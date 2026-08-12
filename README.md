@@ -79,20 +79,51 @@ against real USDC and produced a transaction hash we can cite.
 | --- | --- | --- |
 | P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Not yet** — awaiting Circle credentials |
 | P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done** — `mergegate/contract.py`, tested |
-| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **In progress** |
-| P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Not yet** |
+| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)** — `mergegate/verifier/`, attacks tested end to end; container not yet deployed |
+| P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Partial** — `submission_sha` + `tree_hash` bound into the manifest; invalidation-on-force-push not yet built |
 | P0.5 idempotent settlement | One contract → one settlement action | **Not yet** |
 | P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Not yet** |
 | P0.7 bound receipt | One object binds the whole chain, offline-verifiable | **Not yet** |
-| P1.1 conftest / persisted-file gaming | Provider test hooks cannot survive grader injection | **Not yet** |
-| P1.2 `.git` history leakage | No reading reference solutions from git history | **Not yet** |
+| P1.1 conftest / persisted-file gaming | Provider test hooks cannot survive grader injection | **Done** — hostile `conftest.py` and `sitecustomize.py` quarantined, asserted against a real pytest run |
+| P1.2 `.git` history leakage | No reading reference solutions from git history | **Done** — `git archive` never creates `.git`; a run that tries to read the gold patch fails |
 | P1.3 protected / graded path enforcement | Path violations reject regardless of test results | **Done** — `mergegate/paths.py`, tested |
-| P1.4 sandbox isolation | Default-deny egress, no secrets, resource limits | **Not yet** |
+| P1.4 sandbox isolation | Default-deny egress, no secrets, resource limits | **Partial** — spec refuses weakened configs and is tested; not yet submitted to a live Cloud Run API |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Not yet** |
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Not yet** |
 | P2.2 x402 verifier fee | Verifier-fee tx bound into the receipt | **Not yet** |
 
 ---
+
+## How neutrality is demonstrated
+
+The claim is not "it runs in a sandbox" — it is that the provider cannot
+influence the grader. Assembly is ordered so the buyer's contribution always
+overwrites the provider's:
+
+1. Materialize the pinned base tree (`git archive` — no `.git` is ever created).
+2. Guard every touched path. A protected- or grader-path violation is a hard
+   reject and **the pinned commands never run**.
+3. Apply the provider's changes to allowed source paths only.
+4. Quarantine test hooks the provider introduced or modified *anywhere* —
+   `src/conftest.py` sits inside an allowed path and pytest would still execute
+   it. Allowed to write is not allowed to grade.
+5. Purge the grader paths, then inject the buyer's bundle, so the graded bytes
+   are the buyer's.
+6. Hash the tree.
+
+Steps 2 and 5 are deliberately redundant: a defense that depends on one check
+being correct fails when that check is wrong.
+
+`tests/test_verifier_neutrality.py` runs the documented attacks against a real
+repository with a real `pytest` process and asserts each one fails — rewriting
+the graded tests, a `conftest.py` hook that forces every outcome to pass, a
+`sitecustomize.py` that runs before any test is imported, reading the reference
+solution out of `.git`, and functionally-correct code that disables the CI gate
+on its way past. Mocking the runner would prove nothing; the grade has to
+actually be computed.
+
+Tamper signals (quarantined hooks, purged grader files) are recorded in the
+manifest rather than silently fixed up, so they can surface in the receipt.
 
 ## Development
 

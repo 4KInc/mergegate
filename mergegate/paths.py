@@ -30,6 +30,8 @@ __all__ = [
     "GuardReport",
     "PathViolation",
     "ViolationKind",
+    "compile_patterns",
+    "match_any",
     "normalize_path",
     "PathSyntaxError",
 ]
@@ -145,6 +147,12 @@ def _compile(pattern: str) -> re.Pattern[str]:
             # trailing "/**" -> the directory itself or anything under it
             out.append("(?:/.*)?")
             i += 3
+        elif pattern.startswith("**", i):
+            # bare or trailing "**" -> any path, at any depth. Must be handled
+            # before the single-"*" case, which is segment-local and would
+            # compile "**" into something that matches nothing with a slash.
+            out.append(".*")
+            i += 2
         elif ch == "*":
             out.append("[^/]*")
             i += 1
@@ -160,6 +168,25 @@ def _compile(pattern: str) -> re.Pattern[str]:
         out.append("(?:/.*)?")
     out.append("$")
     return re.compile("".join(out))
+
+
+def compile_patterns(patterns: tuple[str, ...] | list[str]) -> list[tuple[str, re.Pattern[str]]]:
+    """Compile globs once, keeping each source pattern for error reporting."""
+    return [(p, _compile(p)) for p in patterns]
+
+
+def match_any(path: str, compiled: list[tuple[str, re.Pattern[str]]]) -> str | None:
+    """Return the first pattern matching ``path``, or ``None``.
+
+    For callers that need a plain "is this path in this set?" question without
+    the guard's allow/deny precedence — asking a deny-biased classifier and then
+    reinterpreting its answer is how a check ends up meaning something other
+    than what its caller assumed.
+    """
+    for pattern, rx in compiled:
+        if rx.match(path):
+            return pattern
+    return None
 
 
 class PathGuard:
