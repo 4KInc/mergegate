@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MergeGate - Sealed Evaluation Run</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;900&amp;family=Inter:wght@400;500;600&amp;family=Public+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        neutral: {
+                            50: '#fafafa',
+                            100: '#f5f5f5',
+                            200: '#e5e5e5',
+                            300: '#d4d4d4',
+                            400: '#a3a3a3',
+                            500: '#737373',
+                            600: '#525252',
+                            700: '#404040',
+                            800: '#262626',
+                            900: '#171717',
+                            950: '#0a0a0a',
+                        },
+                        emerald: {
+                            400: '#34d399',
+                            500: '#10b981',
+                        },
+                        amber: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                        },
+                        red: {
+                            400: '#f87171',
+                            500: '#ef4444',
+                        },
+                        blue: {
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "none": "0px",
+                        "sm": "0.125rem",
+                        "md": "0.375rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Public Sans", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .pulse-slow {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        
+        /* Custom scrollbar for terminal */
+        .term-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .term-scroll::-webkit-scrollbar-track {
+            background: #171717; 
+        }
+        .term-scroll::-webkit-scrollbar-thumb {
+            background: #404040; 
+            border-radius: 0;
+        }
+        .term-scroll::-webkit-scrollbar-thumb:hover {
+            background: #525252; 
+        }
+    </style>
+</head>
+<body class="bg-neutral-950 text-neutral-200 font-body selection:bg-emerald-500/30 selection:text-emerald-300 min-h-screen flex antialiased">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full flex flex-col pt-16 bg-neutral-950 dark:bg-neutral-950 border-r border-neutral-800 dark:border-neutral-800 z-40 w-64">
+<div class="px-6 mb-8 mt-2">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 bg-neutral-900 border border-neutral-800 rounded flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-neutral-400 text-sm">memory</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-neutral-50 leading-tight">Mainnet-v1</h2>
+<p class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">USDC-Settlement-Active</p>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 text-neutral-500 px-4 py-3 font-mono text-xs uppercase tracking-widest hover:bg-neutral-900 hover:text-neutral-200 transition-all active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+<span>Mandates</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 text-neutral-500 px-4 py-3 font-mono text-xs uppercase tracking-widest hover:bg-neutral-900 hover:text-neutral-200 transition-all active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[18px]">description</span>
+<span>Contracts</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 text-neutral-500 px-4 py-3 font-mono text-xs uppercase tracking-widest hover:bg-neutral-900 hover:text-neutral-200 transition-all active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+<span>Ledger</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 bg-neutral-900 text-emerald-400 border-r-4 border-emerald-500 px-4 py-3 font-mono text-xs uppercase tracking-widest active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+<span>Agents</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 text-neutral-500 px-4 py-3 font-mono text-xs uppercase tracking-widest hover:bg-neutral-900 hover:text-neutral-200 transition-all active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[18px]">database</span>
+<span>Logs</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="mt-auto border-t border-neutral-800 pt-4 pb-6">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 text-neutral-500 px-4 py-2 font-mono text-xs uppercase tracking-widest hover:bg-neutral-900 hover:text-neutral-200 transition-all" href="#">
+<span class="material-symbols-outlined text-[16px]">book</span>
+<span>Docs</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 text-neutral-500 px-4 py-2 font-mono text-xs uppercase tracking-widest hover:bg-neutral-900 hover:text-neutral-200 transition-all" href="#">
+<span class="material-symbols-outlined text-[16px]">help</span>
+<span>Support</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- TopNavBar -->
+<header class="fixed flex justify-between items-center w-full px-4 h-14 bg-neutral-950 dark:bg-neutral-950 border-b border-neutral-800 dark:border-neutral-800 z-50 pl-64">
+<div class="flex items-center gap-6">
+<div class="text-lg font-black tracking-tighter text-neutral-50 dark:text-neutral-50 flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-500" style="font-variation-settings: 'FILL' 1;">mediation</span>
+                MergeGate
+            </div>
+<!-- Breadcrumbs / Active Context -->
+<div class="hidden md:flex items-center gap-2 text-xs font-mono text-neutral-500">
+<span>Agents</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span>Eval</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-emerald-400">RUN-7a92-f0e1</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 border-r border-neutral-800 pr-4">
+<button class="p-1.5 text-neutral-400 hover:text-emerald-400 hover:bg-neutral-900 transition-colors rounded cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</button>
+<button class="p-1.5 text-neutral-400 hover:text-emerald-400 hover:bg-neutral-900 transition-colors rounded cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+</div>
+<button class="font-mono text-xs tracking-tight bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 px-3 py-1.5 hover:bg-emerald-500/20 transition-colors cursor-pointer rounded-none">
+                New Mandate
+            </button>
+<div class="w-8 h-8 rounded-none border border-neutral-700 overflow-hidden shrink-0 ml-2">
+<img alt="Developer Profile" class="w-full h-full object-cover grayscale" data-alt="A macro shot of a geometric, dark metallic developer avatar icon, consisting of interlocking sharp cubes and circuits. Dramatic low-key lighting with a single sharp rim light highlighting the metallic edges. High contrast, technical, cyberpunk aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXcQDSzKsLsq7swfBnk4K5Zm6uIGnAdMQJ7TkOhkGM-JgYwM2JcMCfF5LY6JyunEpr_oHGtdutDXRgGuEUlYnUbu1UJtdZsoIeWbYPBJTLSraEr9T6M9I3ayunLyruaCIMcnSVJ4QioJMoUShagoZbg4Yn7wc04ebmk_RoppYkrG7SuPljsmSw8fCbYxtEO37JzFyuttupS5-9E26dBKX5OTXSUhtv-EJSI5l3dpsblke4OpTNv_1barspLT-snNcfR_SThPf-tRAk"/>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 ml-64 mt-14 p-6 lg:p-8 h-[calc(100vh-3.5rem)] overflow-y-auto bg-neutral-950">
+<div class="max-w-7xl mx-auto space-y-6">
+<!-- Header section -->
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-neutral-800">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<h1 class="text-2xl font-mono font-bold text-neutral-50 tracking-tight">RUN-7a92-f0e1</h1>
+<div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-none">
+<div class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-slow"></div>
+<span class="text-[10px] font-mono text-emerald-400 font-bold tracking-widest uppercase">Running</span>
+</div>
+</div>
+<p class="text-sm font-mono text-neutral-500">Sealed Evaluation Runtime • Job #49281</p>
+</div>
+<div class="flex flex-col items-end">
+<div class="text-[10px] font-mono text-neutral-500 uppercase tracking-widest mb-1">Elapsed Time</div>
+<div class="text-xl font-mono text-neutral-300 font-bold" id="timer">00:04:12</div>
+</div>
+</header>
+<!-- Verification Identity (Monospace Strip) -->
+<div class="bg-neutral-900/50 border border-neutral-800 p-3 overflow-x-auto rounded-none">
+<div class="flex items-center gap-2 whitespace-nowrap font-mono text-[11px] text-neutral-400">
+<span class="text-neutral-500 mr-2">IDENTITY:</span>
+<span class="text-blue-400" title="Base SHA">0x7a2...f3e1</span>
+<span class="text-neutral-600">+</span>
+<span class="text-amber-400" title="Grader Hash">0x9b4...a1c2</span>
+<span class="text-neutral-600">+</span>
+<span class="text-emerald-400" title="Provider SHA">0x3f1...e9d4</span>
+<span class="text-neutral-600">+</span>
+<span class="text-purple-400" title="Tree Hash">0x8c5...b7a9</span>
+<span class="text-neutral-600">=</span>
+<span class="text-neutral-200 font-bold" title="Verifier Digest">V_DIGEST[0x2e8...9f0d]</span>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left Column (Stepper & Environment) -->
+<div class="lg:col-span-1 flex flex-col gap-6">
+<!-- Sandbox Environment Panel -->
+<section class="border border-neutral-800 bg-neutral-900/30 p-5 rounded-none">
+<div class="flex items-center gap-2 mb-4 pb-3 border-b border-neutral-800">
+<span class="material-symbols-outlined text-neutral-400 text-[18px]">shield</span>
+<h3 class="font-mono text-xs uppercase tracking-widest text-neutral-300">Sandbox constraints</h3>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 text-[10px] font-mono border border-neutral-700 text-neutral-400 bg-neutral-900">gVisor isolation</span>
+<span class="px-2 py-1 text-[10px] font-mono border border-neutral-700 text-neutral-400 bg-neutral-900">Default-deny egress</span>
+<span class="px-2 py-1 text-[10px] font-mono border border-neutral-700 text-neutral-400 bg-neutral-900">No secrets mounted</span>
+<span class="px-2 py-1 text-[10px] font-mono border border-neutral-700 text-neutral-400 bg-neutral-900">Read-only mounts</span>
+<span class="px-2 py-1 text-[10px] font-mono border border-neutral-700 text-neutral-400 bg-neutral-900">2 vCPU / 4 GiB</span>
+<span class="px-2 py-1 text-[10px] font-mono border border-neutral-700 text-neutral-400 bg-neutral-900">600s timeout</span>
+<span class="px-2 py-1 text-[10px] font-mono border border-neutral-700 text-neutral-400 bg-neutral-900">Ephemeral</span>
+<span class="px-2 py-1 text-[10px] font-mono border border-neutral-700 text-neutral-400 bg-neutral-900">.git history stripped</span>
+</div>
+</section>
+<!-- Verification Stepper -->
+<section class="border border-neutral-800 bg-neutral-900/30 p-5 rounded-none flex-1">
+<div class="flex items-center gap-2 mb-6 pb-3 border-b border-neutral-800">
+<span class="material-symbols-outlined text-neutral-400 text-[18px]">rule</span>
+<h3 class="font-mono text-xs uppercase tracking-widest text-neutral-300">Execution Pipeline</h3>
+</div>
+<div class="relative space-y-6 before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-emerald-500/50 before:via-neutral-800 before:to-neutral-800">
+<!-- Step 1: Done -->
+<div class="relative flex items-start gap-4">
+<div class="absolute left-0 w-6 h-6 rounded-none bg-emerald-500/20 border border-emerald-500 flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-[14px] text-emerald-400 font-bold">check</span>
+</div>
+<div class="ml-10">
+<h4 class="font-mono text-xs text-neutral-200 mb-1">Checkout pinned base SHA</h4>
+<p class="font-mono text-[10px] text-neutral-500">In sealed container. Hash verified.</p>
+</div>
+</div>
+<!-- Step 2: Done -->
+<div class="relative flex items-start gap-4">
+<div class="absolute left-0 w-6 h-6 rounded-none bg-emerald-500/20 border border-emerald-500 flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-[14px] text-emerald-400 font-bold">check</span>
+</div>
+<div class="ml-10">
+<h4 class="font-mono text-xs text-neutral-200 mb-1">Apply provider diff</h4>
+<p class="font-mono text-[10px] text-neutral-500">Restricted to allowed paths only.</p>
+</div>
+</div>
+<!-- Step 3: Running -->
+<div class="relative flex items-start gap-4">
+<div class="absolute left-0 w-6 h-6 rounded-none bg-emerald-500 border border-emerald-400 flex items-center justify-center z-10">
+<div class="w-2 h-2 bg-neutral-950 pulse-slow"></div>
+</div>
+<div class="ml-10">
+<h4 class="font-mono text-xs text-emerald-400 mb-1 font-bold">Inject buyer grader bundle</h4>
+<p class="font-mono text-[10px] text-neutral-500 mb-2">Executing after diff apply.</p>
+<div class="bg-amber-500/10 border-l-2 border-amber-500 p-2 mt-2">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[14px] text-amber-500 mt-0.5">warning</span>
+<p class="font-mono text-[10px] text-amber-400/90 leading-tight">
+                                                Provider test files overwritten by buyer grader — 2 files stripped
+                                            </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 4: Pending -->
+<div class="relative flex items-start gap-4">
+<div class="absolute left-0 w-6 h-6 rounded-none bg-neutral-900 border border-neutral-700 flex items-center justify-center z-10">
+<span class="text-[10px] font-mono text-neutral-600">4</span>
+</div>
+<div class="ml-10">
+<h4 class="font-mono text-xs text-neutral-600 mb-1">Run pinned required commands</h4>
+<p class="font-mono text-[10px] text-neutral-700">Awaiting bundle injection...</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Middle/Right Column (Terminal & Guard) -->
+<div class="lg:col-span-2 flex flex-col gap-6">
+<!-- Main Terminal Output -->
+<div class="flex flex-col h-[400px] lg:h-[500px] border border-neutral-800 bg-[#0a0a0a] rounded-none shadow-2xl relative group">
+<!-- Terminal Header -->
+<div class="flex items-center justify-between px-4 py-2 border-b border-neutral-800 bg-neutral-900/80">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<div class="w-2.5 h-2.5 rounded-none bg-neutral-700"></div>
+<div class="w-2.5 h-2.5 rounded-none bg-neutral-700"></div>
+<div class="w-2.5 h-2.5 rounded-none bg-neutral-700"></div>
+</div>
+<span class="font-mono text-[10px] text-neutral-500 uppercase tracking-widest">tty0 • std_out / std_err</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-neutral-500 hover:text-neutral-300">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<button class="text-neutral-500 hover:text-neutral-300">
+<span class="material-symbols-outlined text-[16px]">fullscreen</span>
+</button>
+</div>
+</div>
+<!-- Terminal Body -->
+<div class="flex-1 p-4 overflow-y-auto term-scroll font-mono text-xs leading-relaxed text-neutral-300" id="terminal-content">
+<pre class="text-neutral-500">[INFO] 2023-10-27T14:32:11Z Initializing isolated gVisor sandbox...
+[INFO] 2023-10-27T14:32:12Z Mounting read-only rootfs from sha256:8a3c...
+[INFO] 2023-10-27T14:32:12Z Applying network namespace constraints (deny-all)...
+[INFO] 2023-10-27T14:32:14Z Checkout complete. HEAD is now at 7a92f0e
+[INFO] 2023-10-27T14:32:15Z Applying diff 'provider_submission.patch'...
+<span class="text-neutral-400">  |- Patching src/auth.ts (Hunk #1 succeeded)</span>
+<span class="text-neutral-400">  |- Patching src/utils/math.ts (Hunk #1 succeeded)</span>
+<span class="text-neutral-400">  |- WARNING: Rejecting diff for .github/workflows/deploy.yml (Path not in allowlist)</span>
+[INFO] 2023-10-27T14:32:16Z Stripping provider test files...
+<span class="text-amber-400">[WARN] 2023-10-27T14:32:16Z Overwriting test/auth.spec.ts with grader bundle</span>
+<span class="text-amber-400">[WARN] 2023-10-27T14:32:16Z Overwriting test/utils.spec.ts with grader bundle</span>
+<span class="text-emerald-400">$ npm install --prefer-offline --no-audit</span>
+npm WARN deprecated ...
+added 142 packages, and audited 143 packages in 4s
+<span class="text-emerald-400">$ npm test -- --reporter=dot</span>
+</pre>
+<div class="mt-2 flex items-center gap-2">
+<span class="text-emerald-400 font-bold">Running tests</span>
+<span class="animate-pulse text-neutral-500">...</span>
+</div>
+<!-- Blinking cursor -->
+<div class="w-2 h-4 bg-emerald-400/80 animate-pulse mt-1 inline-block align-middle"></div>
+</div>
+<!-- Overlay gradient for depth -->
+<div class="absolute inset-0 pointer-events-none border border-white/5 opacity-50 mix-blend-overlay"></div>
+</div>
+<!-- Path Guard Panel -->
+<div class="border border-neutral-800 bg-neutral-900/30 p-0 rounded-none">
+<div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-900/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-neutral-400 text-[18px]">folder_supervised</span>
+<h3 class="font-mono text-xs uppercase tracking-widest text-neutral-300">Path Guard</h3>
+</div>
+<span class="font-mono text-[10px] text-neutral-500">3 modifications</span>
+</div>
+<ul class="divide-y divide-neutral-800/50">
+<li class="flex items-center justify-between px-4 py-3 bg-neutral-900/20 hover:bg-neutral-900/40 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-emerald-500 text-[16px]">draft</span>
+<span class="font-mono text-xs text-neutral-300">src/auth.ts</span>
+</div>
+<span class="font-mono text-[10px] text-emerald-500 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5">OK</span>
+</li>
+<li class="flex items-center justify-between px-4 py-3 bg-neutral-900/20 hover:bg-neutral-900/40 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-emerald-500 text-[16px]">draft</span>
+<span class="font-mono text-xs text-neutral-300">src/utils/math.ts</span>
+</div>
+<span class="font-mono text-[10px] text-emerald-500 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5">OK</span>
+</li>
+<li class="flex items-center justify-between px-4 py-3 bg-red-500/5 hover:bg-red-500/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-red-500 text-[16px]">block</span>
+<span class="font-mono text-xs text-neutral-300">.github/workflows/deploy.yml</span>
+</div>
+<span class="font-mono text-[10px] text-red-400 border border-red-500/30 bg-red-500/10 px-1.5 py-0.5">VIOLATION</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Footer disclaimer -->
+<footer class="mt-8 pt-6 border-t border-neutral-800 text-center md:text-left">
+<p class="font-mono text-[10px] text-neutral-600 max-w-2xl">
+                    This run proves the submission passed the buyer's pinned tests. It does not assess code quality, security, or mergeworthiness.
+                </p>
+</footer>
+</div>
+</main>
+<script>
+        // Simple timer logic for the UI
+        let seconds = 252; // 00:04:12 starting
+        const timerEl = document.getElementById('timer');
+        
+        setInterval(() => {
+            seconds++;
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            timerEl.textContent = `${h}:${m}:${s}`;
+        }, 1000);
+
+        // Auto-scroll terminal to bottom
+        const term = document.getElementById('terminal-content');
+        term.scrollTop = term.scrollHeight;
+    </script>
+</body></html>
