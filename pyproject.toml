@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mergegate"
+version = "0.1.0"
+description = "Deterministic evaluator and conditional USDC settlement layer for autonomous coding agents."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [{ name = "Heartlin Machado" }]
+dependencies = [
+    "cryptography>=44.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "httpx>=0.28.0",
+    "pydantic>=2.9.0",
+    "google-cloud-storage>=2.18.0",
+    "google-cloud-firestore>=2.19.0",
+    "google-cloud-run>=0.10.0",
+    "web3>=7.0.0",
+    "eth-account>=0.13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "types-requests",
+]
+
+[project.scripts]
+mergegate = "mergegate.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mergegate"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# The shared engine is a vendored submodule owned by another repo. We wire into
+# it; we do not restyle it.
+extend-exclude = ["engine", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+# The shared engine is a vendored submodule with its own (looser) type posture;
+# we type-check the MergeGate surface that wraps it, not the engine internals.
+exclude = ["^engine/"]
+
+[[tool.mypy.overrides]]
+module = ["gateway.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

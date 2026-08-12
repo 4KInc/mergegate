@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Never commit credentials. Circle API keys, entity secrets, and wallet
+# material live in Secret Manager, not in the repo.
+.env
+.env.*
+!.env.example
+*.pem
+!tests/**/*.pem
+service-account*.json
