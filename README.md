@@ -80,16 +80,16 @@ against real USDC and produced a transaction hash we can cite.
 | P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Not yet** — awaiting Circle credentials |
 | P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done** — `mergegate/contract.py`, tested |
 | P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)** — `mergegate/verifier/`, attacks tested end to end; container not yet deployed |
-| P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Partial** — `submission_sha` + `tree_hash` bound into the manifest; invalidation-on-force-push not yet built |
-| P0.5 idempotent settlement | One contract → one settlement action | **Not yet** |
-| P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Not yet** |
-| P0.7 bound receipt | One object binds the whole chain, offline-verifiable | **Not yet** |
+| P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done** — a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
+| P0.5 idempotent settlement | One contract → one settlement action | **Done** — `mergegate/settlement.py`; replayed and out-of-order event sequences settle exactly once |
+| P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Done** — `mergegate/mandate.py`; the executor receives a decision, it does not make one |
+| P0.7 bound receipt | One object binds the whole chain, offline-verifiable | **Done** — `mergegate/receipt.py`; 13 bound fields survive an attacker holding the signing key |
 | P1.1 conftest / persisted-file gaming | Provider test hooks cannot survive grader injection | **Done** — hostile `conftest.py` and `sitecustomize.py` quarantined, asserted against a real pytest run |
 | P1.2 `.git` history leakage | No reading reference solutions from git history | **Done** — `git archive` never creates `.git`; a run that tries to read the gold patch fails |
 | P1.3 protected / graded path enforcement | Path violations reject regardless of test results | **Done** — `mergegate/paths.py`, tested |
 | P1.4 sandbox isolation | Default-deny egress, no secrets, resource limits | **Partial** — spec refuses weakened configs and is tested; not yet submitted to a live Cloud Run API |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Not yet** |
-| P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Not yet** |
+| P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Partial** — both flows run end to end in `tests/test_end_to_end.py`; the on-chain transfer is the only stubbed step |
 | P2.2 x402 verifier fee | Verifier-fee tx bound into the receipt | **Not yet** |
 
 ---
@@ -124,6 +124,25 @@ actually be computed.
 
 Tamper signals (quarantined hooks, purged grader files) are recorded in the
 manifest rather than silently fixed up, so they can surface in the receipt.
+
+## What the receipt proves
+
+A signature over "PASS" proves someone said PASS. The value is the **binding** —
+one object tying together which code, judged by which tests, in which
+environment, under whose mandate, settling which payment.
+
+Thirteen bound fields are cross-checked against the manifest and mandate the
+receipt carries, so editing any of them fails verification **even for an attacker
+holding the signing key**. `tests/test_receipt.py` proves this by re-signing each
+tampered variant; without that test, the tampering cases would only be
+demonstrating that Ed25519 works.
+
+Five fields — `settlement_tx`, `verifier_fee_tx`, `reason`, `settlement_asset`,
+`settlement_chain` — have nothing inside the receipt to check them against and
+rest on the signature alone. Confirming those means comparing the receipt to the
+chain, which no offline verifier can do. A receipt proves the decision was the
+deterministic result of the mandate and the verdict; confirming the money moved
+requires looking at Base.
 
 ## Development
 
