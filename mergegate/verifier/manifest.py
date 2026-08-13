@@ -23,6 +23,7 @@ from enum import StrEnum
 
 from ..engine import canonicalize
 from ..hashing import OUTPUT_DOMAIN, RESULT_DOMAIN, digest, hash_object
+from .sandbox import EGRESS_DENY_TCP
 
 __all__ = ["CommandResult", "VerificationManifest", "Verdict"]
 
@@ -91,7 +92,10 @@ class VerificationManifest:
     Recorded rather than silently fixed up."""
 
     git_stripped: bool = True
-    egress_policy: str = "default-deny"
+    egress_policy: str = EGRESS_DENY_TCP
+    """Recorded into the signed receipt, so it must state what was measured.
+    Claiming blanket "default-deny" here would have signed a false statement:
+    Cloud Run resolves DNS outside the VPC, so DNS survives the deny-all rule."""
 
     @property
     def verdict(self) -> Verdict:

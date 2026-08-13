@@ -79,7 +79,7 @@ against real USDC and produced a transaction hash we can cite.
 | --- | --- | --- |
 | P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Partial** — a real agent-initiated USDC transfer settles on Base Sepolia ([tx](https://sepolia.basescan.org/tx/0xd6fe1a9b1c87210866fa2cdbae6c105e5d5bf2b9b864740c66afaf6a5db9dbd7)); mainnet session not yet established |
 | P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done** — `mergegate/contract.py`, tested |
-| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)** — `mergegate/verifier/`, attacks tested end to end; container not yet deployed |
+| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)** — `mergegate/verifier/`, attacks tested end to end; verifier image built and pinned by real digest |
 | P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done** — a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
 | P0.5 idempotent settlement | One contract → one settlement action | **Done** — `mergegate/settlement.py`; replayed and out-of-order event sequences settle exactly once |
 | P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Done** — `mergegate/mandate.py`; the executor receives a decision, it does not make one |
@@ -87,7 +87,7 @@ against real USDC and produced a transaction hash we can cite.
 | P1.1 conftest / persisted-file gaming | Provider test hooks cannot survive grader injection | **Done** — hostile `conftest.py` and `sitecustomize.py` quarantined, asserted against a real pytest run |
 | P1.2 `.git` history leakage | No reading reference solutions from git history | **Done** — `git archive` never creates `.git`; a run that tries to read the gold patch fails |
 | P1.3 protected / graded path enforcement | Path violations reject regardless of test results | **Done** — `mergegate/paths.py`, tested |
-| P1.4 sandbox isolation | Default-deny egress, no secrets, resource limits | **Partial** — spec refuses weakened configs and is tested; not yet submitted to a live Cloud Run API |
+| P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)** — probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Not yet** |
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Partial** — both flows run end to end in `tests/test_end_to_end.py`; the on-chain transfer is the only stubbed step |
 | P2.2 x402 verifier fee | Verifier-fee tx bound into the receipt | **Not yet** |
@@ -144,6 +144,35 @@ Circle requires idempotency keys to be **UUIDs** and rejects a bare
 the settlement key over a fixed namespace, so the mapping stays deterministic —
 a random UUID would satisfy the format and silently destroy the guard, since a
 retry would present a fresh key.
+
+## Sandbox network posture — measured, not assumed
+
+The receipt records the sandbox's egress policy, so that field has to be true.
+
+An earlier version of this code asserted `default-deny`. Probing inside a real
+Cloud Run Job showed the opposite: **Cloud Run grants internet egress by
+default**, and the job reached Cloudflare on :443 and resolved DNS. MergeGate
+would have signed a receipt containing a false statement — worse than having no
+guarantee at all.
+
+The fix is a custom VPC (`mergegate-sealed`) with no Cloud NAT plus an explicit
+deny-all egress firewall rule, attached to the verifier job with
+`--vpc-egress=all-traffic`. Re-probing gave:
+
+| Probe | Before | After |
+| --- | --- | --- |
+| loopback | works | works |
+| TCP to three public addresses | **reachable** | blocked |
+| DNS resolution | works | **still works** |
+
+So the claim is `deny-tcp-egress; dns-resolution-available` — a graded run
+cannot fetch anything, but DNS remains a residual signalling channel. That is
+disclosed in the constant, in the receipt, and here, rather than rounded up to
+"default-deny".
+
+Note this applies to the **verifier job only**. The API service needs outbound
+access to reach Circle and GitHub; applying the sealed VPC to it would silently
+break settlement.
 
 ## What the receipt proves
 

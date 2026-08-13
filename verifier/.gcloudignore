@@ -1,0 +1,5 @@
+# The verifier image is built from the Dockerfile alone. Nothing else in the
+# repository belongs in the build context, and the graded workspace is mounted
+# at run time rather than baked in.
+*
+!Dockerfile

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from mergegate.verifier.sandbox import SandboxPolicyError, SandboxSpec, build_job_request
+from mergegate.verifier.sandbox import (
+    EGRESS_DENY_TCP,
+    SandboxPolicyError,
+    SandboxSpec,
+    build_job_request,
+)
 
 from .conftest import IMAGE
 
@@ -13,9 +18,34 @@ ARGV = ("python", "-m", "pytest", "-q")
 
 def test_strict_defaults() -> None:
     spec = SandboxSpec(image_digest=IMAGE, argv=ARGV)
-    assert spec.egress == "default-deny"
+    assert spec.egress == EGRESS_DENY_TCP
     assert spec.execution_environment == "gen2"
     assert spec.service_account == ""
+    assert spec.network and spec.subnet
+
+
+def test_egress_claim_states_the_measured_posture() -> None:
+    """The constant must not overstate. A probe run inside a real Cloud Run job
+    on the sealed VPC showed TCP blocked but DNS still resolving, so the string
+    the receipt carries has to say both."""
+    assert "deny-tcp" in EGRESS_DENY_TCP
+    assert "dns" in EGRESS_DENY_TCP.lower()
+    assert EGRESS_DENY_TCP != "default-deny"
+
+
+def test_sealed_run_requires_the_vpc() -> None:
+    """Cloud Run reaches the open internet by default; omitting the VPC would
+    make the egress claim false."""
+    with pytest.raises(SandboxPolicyError, match="deny-all egress"):
+        SandboxSpec(image_digest=IMAGE, argv=ARGV, network="")
+
+
+def test_job_request_forces_all_traffic_through_the_sealed_vpc() -> None:
+    spec = SandboxSpec(image_digest=IMAGE, argv=ARGV)
+    body = build_job_request(spec, project="demo", region="us-central1", job_name="eval-1")
+    vpc = body["job"]["template"]["template"]["vpcAccess"]
+    assert vpc["egress"] == "ALL_TRAFFIC", "private-ranges-only would leave public egress intact"
+    assert vpc["networkInterfaces"][0]["network"] == spec.network
 
 
 def test_image_must_be_pinned_by_digest() -> None:

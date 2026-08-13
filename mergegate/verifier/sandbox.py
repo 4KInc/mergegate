@@ -10,10 +10,18 @@ Cloud Run's second-generation execution environment runs workloads under gVisor,
 which is the isolation boundary this relies on. Everything else here narrows
 what the graded run can reach inside that boundary.
 
-**Deployment status:** the spec and the rendered request body below are
-exercised by tests. Nothing here has yet been submitted to a live Cloud Run
-API — there is no GCP project wired up. The README status table says so rather
-than describing this as working.
+**How the egress posture was established.** It was measured, not assumed. A
+probe executed inside a real Cloud Run Job showed that the default
+configuration reaches the open internet — Cloud Run grants egress by default —
+which meant an earlier version of this module asserted ``default-deny`` while
+the deployed job could reach Cloudflare and resolve DNS. Since the manifest
+writes this field into a *signed receipt*, that would have signed a false
+statement.
+
+The fix was a custom VPC with no Cloud NAT plus an explicit deny-all egress
+firewall rule, attached with ``--vpc-egress=all-traffic``. Re-probing then
+showed all outbound TCP blocked and DNS still resolving, which is exactly what
+:data:`EGRESS_DENY_TCP` now claims — no more, no less.
 """
 
 from __future__ import annotations
@@ -21,7 +29,22 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-__all__ = ["SandboxSpec", "SandboxPolicyError", "build_job_request"]
+__all__ = ["SandboxSpec", "SandboxPolicyError", "build_job_request", "EGRESS_DENY_TCP"]
+
+EGRESS_DENY_TCP = "deny-tcp-egress; dns-resolution-available"
+"""The network posture that was **measured**, not the one we wanted to claim.
+
+Verified by executing a probe inside a real Cloud Run Job on the sealed VPC:
+outbound TCP to three separate public addresses all failed while loopback
+succeeded, so a graded run cannot fetch anything. DNS resolution still
+succeeds — Cloud Run resolves through the platform rather than through the VPC,
+so the deny-all egress firewall does not reach it.
+
+DNS is therefore a residual side channel: a submission cannot retrieve data over
+it, but it could signal outward through crafted lookups. That is a stated limit
+of v1, disclosed here and in the receipt, rather than a gap papered over by
+calling this "default-deny".
+"""
 
 
 class SandboxPolicyError(ValueError):
@@ -45,7 +68,15 @@ class SandboxSpec:
     memory: str = "4Gi"
     timeout_seconds: int = 600
     max_processes: int = 512
-    egress: str = "default-deny"
+    egress: str = EGRESS_DENY_TCP
+    """The measured posture, not an aspiration. See :data:`EGRESS_DENY_TCP`."""
+
+    network: str = "mergegate-sealed"
+    subnet: str = "mergegate-sealed-uc1"
+    """Direct VPC egress into a network with no Cloud NAT and an explicit
+    deny-all egress firewall rule. Without these the job reaches the open
+    internet — Cloud Run's default — and the egress claim would be false."""
+
     execution_environment: str = "gen2"
     """gen2 is the gVisor-sandboxed environment. gen1 is not accepted."""
 
@@ -64,11 +95,17 @@ class SandboxSpec:
             )
         if not self.argv:
             raise SandboxPolicyError("a sandbox run needs a pinned argv vector")
-        if self.egress != "default-deny":
+        if self.egress != EGRESS_DENY_TCP:
             raise SandboxPolicyError(
                 f"egress policy {self.egress!r} is not permitted. Network-dependent "
                 "tests are out of scope because they are not deterministic, and a "
                 "release condition has to be reproducible."
+            )
+        if not self.network or not self.subnet:
+            raise SandboxPolicyError(
+                "a sealed run requires the VPC network and subnet that carry the "
+                "deny-all egress rule. Cloud Run reaches the open internet by "
+                "default, so omitting these would make the egress claim false."
             )
         if self.execution_environment != "gen2":
             raise SandboxPolicyError(
@@ -116,6 +153,12 @@ def build_job_request(
                     "executionEnvironment": "EXECUTION_ENVIRONMENT_GEN2",
                     "maxRetries": 0,  # a retried evaluation is a second evaluation
                     "timeout": f"{spec.timeout_seconds}s",
+                    # all-traffic forces every packet through the sealed VPC.
+                    # private-ranges-only would leave public egress intact.
+                    "vpcAccess": {
+                        "networkInterfaces": [{"network": spec.network, "subnetwork": spec.subnet}],
+                        "egress": "ALL_TRAFFIC",
+                    },
                     "containers": [
                         {
                             "image": spec.image_digest,
