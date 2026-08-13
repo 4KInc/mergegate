@@ -77,7 +77,7 @@ against real USDC and produced a transaction hash we can cite.
 
 | Gate | What it establishes | Status |
 | --- | --- | --- |
-| P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Not yet** — awaiting Circle credentials |
+| P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Partial** — a real agent-initiated USDC transfer settles on Base Sepolia ([tx](https://sepolia.basescan.org/tx/0xd6fe1a9b1c87210866fa2cdbae6c105e5d5bf2b9b864740c66afaf6a5db9dbd7)); mainnet session not yet established |
 | P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done** — `mergegate/contract.py`, tested |
 | P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)** — `mergegate/verifier/`, attacks tested end to end; container not yet deployed |
 | P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done** — a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
@@ -124,6 +124,26 @@ actually be computed.
 
 Tamper signals (quarantined hooks, purged grader files) are recorded in the
 manifest rather than silently fixed up, so they can surface in the receipt.
+
+## Settlement
+
+MergeGate settles through Circle **agent wallets**, driven by the `circle` CLI —
+not the REST Developer-Controlled Wallets API. They are separate products
+holding separate wallets, and the funded Base wallets exist only in the former.
+
+Double-payment has two independent guards. The state machine refuses a second
+settlement (P0.5), and the settlement key is passed to Circle as the transfer's
+idempotency key, so a repeated key returns the original transaction instead of
+sending a new one. Both are verified: the first by replayed and out-of-order
+event tests, the second against real Circle infrastructure on Base Sepolia —
+sending twice with one key moved 0.25 USDC exactly once and returned the same
+transaction hash both times.
+
+Circle requires idempotency keys to be **UUIDs** and rejects a bare
+`sha256:<hex>` with `400 Invalid request body`. The rail derives a UUIDv5 from
+the settlement key over a fixed namespace, so the mapping stays deterministic —
+a random UUID would satisfy the format and silently destroy the guard, since a
+retry would present a fresh key.
 
 ## What the receipt proves
 

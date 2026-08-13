@@ -28,6 +28,7 @@ import json
 import os
 import shutil
 import subprocess
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,11 @@ from .base import RailError, TransferReceipt
 __all__ = ["CircleCliRail", "resolve_circle_binary"]
 
 DEFAULT_TIMEOUT = 180
+
+# Fixed namespace for deriving Circle idempotency UUIDs from settlement keys.
+# Must never change: altering it would remap every existing settlement to a
+# different UUID, so a replayed event would look new to Circle and pay twice.
+_IDEMPOTENCY_NAMESPACE = uuid.UUID("6f9d3c1e-4a2b-5e8d-9c7f-1b2a3c4d5e6f")
 
 
 def resolve_circle_binary() -> str:
@@ -140,6 +146,18 @@ class CircleCliRail:
         amount_usdc: str,
         idempotency_key: str,
     ) -> TransferReceipt:
+        """Move USDC, idempotent on ``idempotency_key``.
+
+        Verified against real Circle infrastructure on BASE-SEPOLIA: sending the
+        same key twice returns the identical transaction hash and moves the
+        funds once.
+
+        ``TransferReceipt.deduplicated`` is always ``False`` here. Circle
+        returns the original transaction on a repeated key but does not signal
+        that it deduplicated, and inferring it from a local record would report
+        our own bookkeeping rather than what Circle did. The field stays
+        meaningful for rails that do signal it.
+        """
         if not idempotency_key:
             raise RailError(
                 "refusing to transfer without an idempotency key — it is the rail-level "
@@ -198,13 +216,18 @@ class CircleCliRail:
 
 
 def _cli_idempotency_key(settlement_key: str) -> str:
-    """Adapt a MergeGate settlement key to what the CLI accepts.
+    """Adapt a MergeGate settlement key to the UUID that Circle requires.
 
-    Settlement keys are ``sha256:<hex>``. The colon is stripped because the CLI
-    expects a plain token; the hex is preserved intact so the key stays a
-    one-to-one function of the settlement it guards.
+    Circle's API rejects a bare ``sha256:<hex>`` (and the stripped 64-hex form)
+    with ``400 Invalid request body`` — it accepts only UUIDs. Verified against
+    the live CLI, not inferred.
+
+    The mapping is UUIDv5 over a fixed namespace, so it is **deterministic**:
+    the same settlement always derives the same UUID. That is the whole point —
+    a random UUID would satisfy the format and silently destroy the guard,
+    because a retry would present a fresh key and Circle would send again.
     """
-    return settlement_key.replace("sha256:", "", 1)
+    return str(uuid.uuid5(_IDEMPOTENCY_NAMESPACE, settlement_key))
 
 
 def _looks_like_auth_failure(stderr: str) -> bool:

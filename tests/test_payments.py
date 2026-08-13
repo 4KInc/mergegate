@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import uuid
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,7 @@ from mergegate.payments import (
     SettlementExecutor,
     resolve_circle_binary,
 )
+from mergegate.payments.circle_cli import _IDEMPOTENCY_NAMESPACE, _cli_idempotency_key
 
 ESCROW = "0xESCROW"
 PROVIDER = "0xPROVIDER"
@@ -212,12 +214,29 @@ def test_cli_rail_builds_the_expected_command(tmp_path: Path) -> None:
     assert PROVIDER in argv
     assert "--chain" in argv and argv[argv.index("--chain") + 1] == "BASE"
     assert "--token" in argv and argv[argv.index("--token") + 1] == "0xUSDC"
-    # The settlement key travels to the rail, minus the sha256: prefix.
-    assert argv[argv.index("--idempotency-key") + 1] == "a" * 64
+    # Circle rejects a bare sha256 hex with 400 Invalid request body; it accepts
+    # only UUIDs. Verified against the live CLI.
+    sent_key = argv[argv.index("--idempotency-key") + 1]
+    assert uuid.UUID(sent_key)  # raises if not a well-formed UUID
+    assert sent_key == str(uuid.uuid5(_IDEMPOTENCY_NAMESPACE, KEY))
 
     assert receipt.tx_hash == "0xdeadbeef"
     assert receipt.explorer_url == "https://basescan.org/tx/0xdeadbeef"
     assert receipt.block_height == 42
+
+
+def test_idempotency_uuid_is_deterministic() -> None:
+    """A random UUID would satisfy Circle's format check and silently destroy
+    the guard: a retry would present a fresh key and Circle would send again."""
+    assert _cli_idempotency_key(KEY) == _cli_idempotency_key(KEY)
+
+
+def test_distinct_settlements_derive_distinct_uuids() -> None:
+    other = "sha256:" + "b" * 64
+    assert _cli_idempotency_key(KEY) != _cli_idempotency_key(other)
+    # The verifier fee rides the same settlement key with a suffix, and must not
+    # collide with the settlement transfer itself.
+    assert _cli_idempotency_key(KEY) != _cli_idempotency_key(f"{KEY}:verifier-fee")
 
 
 def test_cli_rail_uses_the_sepolia_explorer_on_testnet(tmp_path: Path) -> None:
