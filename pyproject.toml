@@ -30,6 +30,7 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.13.0",
     "types-requests",
+    "httpx",
 ]
 
 [project.scripts]
@@ -60,6 +61,12 @@ disallow_untyped_defs = true
 # The shared engine is a vendored submodule with its own (looser) type posture;
 # we type-check the MergeGate surface that wraps it, not the engine internals.
 exclude = ["^engine/"]
+
+# google-cloud client libs ship partial stubs; they are exercised in
+# deployment, not type-checked here.
+[[tool.mypy.overrides]]
+module = ["google.cloud.*", "google.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["gateway.*"]

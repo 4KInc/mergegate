@@ -1,0 +1,14 @@
+# Build context for the API image. Keep secrets and local state out.
+.venv/
+.git/
+.env
+.env.*
+!.env.example
+design/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+tests/
+verifier/

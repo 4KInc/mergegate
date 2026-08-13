@@ -41,6 +41,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from fastapi import APIRouter, Request, Response
+
 from .settlement import EventOutcome, TaskStateMachine
 
 __all__ = [
@@ -244,11 +246,18 @@ class WebhookReceiver:
 def build_router(receiver: WebhookReceiver, *, path: str = "/webhooks/github") -> Any:
     """Mount ``receiver`` on a FastAPI router.
 
-    Imported lazily so that importing this module — and unit-testing
-    :class:`WebhookReceiver` — does not require FastAPI to be installed.
-    """
-    from fastapi import APIRouter, Request, Response
+    FastAPI is imported at module scope rather than here. It used to be a lazy
+    import, which looked harmless and silently broke the endpoint: this module
+    uses ``from __future__ import annotations``, so ``request: Request`` is a
+    *string* at runtime, and FastAPI resolves it against module globals. With
+    ``Request`` bound only inside this function the name was unresolvable, so
+    FastAPI fell back to treating ``request`` as a query parameter and every
+    delivery got 422 without the handler ever running.
 
+    It failed closed, so nothing was mis-authenticated — but signature
+    verification never executed either. Caught by calling the deployed service,
+    not by the unit tests, which exercise :class:`WebhookReceiver` directly.
+    """
     router = APIRouter()
 
     @router.post(path)
