@@ -6,257 +6,357 @@
 <title>Task Contract &amp; Escrow Funding | MergeGate</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&amp;family=Inter:wght@400;500;600&amp;family=Public+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@400;500;600;700;900&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-    </style>
 <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     colors: {
-                        'surface': '#0a0a0a',
-                        'surface-container': '#171717',
-                        'surface-container-high': '#262626',
-                        'surface-container-highest': '#404040',
+                        primary: {
+                            DEFAULT: '#3b82f6',
+                            container: '#1e3a8a',
+                        },
+                        'on-primary-container': '#bfdbfe',
+                        surface: '#0a0a0a',
+                        'surface-variant': '#171717',
                         'on-surface': '#f5f5f5',
                         'on-surface-variant': '#a3a3a3',
-                        'primary': '#22d3ee', // Cyan
-                        'primary-container': '#164e63',
-                        'on-primary-container': '#cffafe',
-                        'secondary-container': '#1e293b',
-                        'on-secondary-container': '#f1f5f9',
-                        'outline': '#525252',
                         'outline-variant': '#262626',
-                        'success': '#10b981',
-                        'success-container': '#064e3b',
-                        'on-success-container': '#34d399',
-                        'error': '#ef4444'
-                    },
-                    borderRadius: {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
+                        success: {
+                            DEFAULT: '#10b981',
+                            container: '#064e3b',
+                            content: '#34d399'
+                        },
+                        warning: {
+                            DEFAULT: '#f59e0b',
+                            container: '#78350f',
+                            content: '#fbbf24'
+                        }
                     },
                     fontFamily: {
-                        "headline": ["Space Grotesk", "sans-serif"],
-                        "display": ["Space Grotesk", "sans-serif"],
-                        "body": ["Inter", "sans-serif"],
-                        "label": ["Public Sans", "sans-serif"],
-                        "mono": ["JetBrains Mono", "monospace"]
+                        headline: ["Space Grotesk", "sans-serif"],
+                        display: ["Space Grotesk", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Public Sans", "sans-serif"],
+                        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
                     }
                 }
             }
         }
     </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .mono-hash {
+            font-variant-ligatures: none;
+            letter-spacing: 0.025em;
+        }
+        
+        /* Custom scrollbar for developer tool aesthetic */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #262626; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #404040; 
+        }
+    </style>
 </head>
-<body class="bg-surface text-on-surface font-body min-h-screen flex selection:bg-primary-container selection:text-on-primary-container">
-<!-- SideNavBar -->
-<nav class="hidden md:flex flex-col h-screen w-64 border-r border-outline-variant bg-surface-container py-4 px-3 sticky top-0 shrink-0">
-<div class="flex items-center mb-8 px-2 gap-3">
-<div class="h-8 w-8 rounded bg-primary-container flex items-center justify-center shrink-0">
-<span class="material-symbols-outlined text-primary text-xl">terminal</span>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex selection:bg-primary/30 selection:text-primary-100">
+<!-- JSON Component: SideNavBar -->
+<nav class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 pt-16 border-r border-outline-variant bg-neutral-950 overflow-y-auto z-40">
+<div class="px-6 pb-8">
+<h1 class="text-lg font-headline font-black text-on-surface tracking-tight">Console</h1>
+<p class="text-xs text-on-surface-variant font-mono mt-1">v2.4.0-stable</p>
 </div>
-<div>
-<div class="font-headline text-lg font-bold text-on-surface tracking-tight">MG-CORE-01</div>
-<div class="text-xs text-success font-mono">Network: Mainnet</div>
+<div class="px-4 mb-6">
+<button class="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-white font-label text-sm font-semibold rounded transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Evaluation
+            </button>
 </div>
+<div class="flex-1 space-y-1">
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-neutral-900 transition-all group-hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">gavel</span>
+<span class="font-label text-xs uppercase tracking-widest">Mandates</span>
+</a>
+<!-- ACTIVE NAVIGATION: "Contracts" based on Intent (Task Contract Screen) -->
+<a class="flex items-center gap-3 bg-primary/10 text-primary border-r-4 border-primary px-4 py-3 font-bold" href="#">
+<span class="material-symbols-outlined text-[20px] icon-fill">description</span>
+<span class="font-label text-xs uppercase tracking-widest">Contracts</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-neutral-900 transition-all group-hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+<span class="font-label text-xs uppercase tracking-widest">Ledger</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-neutral-900 transition-all group-hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">smart_toy</span>
+<span class="font-label text-xs uppercase tracking-widest">Agents</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-neutral-900 transition-all group-hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">database</span>
+<span class="font-label text-xs uppercase tracking-widest">Logs</span>
+</a>
 </div>
-<div class="space-y-1 flex-grow">
-<!-- Active State Navigation Logic: Assuming "Contracts" is the closest match for "Task Contract" -->
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all active:scale-95 duration-75" href="#">
-<span class="material-symbols-outlined">assignment_turned_in</span>
-<span class="font-body text-label-md">Mandates</span>
+<div class="mt-auto pt-4 pb-6 border-t border-outline-variant space-y-1">
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-neutral-900 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+<span class="font-label text-xs uppercase tracking-widest">Docs</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-secondary-container text-on-secondary-container font-medium active:scale-95 duration-75" href="#">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">gavel</span>
-<span class="font-body text-label-md">Contracts</span>
-</a>
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all active:scale-95 duration-75" href="#">
-<span class="material-symbols-outlined">account_balance_wallet</span>
-<span class="font-body text-label-md">Ledger</span>
-</a>
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all active:scale-95 duration-75" href="#">
-<span class="material-symbols-outlined">smart_toy</span>
-<span class="font-body text-label-md">Agents</span>
-</a>
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all active:scale-95 duration-75" href="#">
-<span class="material-symbols-outlined">code</span>
-<span class="font-body text-label-md">Logs</span>
-</a>
-</div>
-<div class="border-t border-outline-variant pt-4 space-y-1 mt-auto">
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all active:scale-95 duration-75" href="#">
-<span class="material-symbols-outlined">description</span>
-<span class="font-body text-label-md">Docs</span>
-</a>
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all active:scale-95 duration-75" href="#">
-<span class="material-symbols-outlined">api</span>
-<span class="font-body text-label-md">API</span>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-neutral-900 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">contact_support</span>
+<span class="font-label text-xs uppercase tracking-widest">Support</span>
 </a>
 </div>
 </nav>
-<!-- Main Content -->
-<div class="flex-grow flex flex-col w-full max-w-full">
-<!-- TopNavBar (Mobile Only) -->
-<header class="md:hidden flex justify-between items-center w-full px-4 h-14 bg-surface border-b border-outline-variant shrink-0">
-<div class="font-headline font-black text-xl tracking-tighter text-on-surface">MERGEGATE</div>
+<!-- Main Content Canvas -->
+<div class="flex-1 md:ml-64 flex flex-col min-h-screen relative">
+<!-- JSON Component: TopNavBar -->
+<header class="flex justify-between items-center px-6 py-3 w-full sticky top-0 z-50 bg-neutral-950 border-b border-outline-variant">
 <div class="flex items-center gap-4">
-<span class="material-symbols-outlined text-on-surface-variant hover:text-on-surface cursor-pointer">terminal</span>
-<span class="material-symbols-outlined text-on-surface-variant hover:text-on-surface cursor-pointer">settings_ethernet</span>
-<span class="material-symbols-outlined text-on-surface-variant hover:text-on-surface cursor-pointer">account_tree</span>
+<!-- Mobile Menu Trigger -->
+<button class="md:hidden text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="text-xl font-headline font-bold tracking-tight text-on-surface">MergeGate</div>
+</div>
+<div class="flex items-center gap-4">
+<!-- Trailing Icon Actions -->
+<button class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80 p-1">
+<span class="material-symbols-outlined">terminal</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80 p-1">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80 p-1">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<!-- Separator -->
+<div class="h-4 w-px bg-outline-variant mx-1"></div>
+<!-- Trailing Primary Action -->
+<button class="font-body text-sm font-label text-primary hover:text-primary-400 transition-colors cursor-pointer active:opacity-80 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                    Connect Wallet
+                </button>
 </div>
 </header>
-<main class="flex-grow p-4 md:p-8 overflow-y-auto w-full max-w-5xl mx-auto space-y-6">
-<!-- 1. Header -->
-<div class="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-6 border-b border-outline-variant">
+<!-- Main Workspace Area -->
+<main class="flex-1 p-6 md:p-10 max-w-6xl mx-auto w-full flex flex-col gap-8">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-outline-variant/50">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="font-mono text-xs text-on-surface-variant bg-surface-variant px-2 py-1 rounded border border-outline-variant">CONTRACT-7A2F3E1</span>
+<div class="flex items-center gap-1.5 bg-success-container/30 border border-success/30 text-success-content px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide">
+<div class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
+                            FUNDED
+                        </div>
+</div>
+<h2 class="text-3xl font-headline font-bold text-on-surface">Fix negative-operand bug</h2>
+</div>
+<div class="flex flex-col items-start md:items-end bg-surface-variant/50 px-4 py-3 rounded-lg border border-outline-variant backdrop-blur-sm">
+<span class="text-xs text-on-surface-variant font-label uppercase tracking-wider mb-1">Deadline Countdown</span>
+<div class="flex items-center gap-2 font-mono text-lg text-warning-content">
+<span class="material-symbols-outlined text-[20px]">timer</span>
+<span id="countdown">2026-08-15 18:00 UTC</span>
+</div>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Column 1 & 2: Immutable Contract Panel -->
+<div class="lg:col-span-2 flex flex-col gap-6">
+<div class="bg-surface-variant/30 border border-outline-variant rounded-xl overflow-hidden shadow-2xl shadow-black/50 backdrop-blur-md">
+<!-- Panel Header -->
+<div class="bg-surface-variant/80 border-b border-outline-variant px-5 py-3 flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">lock</span>
+<h3 class="font-headline font-semibold text-sm text-on-surface tracking-wide">Immutable since funding</h3>
+<div class="ml-auto flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-outline-variant"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-outline-variant"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-outline-variant"></span>
+</div>
+</div>
+<!-- Panel Body -->
+<div class="p-0 text-sm font-mono text-on-surface-variant divide-y divide-outline-variant/40">
+<div class="grid grid-cols-1 md:grid-cols-3 hover:bg-white/[0.02] transition-colors">
+<div class="px-5 py-4 border-r border-outline-variant/40 md:col-span-1 text-xs text-on-surface-variant/70 uppercase tracking-widest flex items-center">Repository</div>
+<div class="px-5 py-4 md:col-span-2 text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary">book</span>
+                                    4KInc/mergegate-demo-task
+                                </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 hover:bg-white/[0.02] transition-colors">
+<div class="px-5 py-4 border-r border-outline-variant/40 md:col-span-1 text-xs text-on-surface-variant/70 uppercase tracking-widest flex items-center">Base Commit</div>
+<div class="px-5 py-4 md:col-span-2 flex items-center justify-between group">
+<span class="text-primary-300 mono-hash bg-primary-container/20 px-2 py-0.5 rounded">3476768e</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant hover:text-white" title="Copy">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 hover:bg-white/[0.02] transition-colors">
+<div class="px-5 py-4 border-r border-outline-variant/40 md:col-span-1 text-xs text-on-surface-variant/70 uppercase tracking-widest flex items-center">Grader Bundle Hash</div>
+<div class="px-5 py-4 md:col-span-2 flex items-center justify-between group">
+<span class="text-on-surface mono-hash">sha256:88e...a1b2</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant hover:text-white" title="Copy">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 hover:bg-white/[0.02] transition-colors">
+<div class="px-5 py-4 border-r border-outline-variant/40 md:col-span-1 text-xs text-on-surface-variant/70 uppercase tracking-widest flex items-center">Verifier Image Digest</div>
+<div class="px-5 py-4 md:col-span-2 flex items-center justify-between group">
+<span class="text-on-surface mono-hash">sha256:cc9...d4e5</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant hover:text-white" title="Copy">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 hover:bg-white/[0.02] transition-colors">
+<div class="px-5 py-4 border-r border-outline-variant/40 md:col-span-1 text-xs text-on-surface-variant/70 uppercase tracking-widest flex items-center">Path Policies</div>
+<div class="px-5 py-4 md:col-span-2 space-y-3">
+<div class="flex items-center gap-3">
+<span class="text-xs text-on-surface-variant w-24">Protected:</span>
+<span class="bg-red-900/30 text-red-400 border border-red-900/50 px-2 py-0.5 rounded text-xs flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">block</span>
+                                            .github/**
+                                        </span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-on-surface-variant w-24">Allowed Source:</span>
+<span class="bg-success-container/30 text-success-content border border-success-container/50 px-2 py-0.5 rounded text-xs flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                                            src/**
+                                        </span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 hover:bg-white/[0.02] transition-colors">
+<div class="px-5 py-4 border-r border-outline-variant/40 md:col-span-1 text-xs text-on-surface-variant/70 uppercase tracking-widest flex items-center">Required Cmds</div>
+<div class="px-5 py-4 md:col-span-2">
+<div class="bg-[#0d1117] border border-outline-variant/50 rounded p-3 overflow-x-auto">
+<code class="text-primary-300">python -m pytest -q</code>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 bg-primary/5 hover:bg-primary/10 transition-colors">
+<div class="px-5 py-4 border-r border-outline-variant/40 md:col-span-1 text-xs text-primary/70 uppercase tracking-widest flex items-center font-bold">Reward &amp; Deadline</div>
+<div class="px-5 py-4 md:col-span-1 flex flex-col gap-2">
+<div class="text-xl text-white font-headline font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">monetization_on</span>
+                                        0.25 USDC
+                                    </div>
+<div class="text-xs text-on-surface-variant">
+                                        Due: 2026-08-15 18:00 UTC
+                                    </div>
+</div>
+</div>
+</div>
+<!-- Panel Footer -->
+<div class="bg-surface-variant border-t border-outline-variant px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div class="flex items-center gap-2 text-xs font-mono text-on-surface-variant group">
+<span>Hash:</span>
+<span class="text-on-surface">0x9e8f...d0e9</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity hover:text-white" title="Copy">
+<span class="material-symbols-outlined text-[14px]">content_copy</span>
+</button>
+</div>
+<div class="bg-[#1f2937] text-gray-300 border border-gray-700 px-2.5 py-1 rounded text-[10px] font-mono tracking-widest uppercase flex items-center gap-1.5 shadow-inner">
+<span class="material-symbols-outlined text-[12px]">verified</span>
+                                RFC 8785 Canonical JSON
+                            </div>
+</div>
+</div>
+</div>
+<!-- Column 3: Escrow & Mandate Sidebar -->
+<div class="lg:col-span-1 flex flex-col gap-6">
+<!-- Conditional Payment Mandate Card -->
+<div class="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-lg shadow-black/20 relative">
+<div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500"></div>
+<div class="p-5">
+<h3 class="font-headline font-semibold text-sm text-on-surface tracking-wide flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary text-[18px]">policy</span>
+                                Payment Mandate
+                            </h3>
+<div class="bg-surface-variant/50 p-4 rounded-lg border border-outline-variant mb-4">
+<p class="text-sm font-mono text-on-surface leading-relaxed">
+                                    'pay exactly <span class="text-success-content font-bold">0.25 USDC</span> to provider agent <span class="text-primary-300">0xPROV...</span> if and only if contract <span class="text-purple-400">0xC0NTRACT...</span> evaluates <span class="bg-success-container/50 text-success-content px-1 rounded">PASS</span> before the deadline.'
+                                </p>
+</div>
+<div class="space-y-4 font-mono text-xs">
 <div>
-<div class="flex items-center gap-3 mb-2">
-<span class="bg-success-container text-on-success-container px-2 py-0.5 rounded text-xs font-mono font-medium tracking-wider">FUNDED</span>
-<span class="text-on-surface-variant font-mono text-sm flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px]">schedule</span>
-                            04:12:35:12
-                        </span>
-</div>
-<h1 class="font-headline text-3xl md:text-4xl font-bold tracking-tight text-on-surface">Refactor Auth Middleware</h1>
+<span class="text-on-surface-variant block mb-1 uppercase tracking-widest text-[10px]">Buyer Agent Wallet</span>
+<div class="flex items-center justify-between bg-surface-variant px-3 py-2 rounded border border-outline-variant group">
+<span class="text-on-surface truncate">0xBUYER...ABCD</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant hover:text-white shrink-0 ml-2">
+<span class="material-symbols-outlined text-[14px]">content_copy</span>
+</button>
 </div>
 </div>
-<!-- 2. Immutable Contract Panel -->
-<div class="bg-surface-container border border-outline-variant rounded-lg overflow-hidden relative">
-<div class="bg-surface-container-high px-4 py-3 border-b border-outline-variant flex items-center justify-between">
-<div class="flex items-center gap-2 text-on-surface font-headline font-medium">
-<span class="material-symbols-outlined text-primary text-[20px]">policy</span>
-                        Immutable Contract Parameters
-                    </div>
-<div class="flex items-center gap-1.5 text-on-surface-variant text-sm">
-<span class="material-symbols-outlined text-[16px]">lock</span>
-                        Immutable since funding
-                    </div>
-</div>
-<div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-<!-- Repository -->
-<div class="flex flex-col gap-1 border-b md:border-b-0 border-outline-variant pb-3 md:pb-0">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Repository</span>
-<span class="font-mono text-on-surface">github.com/org/repo</span>
-</div>
-<!-- Base Commit SHA -->
-<div class="flex flex-col gap-1 border-b md:border-b-0 border-outline-variant pb-3 md:pb-0">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Base Commit SHA</span>
-<div class="flex items-center gap-2 group cursor-pointer">
-<span class="font-mono text-on-surface">0x7a2...f3e1</span>
-<span class="material-symbols-outlined text-[16px] text-on-surface-variant group-hover:text-primary transition-colors">content_copy</span>
+<div>
+<span class="text-on-surface-variant block mb-1 uppercase tracking-widest text-[10px]">Cryptographic Signature</span>
+<div class="flex items-center justify-between bg-surface-variant px-3 py-2 rounded border border-outline-variant group">
+<span class="text-on-surface truncate text-primary-300">0x4b7c...1d9...</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant hover:text-white shrink-0 ml-2">
+<span class="material-symbols-outlined text-[14px]">content_copy</span>
+</button>
 </div>
 </div>
-<!-- Grader Bundle Hash -->
-<div class="flex flex-col gap-1 border-b md:border-b-0 border-outline-variant pb-3 md:pb-0">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Grader Bundle Hash</span>
-<span class="font-mono text-on-surface text-xs md:text-sm truncate" title="sha256:88e1465a396489376bd69440ff110085a666e927c32b5003bba2a20fc798a1b2">sha256:88e...a1b2</span>
-</div>
-<!-- Verifier Image Digest -->
-<div class="flex flex-col gap-1 border-b border-outline-variant pb-3 md:pb-0">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Verifier Image Digest</span>
-<span class="font-mono text-on-surface text-xs md:text-sm truncate" title="sha256:cc98765c396489376bd69440ff110085a666e927c32b5003bba2a20fc798d4e5">sha256:cc9...d4e5</span>
-</div>
-<!-- Protected Paths -->
-<div class="flex flex-col gap-2 md:col-span-2 pt-2 border-b border-outline-variant pb-4 md:border-b-0 md:pb-0">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Protected Paths (NO-WRITE)</span>
-<div class="flex flex-wrap gap-2">
-<span class="px-2 py-1 bg-surface rounded text-error border border-error/20 font-mono text-xs">src/auth/**</span>
-<span class="px-2 py-1 bg-surface rounded text-error border border-error/20 font-mono text-xs">config/**</span>
 </div>
 </div>
-<!-- Allowed Source Paths -->
-<div class="flex flex-col gap-2 md:col-span-2 pt-2 border-b border-outline-variant pb-4 md:border-b-0 md:pb-0">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Allowed Source Paths (WRITE-OK)</span>
-<div class="flex flex-wrap gap-2">
-<span class="px-2 py-1 bg-surface rounded text-success border border-success/20 font-mono text-xs">src/internal/**</span>
+<div class="bg-primary-container/20 border-t border-primary/20 px-5 py-3">
+<div class="flex items-start gap-2 text-primary-300 text-xs">
+<span class="material-symbols-outlined text-[16px] shrink-0 mt-0.5">robot_2</span>
+<span>Agent-signed — no human approval in the funding path.</span>
 </div>
 </div>
-<!-- Required Commands -->
-<div class="flex flex-col gap-2 md:col-span-2 pt-2 border-b border-outline-variant pb-4 md:border-b-0 md:pb-0">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Required Commands</span>
-<div class="bg-surface p-2 rounded border border-outline-variant space-y-1">
-<div class="font-mono text-xs text-on-surface">$ npm test</div>
-<div class="font-mono text-xs text-on-surface">$ npm run lint</div>
 </div>
-</div>
-<!-- Financials & Timing -->
-<div class="flex flex-col gap-1 pt-2">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Reward</span>
-<span class="font-mono text-primary font-bold">250.00 USDC</span>
-</div>
-<div class="flex flex-col gap-1 pt-2">
-<span class="text-on-surface-variant text-xs uppercase tracking-wider font-label">Deadline (UTC)</span>
-<span class="font-mono text-on-surface">2023-11-20 12:00:00</span>
-</div>
-</div>
-<!-- Contract Hash Footer -->
-<div class="bg-surface-container-highest px-4 py-2 border-t border-outline-variant flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
-<div class="flex items-center gap-2">
-<span class="text-on-surface-variant text-xs font-label">Contract Hash:</span>
-<span class="font-mono text-xs text-on-surface">0x9e8f7a6b5c4d3e2f1a09b8c7d6e5f4a3b2c1d0e9</span>
-</div>
-<span class="bg-surface text-on-surface-variant border border-outline-variant px-1.5 py-0.5 rounded text-[10px] font-mono tracking-wide uppercase">RFC 8785 Canonical JSON</span>
-</div>
-</div>
-<!-- 3. Conditional Payment Mandate Card -->
-<div class="bg-surface border border-outline-variant rounded-lg p-5 relative overflow-hidden group">
-<div class="absolute right-0 top-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+<!-- Escrow Funding Row -->
+<div class="bg-surface-variant border border-outline-variant rounded-xl p-5 shadow-lg shadow-black/20 flex flex-col gap-4">
 <div class="flex items-start gap-3">
-<span class="material-symbols-outlined text-primary mt-1">gavel</span>
-<div class="space-y-4 w-full">
-<h2 class="font-headline font-bold text-lg text-on-surface border-b border-outline-variant pb-2">Conditional Payment Mandate</h2>
-<p class="font-mono text-sm leading-relaxed text-on-surface-variant border-l-2 border-primary pl-4 py-1">
-                            pay exactly <strong class="text-primary font-normal">250.00 USDC</strong> to provider agent <span class="text-on-surface bg-surface-container px-1 py-0.5 rounded">0xPROV...</span> if and only if contract <span class="text-on-surface bg-surface-container px-1 py-0.5 rounded">0xC0NTRACT...</span> evaluates PASS before the deadline.
-                        </p>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-container p-3 rounded border border-outline-variant mt-4">
-<div>
-<span class="block text-xs text-on-surface-variant mb-1 font-label uppercase">Buyer Agent Wallet</span>
-<span class="font-mono text-sm text-on-surface">0xBUYER...ABCD</span>
+<div class="w-8 h-8 rounded-full bg-success-container/30 flex items-center justify-center shrink-0 border border-success/30">
+<span class="material-symbols-outlined text-success-content text-[18px]">check</span>
 </div>
-<div>
-<span class="block text-xs text-on-surface-variant mb-1 font-label uppercase">Signature</span>
-<span class="font-mono text-sm text-on-surface truncate block" title="0x4b7c2a1d9e8f0a3c5b7d9e2f1a0c4b7c2a1d9e8f0a3c5b7d9e2f1a0c4b7c2a1d">0x4b7c2a1d9...</span>
-</div>
-</div>
-<div class="flex items-center gap-2 mt-4 text-xs">
-<span class="material-symbols-outlined text-[16px] text-success">memory</span>
-<span class="text-success-container font-medium dark:text-on-success-container">Agent-signed — no human approval in the funding path</span>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline font-semibold text-sm text-on-surface">Escrow Funding Tx (Base)</h4>
+<div class="flex items-center gap-2 mt-1 font-mono text-xs text-on-surface-variant group">
+<span class="truncate">0x88f2...3a9c</span>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity hover:text-white shrink-0" title="Copy Hash">
+<span class="material-symbols-outlined text-[12px]">content_copy</span>
+</button>
 </div>
 </div>
 </div>
-</div>
-<!-- 4. On-chain Row -->
-<div class="bg-surface-container rounded-lg border border-outline-variant p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-<div class="flex items-center gap-3 w-full md:w-auto">
-<div class="h-10 w-10 rounded-full bg-[#0052FF]/10 border border-[#0052FF]/20 flex items-center justify-center shrink-0">
-<!-- Abstract base icon placeholder -->
-<div class="w-5 h-5 rounded-full border-2 border-[#0052FF]"></div>
-</div>
-<div>
-<div class="text-sm font-label text-on-surface-variant mb-0.5">Escrow Funding Tx (Base)</div>
-<div class="font-mono text-sm text-on-surface flex items-center gap-2">
-                            0x88f2...3a9c
-                            <span class="material-symbols-outlined text-[14px] text-success" title="Confirmed">check_circle</span>
-</div>
-</div>
-</div>
-<a class="w-full md:w-auto text-center px-4 py-2 bg-surface hover:bg-surface-container-high border border-outline-variant text-on-surface rounded text-sm font-medium transition-colors flex items-center justify-center gap-2" href="#">
-                    View on Explorer
-                    <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+<a class="w-full text-center text-xs font-label text-primary hover:text-primary-300 transition-colors border border-primary/30 hover:border-primary/60 bg-primary/5 rounded py-2 flex items-center justify-center gap-1.5" href="#">
+                            View on Explorer
+                            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
 </a>
 </div>
-<!-- 5. Footer Disclosure -->
-<div class="mt-12 pt-6 border-t border-outline-variant text-center md:text-left">
-<p class="text-[11px] text-on-surface-variant/60 leading-relaxed max-w-3xl">
-                    Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority. Guarantee is limited to verified contract acceptance — not code quality, security, or mergeworthiness.
-                </p>
 </div>
+</div>
+<!-- Disclaimer Footer -->
+<footer class="mt-8 border-t border-outline-variant pt-6 pb-12">
+<div class="flex gap-3 text-on-surface-variant/60 text-xs max-w-4xl">
+<span class="material-symbols-outlined text-[16px] shrink-0">info</span>
+<p class="leading-relaxed font-body">
+                        Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority. Guarantee is limited to verified contract acceptance — not code quality, security, or mergeworthiness.
+                    </p>
+</div>
+</footer>
 </main>
 </div>
 </body></html>
