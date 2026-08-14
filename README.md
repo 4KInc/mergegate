@@ -16,6 +16,11 @@ optimistic timeout, or a discretionary approval.** MergeGate implements the
 deterministic *evaluator* of the ERC-8183 agent-job pattern for GitHub code,
 without putting an LLM in the payment-authority path.
 
+**Live:** [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app)
+· both flows settled on Base mainnet
+· [PASS receipt](https://mergegate-api-1031148889398.us-central1.run.app/receipts/mainnet-receipt-pass)
+· [FAIL receipt](https://mergegate-api-1031148889398.us-central1.run.app/receipts/mainnet-receipt-fail)
+
 ---
 
 ## What MergeGate does and does not claim
@@ -54,18 +59,33 @@ engine, vendored here as the `engine/` submodule and reached through exactly one
 adapter module (`mergegate/engine.py`).
 
 ```
-buyer agent ──signs mandate──> escrow (USDC, Base)
+buyer agent ──signs mandate──> escrow (USDC, Base mainnet)
      │                              │
      │  pins contract + grader      │  releases / refunds
      ▼                              ▼
 task contract ──> sealed sandbox verifier ──> bound receipt
   (immutable)      (Cloud Run Job, gVisor)     (offline-verifiable)
-                            ▲
-provider agent ──diff──────┘
+                            ▲                        │
+provider agent ──diff───────┘                        ▼
+                                              dashboard + API
+                                              (Cloud Run service)
 ```
 
-Hosting is Google Cloud: verifier on Cloud Run Jobs with gVisor sandboxing, API
-and dashboard on Cloud Run, evidence in GCS.
+Two workloads with deliberately opposite network postures:
+
+| | Outbound network | Why |
+| --- | --- | --- |
+| **API / dashboard** (Cloud Run *service*) | allowed | must reach Circle to settle and GitHub to read submissions |
+| **Verifier** (Cloud Run *job*) | no TCP egress | grading must be deterministic and un-influenceable |
+
+Sealing the API too would silently break settlement, which is why the deny-all
+VPC is attached to the job alone.
+
+State lives in Firestore: `mergegate_tasks` (settlement state machines),
+`mergegate_receipts` (issued receipts), `mergegate_contracts` (funded contract
+terms and their funding transaction). Secrets — the receipt signing key, the
+GitHub webhook secret, the Circle CLI session — live in Secret Manager and are
+mounted, never baked into the image or passed as plain environment variables.
 
 ---
 
@@ -192,27 +212,46 @@ Both receipts re-verify offline against the Secret Manager signing key
 `demo/receipts/mainnet/`, alongside the earlier Base Sepolia pair in
 `demo/receipts/`.
 
-## The dashboard
+## The app
 
-Live at **https://mergegate-api-1031148889398.us-central1.run.app**, served by
-the same Cloud Run service that receives webhooks.
+Served by the same Cloud Run service that receives webhooks.
 
-It reads receipts from **Firestore**, not from a bundle baked into the image, so
-a settlement appears without a redeploy. Verified by deleting a receipt from
-Firestore and watching the live page drop from 4 contracts to 3, then restoring
-it — no deploy in between.
+| Page | What it shows |
+| --- | --- |
+| `/` | Settlements, with mainnet and testnet rows distinguished |
+| `/contracts/{hash}` | The pinned terms, the mandate, and the escrow funding transaction |
+| `/evaluations/{id}` | Which stage the run reached, the pinned commands, path-guard result, tamper signals |
+| `/receipts` | Every receipt with its live verification status |
+| `/receipts/{id}` | The verdict, the binding, and the on-chain settlement |
+| `/receipts/{id}.json` | The raw signed receipt, byte-identical to what was signed |
+| `/verifier` | Pinned environment, grading order, the measured egress probe, defeated attacks |
+| `/health`, `/api/status` | Liveness and machine-readable status |
 
-Receipts are **re-verified on every request** against the published public key
-rather than trusted from a stored flag: altering a receipt changes what the page
-says. The service holds only the public half of the signing key, so it can
-verify and cannot sign.
+Four properties are deliberate, and each has a test:
 
-Two things it deliberately will not do. It does not fall back to the shipped
-bundle when Firestore is configured but unreachable — stale receipts presented
-as live state would be a quiet lie, so it shows a failure banner distinguishing
-"could not read the datastore" from "nothing has settled". And it does not
-aggregate mainnet and testnet under one label: the table carries a Network
-column, and the header says totals span every network shown.
+**Nothing rendered is illustrative.** Every figure comes from a receipt that was
+issued. An empty datastore renders zeroes and an empty table rather than seeded
+rows.
+
+**Receipts are re-verified on every request** against the published public key,
+not read from a stored flag. Altering a receipt changes what the page says. The
+service holds only the public half of the key, so it can verify and cannot sign.
+
+**A datastore failure is reported, not disguised.** An unreachable Firestore and
+an empty system look identical on screen unless the failure is surfaced, so the
+page distinguishes "could not read the datastore" from "nothing has settled".
+
+**Evaluation stage states are derived from the manifest.** The FAIL page shows
+the path guard failing and the later stages marked *not run* — a page that
+always showed the same ticks would be describing a run it never read.
+
+One honest gap: the contract page needs terms and a funding transaction, and a
+receipt binds neither. Contracts are persisted at funding time now, but the two
+mainnet contracts predate that. Their terms were reconstructed and then
+*verified* — rebuilding each one reproduces its bound `contract_hash` exactly,
+and the backfill refuses to store anything that fails that check. Where no
+record exists the page says the terms were not recorded rather than inventing
+them.
 
 ## Sandbox network posture — measured, not assumed
 
@@ -272,21 +311,54 @@ cd mergegate
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-ruff check . && mypy mergegate tests && pytest -q
+ruff check . && ruff format --check . && mypy mergegate tests && pytest -q
 ```
 
+Install with `pip install -e ".[dev]"` rather than hand-picking packages. CI
+does exactly that, and a venv holding a different dependency set type-checks
+against different stubs — mypy passed locally while failing in CI for two
+commits because `google-cloud-firestore` was absent here and present there. If
+mypy disagrees with CI, clear `.mypy_cache` before believing either: a stale
+cache reported success after the discrepancy was already fixed.
+
 If you cloned without `--recurse-submodules`, the shared engine will be missing
-and imports will tell you so:
+and imports will say so:
 
 ```bash
 git submodule update --init --recursive
 ```
 
+### Running the demo
+
+`mergegate/demo.py` drives one task from funding to receipt. It moves real USDC.
+
+```bash
+cp .env.example .env          # fill in, or use .env.mainnet for Base mainnet
+python -m mergegate.demo pass --env .env.mainnet
+python -m mergegate.demo fail --env .env.mainnet
+```
+
+Settlement runs through the `circle` CLI, not the REST API — Circle agent
+wallets and Developer-Controlled Wallets are separate products holding separate
+wallets, and the funded Base wallets exist only in the former. The CLI session
+is a bearer credential: anyone holding it can move USDC.
+
+Both flows push to the demo repository and rewrite its `main`, which is why
+`4KInc/mergegate-demo-task` exists and holds nothing precious.
+
 ## Design
 
-Dashboard screens live in `design/screens/` (generated with Google Stitch,
-project `14966020786333238841`, design system "MergeGate Proof"). They are
-design references for the Next.js dashboard, not shipped assets.
+Screens in `design/screens/` were generated with Google Stitch (project
+`14966020786333238841`, design system "MergeGate Proof") and carry the real
+mainnet values. They are design references; the live pages are Jinja templates
+in `mergegate/templates/` that reuse the same theme.
+
+The Stitch HTML is not served directly, for one specific reason: generated
+markup invents values. An audit of the regenerated screens caught a fabricated
+wallet address suffix — a truncation whose tail matched no real address —
+produced despite the prompt supplying the full address. That is tolerable in a
+picture and unacceptable in a page rendering signed financial receipts, so every
+value on a live page comes from a receipt or raises.
 
 ## License
 
