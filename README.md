@@ -87,11 +87,20 @@ of settlement value or a flat per-evaluation fee, and neither is validated.
 **Known game-theory gap.** A buyer sets the acceptance test, so a buyer acting
 in bad faith can pin a test the provider cannot pass, collect the work as a
 public diff, and take a refund. The verifier still gets paid, so MergeGate has
-no incentive to police it. Nothing in v1 prevents this; trusted-buyer scope
-avoids the situation rather than solving it. The shape of a fix is a slashable
-buyer bond or a non-refundable attempt fee that survives a refund, so a buyer
-pays something for every evaluation they trigger. Not built, not designed in
-detail, and stated here rather than left for a reviewer to find.
+no incentive to police it.
+
+It is tempting to answer that the provider can simply read the tests before
+accepting, and that answer is wrong here. The contract publishes `grader_hash`
+and `grader_paths`, never the bundle contents. A provider can therefore verify
+that the tests **cannot change** after submission, which is the property the
+hash exists to give, but cannot verify that they are **passable**. Those are
+different guarantees and only the first is implemented.
+
+The shape of a fix is a slashable buyer bond or a non-refundable attempt fee
+that survives a refund, so a buyer pays something for every evaluation they
+trigger. Publishing the grader bundle alongside its hash would also close it,
+at the cost of revealing the acceptance test up front. Neither is built.
+Trusted-buyer scope avoids the situation rather than solving it.
 
 ## What MergeGate does and does not claim
 
@@ -182,7 +191,7 @@ rows below now do.
 | P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)**: probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial**: quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet**: both run live with real USDC, txs confirmed on-chain (see below) |
-| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: escrow pays the verifier a per-run fee as a distinct mainnet tx, bound into the receipt; it is a plain USDC transfer, **not x402/Gateway** |
+| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: escrow pays the verifier a per-run fee as a distinct mainnet tx, bound into the receipt and settled live. It is a plain USDC transfer; **x402/Gateway integration is deferred**, so anyone expecting the protocol should read this row |
 
 ---
 
