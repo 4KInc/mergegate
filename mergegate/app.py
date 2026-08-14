@@ -41,6 +41,27 @@ def config_from_env() -> dict[str, str]:
     return config
 
 
+def _dashboard_public_key() -> Any:
+    """Public half of the receipt signing key, for verifying on the dashboard.
+
+    Returns None when unavailable rather than failing to boot: the dashboard
+    then says it cannot verify, which is honest, instead of showing a green
+    check it did not earn.
+    """
+    import base64
+
+    raw = os.environ.get("MERGEGATE_RECEIPT_PUBLIC_KEY", "")
+    if not raw:
+        return None
+    try:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        padded = raw + "=" * (-len(raw) % 4)
+        return Ed25519PublicKey.from_public_bytes(base64.urlsafe_b64decode(padded))
+    except Exception:
+        return None
+
+
 def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> Any:
     """Build the FastAPI app.
 
@@ -82,6 +103,18 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
 
     app.include_router(build_router(receiver))
 
+    # The dashboard is mounted last so its "/" does not shadow the API routes
+    # above. Receipts are read from the bundle shipped in the image and
+    # re-verified on each request against the published signing key.
+    from .web import ReceiptBundle, build_web_router
+
+    app.include_router(
+        build_web_router(
+            ReceiptBundle(public_key=_dashboard_public_key()),
+            network=os.environ.get("MERGEGATE_NETWORK", "Base mainnet"),
+        )
+    )
+
     # Deliberately /health, not /healthz. The deployed service showed /healthz
     # returning a generic HTML 404 with no "Server: Google Frontend" header
     # while every other path carried one — something upstream intercepts that
@@ -93,8 +126,8 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.get("/")
-    def root() -> dict[str, Any]:
+    @app.get("/api/status")
+    def status() -> dict[str, Any]:
         """Status, stated in the same terms the receipts use."""
         return {
             "service": "mergegate",

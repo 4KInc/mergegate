@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}MergeGate — Receipt {{ receipt.id }}{% endblock %}
+{% block content %}
+
+<header class="mb-8 flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="font-display text-2xl font-semibold tracking-tight">Bound settlement receipt</h1>
+    <p class="text-sm text-on-surface-variant mt-1 mono">{{ receipt.id }}</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <span class="px-3 py-1 rounded-full text-sm font-semibold
+      {% if receipt.decision == 'PASS' %}bg-success/15 text-success{% else %}bg-danger/15 text-danger{% endif %}">
+      {{ receipt.decision }}
+    </span>
+    <a href="/receipts/{{ receipt.id }}.json"
+       class="px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant/40 text-sm hover:border-primary">
+      Download JSON
+    </a>
+  </div>
+</header>
+
+{# The binding is the point: one object tying which code, judged by which tests,
+   in which environment, under whose mandate, settling which payment. #}
+<section class="bg-surface-container rounded-xl border border-outline-variant/30 p-5 mb-6">
+  <h2 class="font-display font-semibold mb-1">Binding</h2>
+  <p class="text-xs text-on-surface-variant mb-4">
+    A signature over "PASS" proves someone said PASS. These fields are what make
+    it evidence.
+  </p>
+  <div class="relative pl-4 border-l border-outline-variant/50 space-y-2.5">
+    {% for label, value in receipt.binding_rows %}
+    <div class="grid md:grid-cols-[190px_1fr] gap-1 md:gap-3">
+      <div class="text-xs text-on-surface-variant pt-0.5">{{ label }}</div>
+      <div class="mono text-xs hash">{{ value or "—" }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="grid md:grid-cols-2 gap-6 mb-6">
+  <div class="bg-surface-container rounded-xl border border-outline-variant/30 p-5">
+    <h2 class="font-display font-semibold mb-3">Offline verification</h2>
+    {% if verification.valid %}
+    <p class="text-success text-sm font-medium">
+      ✓ Re-verified from the receipt alone — {{ verification.checks }} checks passed
+    </p>
+    <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">
+      Signature valid and every bound field consistent with the embedded
+      manifest and mandate. Recomputed on this request, not cached.
+    </p>
+    {% else %}
+    <p class="text-danger text-sm font-medium">✗ Verification failed</p>
+    <ul class="text-xs text-danger/90 mt-2 space-y-1">
+      {% for f in verification.failures %}<li>{{ f }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    <div class="mt-4 rounded-lg bg-surface px-3 py-2 mono text-xs text-on-surface-variant">
+      mergegate verify {{ receipt.id }}.json
+    </div>
+    <p class="text-xs text-on-surface-variant mt-3">key <span class="mono">{{ receipt.kid }}</span></p>
+  </div>
+
+  <div class="bg-surface-container rounded-xl border border-outline-variant/30 p-5">
+    <h2 class="font-display font-semibold mb-3">Settlement</h2>
+    <div class="space-y-3">
+      <div>
+        <div class="text-xs text-on-surface-variant">
+          {% if receipt.action == 'release' %}Escrow release{% else %}Refund to buyer{% endif %}
+          — {{ receipt.amount }} USDC
+        </div>
+        <a class="mono text-xs text-primary hover:underline hash" target="_blank" rel="noopener"
+           href="{{ receipt.settlement_explorer }}">{{ receipt.settlement_tx }} ↗</a>
+      </div>
+      {% if receipt.fee_tx %}
+      <div>
+        <div class="text-xs text-on-surface-variant">Verifier fee — {{ receipt.fee_amount }} USDC</div>
+        <a class="mono text-xs text-primary hover:underline hash" target="_blank" rel="noopener"
+           href="{{ receipt.fee_explorer }}">{{ receipt.fee_tx }} ↗</a>
+      </div>
+      {% endif %}
+    </div>
+    <p class="text-xs text-on-surface-variant mt-4 leading-relaxed">
+      Settlement executed the buyer's pre-signed mandate. No discretionary
+      approval: the payment decision was made at funding time.
+    </p>
+  </div>
+</section>
+
+<section class="bg-surface-container rounded-xl border border-outline-variant/30 p-5 mb-6">
+  <h2 class="font-display font-semibold mb-3">Why this verdict</h2>
+  <p class="text-sm {% if receipt.decision == 'PASS' %}text-on-surface{% else %}text-danger{% endif %}">
+    {{ receipt.reason }}
+  </p>
+  {% if receipt.failed_terms %}
+  <div class="mt-3 flex flex-wrap gap-1.5">
+    {% for t in receipt.failed_terms %}
+    <span class="px-2 py-0.5 rounded-full bg-danger/15 text-danger text-xs mono">{{ t }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <p class="text-xs text-on-surface-variant mt-4">
+    Pinned commands executed: <span class="mono">{{ receipt.command_count }}</span>
+    {% if receipt.command_count == 0 %}
+      — a contract-term violation is decided before any command runs, so passing
+      tests could not have rescued it.
+    {% endif %}
+  </p>
+</section>
+
+<section class="bg-surface-container rounded-xl border border-outline-variant/30 p-5">
+  <h2 class="font-display font-semibold mb-3">Mandate</h2>
+  <p class="text-sm text-on-surface-variant leading-relaxed">{{ receipt.mandate_statement }}</p>
+</section>
+
+<p class="text-xs text-on-surface-variant mt-6">{{ receipt.scope }}</p>
+
+{% endblock %}

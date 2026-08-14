@@ -23,6 +23,8 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY mergegate ./mergegate
 COPY engine ./engine
+# The dashboard renders from real receipts; they are evidence, so they ship.
+COPY demo ./demo
 RUN pip install --no-cache-dir .
 
 COPY entrypoint.sh /entrypoint.sh

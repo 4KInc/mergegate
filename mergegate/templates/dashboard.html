@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}MergeGate — Contracts{% endblock %}
+{% block content %}
+
+<header class="mb-8">
+  <h1 class="font-display text-2xl font-semibold tracking-tight">Contracts</h1>
+  <p class="text-sm text-on-surface-variant mt-1">
+    Settled from real receipts. Every figure below is derived from a run that
+    happened; nothing here is illustrative. Totals span every network shown —
+    the Network column distinguishes mainnet settlements from testnet
+    rehearsals.
+  </p>
+</header>
+
+<section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+  {% for label, value in stats %}
+  <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/30">
+    <div class="font-display text-2xl font-semibold">{{ value }}</div>
+    <div class="text-xs text-on-surface-variant mt-1">{{ label }}</div>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="bg-surface-container rounded-xl border border-outline-variant/30 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm min-w-[820px]">
+      <thead class="text-xs text-on-surface-variant border-b border-outline-variant/40">
+        <tr>
+          <th class="text-left font-medium px-5 py-3">Task</th>
+          <th class="text-left font-medium px-5 py-3">Repository</th>
+          <th class="text-right font-medium px-5 py-3">Reward</th>
+          <th class="text-left font-medium px-5 py-3">Submission</th>
+          <th class="text-left font-medium px-5 py-3">Network</th>
+          <th class="text-left font-medium px-5 py-3">State</th>
+          <th class="text-left font-medium px-5 py-3">Settlement</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr class="border-b border-outline-variant/20 last:border-0 hover:bg-surface-variant/20">
+          <td class="px-5 py-3">
+            <a class="hover:text-primary" href="/receipts/{{ r.id }}">{{ r.task }}</a>
+          </td>
+          <td class="px-5 py-3 text-on-surface-variant mono text-xs">{{ r.repository }}</td>
+          <td class="px-5 py-3 text-right mono">{{ r.amount }} USDC</td>
+          <td class="px-5 py-3 mono text-xs">{{ r.submission_short }}</td>
+          <td class="px-5 py-3">
+            <span class="text-xs {% if 'SEPOLIA' in r.chain|upper %}text-warning{% else %}text-on-surface-variant{% endif %}">{{ r.chain }}</span>
+          </td>
+          <td class="px-5 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium
+              {% if r.state == 'SETTLED' %}bg-success/15 text-success
+              {% elif r.state == 'REFUNDED' %}bg-warning/15 text-warning
+              {% else %}bg-surface-variant text-on-surface-variant{% endif %}">
+              {{ r.state }}
+            </span>
+          </td>
+          <td class="px-5 py-3">
+            <a class="mono text-xs text-primary hover:underline" target="_blank" rel="noopener"
+               href="{{ r.explorer }}">{{ r.settlement_short }} ↗</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="px-5 py-8 text-center text-on-surface-variant">
+          No settled contracts yet.
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="mt-8 grid md:grid-cols-2 gap-4">
+  <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/30">
+    <h2 class="font-display font-semibold mb-3">Settlement integrity</h2>
+    <ul class="text-sm text-on-surface-variant space-y-1.5">
+      <li>One contract → one eligible submission SHA</li>
+      <li>→ one verification result → one terminal settlement</li>
+    </ul>
+    <p class="text-xs text-on-surface-variant mt-4 leading-relaxed">
+      Enforced in three independent places: webhook delivery de-duplication, the
+      settlement state machine, and the payment rail's idempotency key. They
+      fail independently, which is the point.
+    </p>
+  </div>
+  <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/30">
+    <h2 class="font-display font-semibold mb-3">Sandbox posture</h2>
+    <div class="flex flex-wrap gap-1.5">
+      {% for badge in badges %}
+      <span class="px-2 py-0.5 rounded-full bg-surface-variant text-xs text-on-surface-variant">{{ badge }}</span>
+      {% endfor %}
+    </div>
+    <p class="text-xs text-on-surface-variant mt-4 leading-relaxed">
+      Measured by probing inside a live Cloud Run Job, not assumed. DNS still
+      resolves and is disclosed rather than rounded up to "default-deny".
+    </p>
+  </div>
+</section>
+
+{% endblock %}

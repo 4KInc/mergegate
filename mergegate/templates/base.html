@@ -1,0 +1,68 @@
+{# Shared shell. The Tailwind theme is lifted verbatim from the Stitch designs
+   in design/screens/, so the built UI and the design references stay the same
+   visual system rather than drifting apart. #}
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>{% block title %}MergeGate{% endblock %}</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: { extend: {
+    colors: {
+      surface: '#0f172a', 'on-surface': '#f8fafc', 'on-surface-variant': '#94a3b8',
+      'surface-container': '#1e293b', 'surface-variant': '#334155',
+      primary: '#38bdf8', 'on-primary': '#0f172a',
+      'outline-variant': '#475569', success: '#22c55e', warning: '#f59e0b',
+      danger: '#f87171',
+    },
+    borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
+    fontFamily: {
+      headline: ["Space Grotesk"], display: ["Space Grotesk"],
+      body: ["Inter"], mono: ["JetBrains Mono", "monospace"],
+    },
+  }},
+}
+</script>
+<style>
+  body { font-family: Inter, system-ui, sans-serif; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .hash { word-break: break-all; }
+</style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<div class="flex min-h-screen">
+  <aside class="w-56 shrink-0 border-r border-outline-variant/40 p-5 hidden md:block">
+    <a href="/" class="flex items-center gap-2 mb-8">
+      <span class="text-primary text-2xl leading-none">⊟</span>
+      <span class="font-display font-semibold tracking-tight">MergeGate</span>
+    </a>
+    <nav class="space-y-1 text-sm">
+      {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier")] %}
+      <a href="{{ href }}"
+         class="block px-3 py-2 rounded-lg {% if active == label %}bg-surface-container text-on-surface{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </nav>
+    <div class="mt-8 pt-5 border-t border-outline-variant/40 text-xs text-on-surface-variant space-y-1">
+      <div>network</div>
+      <div class="mono text-on-surface">{{ network }}</div>
+    </div>
+  </aside>
+
+  <main class="flex-1 min-w-0 p-6 md:p-10">
+    {% block content %}{% endblock %}
+
+    <footer class="mt-14 pt-6 border-t border-outline-variant/40 text-xs text-on-surface-variant space-y-1">
+      <p>Verified contract acceptance — not code quality, security, or mergeworthiness.</p>
+      <p>Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

@@ -67,9 +67,9 @@ def test_health() -> None:
     assert _client().get("/health").json() == {"status": "ok"}
 
 
-def test_root_states_scope_and_custody() -> None:
+def test_status_states_scope_and_custody() -> None:
     """The service's own description must carry the same limits the receipts do."""
-    body = _client().get("/").json()
+    body = _client().get("/api/status").json()
     assert "not code quality, security, or mergeworthiness" in body["scope"]
     assert "escrow authority" in body["custody"]
     assert "non-custodial" not in json.dumps(body).lower()
