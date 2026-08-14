@@ -92,8 +92,9 @@ mounted, never baked into the image or passed as plain environment variables.
 ## Implementation status
 
 Nothing below is asserted from intent: a row is only marked done when a test
-or a real run demonstrates it. On-chain rows stayed "not yet" until they had run against real USDC and
-produced a transaction hash we can cite; the mainnet rows below now do.
+or a real run demonstrates it. On-chain rows stayed "not yet" until they had
+run against real USDC and produced a transaction hash we can cite; the mainnet
+rows below now do.
 
 | Gate | What it establishes | Status |
 | --- | --- | --- |
@@ -165,7 +166,7 @@ the settlement key over a fixed namespace, so the mapping stays deterministic:
 a random UUID would satisfy the format and silently destroy the guard, since a
 retry would present a fresh key.
 
-## The two demo flows, run live on Base MAINNET
+## The two demo flows, run live on Base mainnet
 
 Both ran end to end on **Base mainnet** with real USDC, driven by
 `python -m mergegate.demo`. Every hash and transaction below came out of those
