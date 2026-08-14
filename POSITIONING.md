@@ -2,8 +2,8 @@
 
 ## The mechanism, first
 
-A buyer agent signs a conditional payment mandate — *pay exactly X USDC to
-provider Y if and only if contract C evaluates PASS before deadline T* — and
+A buyer agent signs a conditional payment mandate (*pay exactly X USDC to
+provider Y if and only if contract C evaluates PASS before deadline T*) and
 funds escrow against a task contract whose every term is fixed and hashed before
 the provider is allowed to submit. The provider submits a commit. A sealed
 container checks out the buyer's pinned base SHA, applies the provider's diff to
@@ -22,15 +22,15 @@ response.
 
 | Flow | Settlement | Verifier fee |
 | --- | --- | --- |
-| PASS → release, 0.25 USDC to provider | [`0xb8a45ef2…`](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827) block 49945815 | [`0xeb5c1603…`](https://basescan.org/tx/0xeb5c16037349ad081168f3dcea99f912366013b45a754c39cce74b22714c0723) |
-| FAIL → refund, 0.25 USDC to buyer | [`0x4581edf6…`](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e) block 49946711 | [`0x75ca88ed…`](https://basescan.org/tx/0x75ca88edadcf72225b0baddaf7c036449c9952f667b3242cac6df4c3bb928280) |
+| PASS → release, 0.25 USDC to provider | [`0xb8a45ef2…`](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827), block 49945815 | [`0xeb5c1603…`](https://basescan.org/tx/0xeb5c16037349ad081168f3dcea99f912366013b45a754c39cce74b22714c0723) |
+| FAIL → refund, 0.25 USDC to buyer | [`0x4581edf6…`](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e), block 49946711 | [`0x75ca88ed…`](https://basescan.org/tx/0x75ca88edadcf72225b0baddaf7c036449c9952f667b3242cac6df4c3bb928280) |
 
-The FAIL flow is the one that carries the argument. Its code was *correct* — it
-would have passed the buyer's pinned tests — but it also edited a protected
+The FAIL flow is the one that carries the argument. Its code was *correct*: it
+would have passed the buyer's pinned tests, but it also edited a protected
 path, so the pinned commands never ran and escrow returned to the buyer. The
 receipt names the term:
 
-> contract evaluated FAIL — `.github/workflows/deploy.yml` modifies a
+> contract evaluated FAIL: `.github/workflows/deploy.yml` modifies a
 > contract-protected path (pattern: `.github/**`)
 
 That is the difference between a control layer and "CI plus a transfer".
@@ -42,7 +42,7 @@ re-verifies them on every request rather than trusting a stored flag.
 
 ## Where this sits relative to ERC-8183
 
-ERC-8183 defines **who** may evaluate an agent's work — the roles, the
+ERC-8183 defines **who** may evaluate an agent's work: the roles, the
 validator, the shape of an agent job. It is deliberately agnostic about how an
 evaluator reaches its verdict.
 
@@ -57,7 +57,7 @@ standard. It is an evaluator implementation with an opinionated threat model.
 ## Prior art
 
 Disclosed in full, because the interesting question is not "is anything else
-nearby" — things are — but "what is actually load-bearing here".
+nearby" (things are) but "what is actually load-bearing here".
 
 | Prior art | What it does | Relationship |
 | --- | --- | --- |
@@ -90,7 +90,7 @@ the bound receipt**:
    rewriting the graded tests, a `conftest.py` hook that forces every outcome to
    pass, a `sitecustomize.py` that runs before any test is imported, reading the
    reference solution out of `.git`, and functionally-correct code that disables
-   the CI gate on its way past. Mocking the runner would prove nothing — the
+   the CI gate on its way past. Mocking the runner would prove nothing; the
    grade has to actually be computed.
 
    One defense is worth naming because the obvious version of it is
@@ -106,7 +106,7 @@ the bound receipt**:
    decision, settlement tx, and verifier-fee tx into one object. Thirteen of
    those fields are cross-checked against the manifest and mandate the receipt
    carries, so editing any of them fails verification **even for an attacker
-   holding the signing key** — proven by re-signing each tampered variant.
+   holding the signing key**, proven by re-signing each tampered variant.
 
 The threat model comes from documented reality, not imagination: the SWE-bench
 and coding-agent literature records agents passing benchmarks by editing tests,
@@ -124,7 +124,7 @@ differently from how they would have been written in advance.
   AI-generated pull requests found that passing the associated tests is a poor
   proxy for what a maintainer will actually merge. MergeGate does not dispute
   that; it scopes to exactly the claim it can prove. A PASS receipt means "this
-  diff satisfied these pinned tests in this environment", full stop — not that
+  diff satisfied these pinned tests in this environment", full stop, not that
   the code is correct, secure, idiomatic, or mergeable.
 
 - **Custody is real.** MergeGate holds escrow authority. Calling this
@@ -135,7 +135,7 @@ differently from how they would have been written in advance.
   not what v1 does.
 
 - **Trusted-buyer scope.** v1 targets private repos and approved providers. In
-  an open marketplace, a buyer can read a submitted diff and then refuse — work
+  an open marketplace, a buyer can read a submitted diff and then refuse: work
   is visible before payment. MergeGate does not solve that; it operates in a
   scope where it does not arise. Presenting this as a permissionless labor
   market would be overclaiming.
@@ -143,13 +143,13 @@ differently from how they would have been written in advance.
 - **The sandbox blocks outbound TCP; DNS still resolves.** This is measured, not
   assumed, and the measurement corrected an earlier false claim. A probe run
   inside a real Cloud Run Job showed that the default configuration reaches the
-  open internet — Cloud Run grants egress by default — while the code was
+  open internet (Cloud Run grants egress by default) while the code was
   asserting `default-deny`. Since that field is written into a *signed receipt*,
   it would have signed a false statement. A custom VPC with no Cloud NAT and an
   explicit deny-all egress rule now blocks all outbound TCP, but DNS resolution
   survives because Cloud Run resolves outside the VPC. So a graded run cannot
   fetch anything, and **DNS remains a residual outbound signalling channel**.
-  The claim is `deny-tcp-egress; dns-resolution-available` — no more. Network-
+  The claim is `deny-tcp-egress; dns-resolution-available`, no more. Network-
   dependent tests remain out of scope regardless, because they are not
   deterministic and a release condition has to be reproducible.
 
@@ -161,7 +161,7 @@ differently from how they would have been written in advance.
   the verdict; confirming the money moved requires looking at Base.
 
 - **There is no LLM anywhere in the system.** Not merely absent from the
-  payment-authority path — absent entirely. No model is called at any point in
+  payment-authority path, absent entirely. No model is called at any point in
   contract creation, evaluation, settlement, or receipt issuance. An earlier
   draft of this document said Gemini "may normalize task prose into a proposed
   contract"; that capability was never built, and describing it here would have
