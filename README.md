@@ -11,7 +11,7 @@ Every decision emits one receipt that cryptographically binds contract + grader
 + artifact + verifier environment + decision + settlement transaction into a
 single independently-verifiable object.
 
-**The release condition is a reproducible test contract — not an LLM opinion, an
+**The release condition is a reproducible test contract, not an LLM opinion, an
 optimistic timeout, or a discretionary approval.** MergeGate implements the
 deterministic *evaluator* of the ERC-8183 agent-job pattern for GitHub code,
 without putting an LLM in the payment-authority path.
@@ -25,7 +25,7 @@ without putting an LLM in the payment-authority path.
 
 ## What MergeGate does and does not claim
 
-> **Scope of the guarantee: verified contract acceptance — not code quality,
+> **Scope of the guarantee: verified contract acceptance, not code quality,
 > security, or mergeworthiness.**
 
 MergeGate proves that a submission passed the buyer's pinned tests, unmodified,
@@ -41,7 +41,7 @@ described as non-custodial, and will not be unless and until a contract is
 deployed where neither MergeGate nor either party has unilateral release
 authority outside the signed conditions.
 
-**Scope:** v1 is **trusted-buyer** escrow — private repos, approved providers.
+**Scope:** v1 is **trusted-buyer** escrow: private repos, approved providers.
 It is not an open or permissionless labor marketplace, and the "work is visible
 before payment" defection risk is deferred by scope rather than solved.
 
@@ -83,48 +83,48 @@ VPC is attached to the job alone.
 
 State lives in Firestore: `mergegate_tasks` (settlement state machines),
 `mergegate_receipts` (issued receipts), `mergegate_contracts` (funded contract
-terms and their funding transaction). Secrets — the receipt signing key, the
-GitHub webhook secret, the Circle CLI session — live in Secret Manager and are
+terms and their funding transaction). Secrets (the receipt signing key, the
+GitHub webhook secret, the Circle CLI session) live in Secret Manager and are
 mounted, never baked into the image or passed as plain environment variables.
 
 ---
 
 ## Implementation status
 
-Nothing below is asserted from intent — a row is only marked done when a test
+Nothing below is asserted from intent: a row is only marked done when a test
 or a real run demonstrates it. On-chain rows stayed "not yet" until they had run against real USDC and
 produced a transaction hash we can cite; the mainnet rows below now do.
 
 | Gate | What it establishes | Status |
 | --- | --- | --- |
-| P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Done on mainnet** — the buyer agent funds escrow and seals the contract with no human step ([funding tx](https://basescan.org/tx/0xaf13670e060dfa86cd1fddd5da3171525e7934c1e76317769035a5485fa4c27d)) |
-| P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done** — `mergegate/contract.py`, tested |
-| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)** — `mergegate/verifier/`, attacks tested end to end; verifier image built and pinned by real digest |
-| P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done** — a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
-| P0.5 idempotent settlement | One contract → one settlement action | **Done** — `mergegate/settlement.py`; replayed and out-of-order event sequences settle exactly once |
-| P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Done** — `mergegate/mandate.py`; the executor receives a decision, it does not make one |
-| P0.7 bound receipt | One object binds the whole chain, offline-verifiable | **Done** — `mergegate/receipt.py`; 13 bound fields survive an attacker holding the signing key |
-| P1.1 conftest / persisted-file gaming | Provider test hooks cannot survive grader injection | **Done** — hostile `conftest.py` and `sitecustomize.py` quarantined, asserted against a real pytest run |
-| P1.2 `.git` history leakage | No reading reference solutions from git history | **Done** — `git archive` never creates `.git`; a run that tries to read the gold patch fails |
-| P1.3 protected / graded path enforcement | Path violations reject regardless of test results | **Done** — `mergegate/paths.py`, tested |
-| P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)** — probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
-| P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial** — quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
-| P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet** — both run live with real USDC, txs confirmed on-chain (see below) |
-| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial** — escrow pays the verifier a per-run fee as a distinct mainnet tx, bound into the receipt; it is a plain USDC transfer, **not x402/Gateway** |
+| P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Done on mainnet**: the buyer agent funds escrow and seals the contract with no human step ([funding tx](https://basescan.org/tx/0xaf13670e060dfa86cd1fddd5da3171525e7934c1e76317769035a5485fa4c27d)) |
+| P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done**: `mergegate/contract.py`, tested |
+| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)**: `mergegate/verifier/`, attacks tested end to end; verifier image built and pinned by real digest |
+| P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done**: a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
+| P0.5 idempotent settlement | One contract → one settlement action | **Done**: `mergegate/settlement.py`; replayed and out-of-order event sequences settle exactly once |
+| P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Done**: `mergegate/mandate.py`; the executor receives a decision, it does not make one |
+| P0.7 bound receipt | One object binds the whole chain, offline-verifiable | **Done**: `mergegate/receipt.py`; 13 bound fields survive an attacker holding the signing key |
+| P1.1 conftest / persisted-file gaming | Provider test hooks cannot survive grader injection | **Done**: hostile `conftest.py` and `sitecustomize.py` quarantined, asserted against a real pytest run |
+| P1.2 `.git` history leakage | No reading reference solutions from git history | **Done**: `git archive` never creates `.git`; a run that tries to read the gold patch fails |
+| P1.3 protected / graded path enforcement | Path violations reject regardless of test results | **Done**: `mergegate/paths.py`, tested |
+| P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)**: probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
+| P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial**: quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
+| P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet**: both run live with real USDC, txs confirmed on-chain (see below) |
+| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: escrow pays the verifier a per-run fee as a distinct mainnet tx, bound into the receipt; it is a plain USDC transfer, **not x402/Gateway** |
 
 ---
 
 ## How neutrality is demonstrated
 
-The claim is not "it runs in a sandbox" — it is that the provider cannot
+The claim is not "it runs in a sandbox"; it is that the provider cannot
 influence the grader. Assembly is ordered so the buyer's contribution always
 overwrites the provider's:
 
-1. Materialize the pinned base tree (`git archive` — no `.git` is ever created).
+1. Materialize the pinned base tree (`git archive`, so no `.git` is ever created).
 2. Guard every touched path. A protected- or grader-path violation is a hard
    reject and **the pinned commands never run**.
 3. Apply the provider's changes to allowed source paths only.
-4. Quarantine test hooks the provider introduced or modified *anywhere* —
+4. Quarantine test hooks the provider introduced or modified *anywhere*:
    `src/conftest.py` sits inside an allowed path and pytest would still execute
    it. Allowed to write is not allowed to grade.
 5. Purge the grader paths, then inject the buyer's bundle, so the graded bytes
@@ -135,7 +135,7 @@ Steps 2 and 5 are deliberately redundant: a defense that depends on one check
 being correct fails when that check is wrong.
 
 `tests/test_verifier_neutrality.py` runs the documented attacks against a real
-repository with a real `pytest` process and asserts each one fails — rewriting
+repository with a real `pytest` process and asserts each one fails: rewriting
 the graded tests, a `conftest.py` hook that forces every outcome to pass, a
 `sitecustomize.py` that runs before any test is imported, reading the reference
 solution out of `.git`, and functionally-correct code that disables the CI gate
@@ -147,7 +147,7 @@ manifest rather than silently fixed up, so they can surface in the receipt.
 
 ## Settlement
 
-MergeGate settles through Circle **agent wallets**, driven by the `circle` CLI —
+MergeGate settles through Circle **agent wallets**, driven by the `circle` CLI,
 not the REST Developer-Controlled Wallets API. They are separate products
 holding separate wallets, and the funded Base wallets exist only in the former.
 
@@ -155,13 +155,13 @@ Double-payment has two independent guards. The state machine refuses a second
 settlement (P0.5), and the settlement key is passed to Circle as the transfer's
 idempotency key, so a repeated key returns the original transaction instead of
 sending a new one. Both are verified: the first by replayed and out-of-order
-event tests, the second against real Circle infrastructure on Base Sepolia —
+event tests, the second against real Circle infrastructure on Base Sepolia:
 sending twice with one key moved 0.25 USDC exactly once and returned the same
 transaction hash both times.
 
 Circle requires idempotency keys to be **UUIDs** and rejects a bare
 `sha256:<hex>` with `400 Invalid request body`. The rail derives a UUIDv5 from
-the settlement key over a fixed namespace, so the mapping stays deterministic —
+the settlement key over a fixed namespace, so the mapping stays deterministic:
 a random UUID would satisfy the format and silently destroy the guard, since a
 retry would present a fresh key.
 
@@ -180,11 +180,11 @@ Base RPC, not just through Circle's response.
 | grader | `sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6` |
 | submission | `e83964b7b61edcd1eae5c425c0eacd6e0dd210ff` |
 | escrow funded | [`0xaf13670e…`](https://basescan.org/tx/0xaf13670e060dfa86cd1fddd5da3171525e7934c1e76317769035a5485fa4c27d) |
-| release, 0.25 USDC | [`0xb8a45ef2…`](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827) — block 49945815 |
-| verifier fee, 0.05 USDC | [`0xeb5c1603…`](https://basescan.org/tx/0xeb5c16037349ad081168f3dcea99f912366013b45a754c39cce74b22714c0723) — block 49945839 |
+| release, 0.25 USDC | [`0xb8a45ef2…`](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827), block 49945815 |
+| verifier fee, 0.05 USDC | [`0xeb5c1603…`](https://basescan.org/tx/0xeb5c16037349ad081168f3dcea99f912366013b45a754c39cce74b22714c0723), block 49945839 |
 
 **FAIL → refund.** This is the one that matters. The submission's code is
-*correct* — it would have passed the buyer's tests — but it also edited
+*correct*: it would have passed the buyer's tests, but it also edited
 `.github/workflows/deploy.yml`. The pinned commands never ran (`commands: 0`),
 and escrow returned to the buyer.
 
@@ -193,13 +193,13 @@ and escrow returned to the buyer.
 | contract | `sha256:7090242fb45b88a3eb1e0f65c2245cff1fc1ce6c5e3b85c03e2af98a2683d346` |
 | submission | `272356dbfc2b165f64e8c55734364d8488a730aa` |
 | escrow funded | [`0x7ae6ca91…`](https://basescan.org/tx/0x7ae6ca918d4466539ee7313015073742033c576ffad49490bcd625b47dfe20ad) |
-| refund, 0.25 USDC | [`0x4581edf6…`](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e) — block 49946711 |
-| verifier fee, 0.05 USDC | [`0x75ca88ed…`](https://basescan.org/tx/0x75ca88edadcf72225b0baddaf7c036449c9952f667b3242cac6df4c3bb928280) — block 49946736 |
+| refund, 0.25 USDC | [`0x4581edf6…`](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e), block 49946711 |
+| verifier fee, 0.05 USDC | [`0x75ca88ed…`](https://basescan.org/tx/0x75ca88edadcf72225b0baddaf7c036449c9952f667b3242cac6df4c3bb928280), block 49946736 |
 
 The refund receipt names the failed term rather than reporting a generic
 failure:
 
-> contract evaluated FAIL — `.github/workflows/deploy.yml` modifies a
+> contract evaluated FAIL: `.github/workflows/deploy.yml` modifies a
 > contract-protected path (pattern: `.github/**`)
 
 Mainnet balances moved exactly as the mandates specified: buyer 2.64 → 2.29
@@ -208,7 +208,7 @@ Mainnet balances moved exactly as the mandates specified: buyer 2.64 → 2.29
 was empty beforehand, so its balance came only from these runs.
 
 Both receipts re-verify offline against the Secret Manager signing key
-(`mergegate-e5683130`) — 18 and 17 checks. They are committed under
+(`mergegate-e5683130`): 18 and 17 checks. They are committed under
 `demo/receipts/mainnet/`, alongside the earlier Base Sepolia pair in
 `demo/receipts/`.
 
@@ -242,25 +242,25 @@ an empty system look identical on screen unless the failure is surfaced, so the
 page distinguishes "could not read the datastore" from "nothing has settled".
 
 **Evaluation stage states are derived from the manifest.** The FAIL page shows
-the path guard failing and the later stages marked *not run* — a page that
+the path guard failing and the later stages marked *not run*. A page that
 always showed the same ticks would be describing a run it never read.
 
 One honest gap: the contract page needs terms and a funding transaction, and a
 receipt binds neither. Contracts are persisted at funding time now, but the two
 mainnet contracts predate that. Their terms were reconstructed and then
-*verified* — rebuilding each one reproduces its bound `contract_hash` exactly,
+*verified*: rebuilding each one reproduces its bound `contract_hash` exactly,
 and the backfill refuses to store anything that fails that check. Where no
 record exists the page says the terms were not recorded rather than inventing
 them.
 
-## Sandbox network posture — measured, not assumed
+## Sandbox network posture: measured, not assumed
 
 The receipt records the sandbox's egress policy, so that field has to be true.
 
 An earlier version of this code asserted `default-deny`. Probing inside a real
 Cloud Run Job showed the opposite: **Cloud Run grants internet egress by
 default**, and the job reached Cloudflare on :443 and resolved DNS. MergeGate
-would have signed a receipt containing a false statement — worse than having no
+would have signed a receipt containing a false statement, worse than having no
 guarantee at all.
 
 The fix is a custom VPC (`mergegate-sealed`) with no Cloud NAT plus an explicit
@@ -273,7 +273,7 @@ deny-all egress firewall rule, attached to the verifier job with
 | TCP to three public addresses | **reachable** | blocked |
 | DNS resolution | works | **still works** |
 
-So the claim is `deny-tcp-egress; dns-resolution-available` — a graded run
+So the claim is `deny-tcp-egress; dns-resolution-available`. A graded run
 cannot fetch anything, but DNS remains a residual signalling channel. That is
 disclosed in the constant, in the receipt, and here, rather than rounded up to
 "default-deny".
@@ -284,7 +284,7 @@ break settlement.
 
 ## What the receipt proves
 
-A signature over "PASS" proves someone said PASS. The value is the **binding** —
+A signature over "PASS" proves someone said PASS. The value is the **binding**:
 one object tying together which code, judged by which tests, in which
 environment, under whose mandate, settling which payment.
 
@@ -294,8 +294,8 @@ holding the signing key**. `tests/test_receipt.py` proves this by re-signing eac
 tampered variant; without that test, the tampering cases would only be
 demonstrating that Ed25519 works.
 
-Five fields — `settlement_tx`, `verifier_fee_tx`, `reason`, `settlement_asset`,
-`settlement_chain` — have nothing inside the receipt to check them against and
+Five fields (`settlement_tx`, `verifier_fee_tx`, `reason`, `settlement_asset`,
+`settlement_chain`) have nothing inside the receipt to check them against and
 rest on the signature alone. Confirming those means comparing the receipt to the
 chain, which no offline verifier can do. A receipt proves the decision was the
 deterministic result of the mandate and the verdict; confirming the money moved
@@ -316,7 +316,7 @@ ruff check . && ruff format --check . && mypy mergegate tests && pytest -q
 
 Install with `pip install -e ".[dev]"` rather than hand-picking packages. CI
 does exactly that, and a venv holding a different dependency set type-checks
-against different stubs — mypy passed locally while failing in CI for two
+against different stubs. mypy passed locally while failing in CI for two
 commits because `google-cloud-firestore` was absent here and present there. If
 mypy disagrees with CI, clear `.mypy_cache` before believing either: a stale
 cache reported success after the discrepancy was already fixed.
@@ -338,7 +338,7 @@ python -m mergegate.demo pass --env .env.mainnet
 python -m mergegate.demo fail --env .env.mainnet
 ```
 
-Settlement runs through the `circle` CLI, not the REST API — Circle agent
+Settlement runs through the `circle` CLI, not the REST API. Circle agent
 wallets and Developer-Controlled Wallets are separate products holding separate
 wallets, and the funded Base wallets exist only in the former. The CLI session
 is a bearer credential: anyone holding it can move USDC.
@@ -355,7 +355,7 @@ in `mergegate/templates/` that reuse the same theme.
 
 The Stitch HTML is not served directly, for one specific reason: generated
 markup invents values. An audit of the regenerated screens caught a fabricated
-wallet address suffix — a truncation whose tail matched no real address —
+wallet address suffix, a truncation whose tail matched no real address,
 produced despite the prompt supplying the full address. That is tolerable in a
 picture and unacceptable in a page rendering signed financial receipts, so every
 value on a live page comes from a receipt or raises.
