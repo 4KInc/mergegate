@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}MergeGate — Receipt {{ receipt.id }}{% endblock %}
+{% block title %}MergeGate: Receipt {{ receipt.id }}{% endblock %}
 {% block content %}
 
 <a href="/" class="text-xs text-on-faint hover:text-accent transition-colors">← Contracts</a>
@@ -38,7 +38,7 @@
   {% endif %}
   <div class="rule my-4"></div>
   <p class="text-xs text-on-faint">
-    Pinned commands executed: <span class="mono text-on-muted">{{ receipt.command_count }}</span>{% if receipt.command_count == 0 %} — a contract-term violation is decided before any command runs, so passing tests could not have rescued it.{% endif %}
+    Pinned commands executed: <span class="mono text-on-muted">{{ receipt.command_count }}</span>{% if receipt.command_count == 0 %}. A contract-term violation is decided before any command runs, so passing tests could not have rescued it.{% endif %}
   </p>
 </section>
 
@@ -51,7 +51,7 @@
       <span class="text-sm text-on-muted">checks passed</span>
     </div>
     <p class="text-xs text-on-faint mt-3 leading-relaxed">
-      Re-verified from the receipt alone on this request — signature valid and
+      Re-verified from the receipt alone on this request. Signature valid, and
       every bound field consistent with the embedded manifest and mandate. Not
       a cached result.
     </p>
@@ -96,7 +96,7 @@
     <div class="rule my-4"></div>
     <p class="text-xs text-on-faint leading-relaxed">
       Settlement executed the buyer's pre-signed mandate. No discretionary
-      approval — the payment decision was made at funding time.
+      approval. The payment decision was made at funding time.
     </p>
   </div>
 </section>
@@ -110,7 +110,7 @@
   </div>
   <p class="text-xs text-on-faint mb-5 max-w-2xl">
     A signature over "PASS" proves someone said PASS. These fields are what make
-    it evidence — which code, judged by which tests, in which environment, under
+    it evidence: which code, judged by which tests, in which environment, under
     whose mandate, settling which payment.
   </p>
   <div class="relative pl-5">
@@ -119,7 +119,7 @@
       {% for label, value in receipt.binding_rows %}
       <div class="grid md:grid-cols-[210px_1fr] gap-1 md:gap-4 items-baseline">
         <div class="mono text-[11px] text-on-faint">{{ label }}</div>
-        <div class="mono text-xs hash {% if value %}text-on-muted{% else %}text-on-faint{% endif %}">{{ value or "—" }}</div>
+        <div class="mono text-xs hash {% if value %}text-on-muted{% else %}text-on-faint{% endif %}">{{ value or "not set" }}</div>
       </div>
       {% endfor %}
     </div>

@@ -373,3 +373,42 @@ def test_verifier_page_lists_the_attacks(
     html = _client(bundle_dir, key).get("/verifier").text
     for marker in ("conftest.py", "sitecustomize.py", ".git history", "Force-pushing"):
         assert marker in html
+
+
+def test_receipts_page_is_not_the_contracts_page(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    """It used to re-render the contracts table, so the nav item looked broken."""
+    client = _client(bundle_dir, key)
+    receipts = client.get("/receipts").text
+    contracts = client.get("/").text
+    assert "MergeGate: Receipts" in receipts
+    assert "Correct code still gets refunded" not in receipts
+    assert receipts != contracts
+
+
+def test_receipts_page_links_to_every_receipt(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    html = _client(bundle_dir, key).get("/receipts").text
+    assert 'href="/receipts/receipt-pass"' in html
+    assert 'href="/receipts/mainnet-receipt-fail"' in html
+    assert "checks passed" in html
+
+
+def test_dashboard_rows_are_clickable(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    """A small link in the last column could be scrolled out of view, which
+    made the receipts look unreachable. The whole row links now."""
+    html = _client(bundle_dir, key).get("/").text
+    assert 'class="absolute inset-0"' in html
+    assert 'aria-label="Open receipt' in html
+
+
+def test_no_em_dashes_anywhere_in_the_ui(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    """Requested explicitly. Covers rendered data as well as template prose,
+    since receipt reasons carry their own punctuation."""
+    client = _client(bundle_dir, key)
+    for path in (
+        "/",
+        "/receipts",
+        "/verifier",
+        "/receipts/receipt-pass",
+        "/receipts/mainnet-receipt-fail",
+    ):
+        assert "—" not in client.get(path).text, f"em-dash rendered on {path}"

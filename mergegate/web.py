@@ -14,7 +14,7 @@ rather than decoration:
   renders zeroes and an empty table. Nothing is seeded to make the dashboard
   look busier than the system has been.
 
-The design language — the Tailwind theme, fonts, and layout — comes from the
+The design language: the Tailwind theme, fonts, and layout: comes from the
 Stitch screens in ``design/screens/``. Those remain the design reference; these
 templates are the live implementation of them.
 """
@@ -35,16 +35,30 @@ from fastapi.templating import Jinja2Templates
 from .receipt import verify_receipt
 from .verifier.sandbox import EGRESS_DENY_TCP, EGRESS_PROBE, SandboxSpec
 
-__all__ = ["ReceiptBundle", "build_web_router", "short"]
+__all__ = ["ReceiptBundle", "build_web_router", "short", "display"]
 
 RECEIPTS_DIR = Path(__file__).resolve().parent.parent / "demo" / "receipts"
+
+
+def display(text: str) -> str:
+    """Text as it should appear on screen.
+
+    Receipts already issued carry em-dashes inside their signed bodies, and
+    editing those bytes would invalidate the signature. So the substitution
+    happens at render time; the receipt itself is never touched, and the JSON
+    download still returns exactly what was signed.
+    """
+    # Written as escapes, not literal em-dashes: a text sweep over this file
+    # already clobbered these two literals once and turned the function into a
+    # no-op that also mangled colons.
+    return text.replace(" \u2014 ", ": ").replace("\u2014", "-")
 
 
 def short(value: str, head: int = 10, tail: int = 6) -> str:
     """Truncate a hash for display, keeping both ends.
 
     Both ends, because a prefix alone cannot be checked against a block
-    explorer — and a truncation whose tail is invented is worse than no
+    explorer: and a truncation whose tail is invented is worse than no
     truncation at all.
     """
     if not value or len(value) <= head + tail + 1:
@@ -118,7 +132,7 @@ class ReceiptView:
 
     @property
     def reason(self) -> str:
-        return str(self.binding.get("reason", ""))
+        return display(str(self.binding.get("reason", "")))
 
     @property
     def failed_terms(self) -> list[str]:
@@ -130,11 +144,11 @@ class ReceiptView:
 
     @property
     def mandate_statement(self) -> str:
-        return str(self.body.get("mandate_statement", ""))
+        return display(str(self.body.get("mandate_statement", "")))
 
     @property
     def scope(self) -> str:
-        return str(self.body.get("scope", ""))
+        return display(str(self.body.get("scope", "")))
 
     @property
     def task(self) -> str:
@@ -206,7 +220,7 @@ class ReceiptBundle:
     The source is pluggable so the dashboard can read live from Firestore in
     deployment and from a directory in tests, without the rendering layer
     knowing which. A source that raises is surfaced through
-    :attr:`source_error` rather than swallowed — a dashboard that silently
+    :attr:`source_error` rather than swallowed: a dashboard that silently
     shows nothing when its datastore is unreachable looks identical to one
     reporting an empty system, and those mean very different things.
     """
@@ -249,7 +263,7 @@ class ReceiptBundle:
                 "valid": False,
                 "checks": 0,
                 "failures": [
-                    "no public key configured — the receipt cannot be verified here. "
+                    "no public key configured: the receipt cannot be verified here. "
                     "Download the JSON and verify it against the published key."
                 ],
             }
@@ -293,7 +307,7 @@ GRADING_PIPELINE = [
     (
         3,
         "Apply the provider diff",
-        "Allowed source paths only, as explicit file changes — never a shell "
+        "Allowed source paths only, as explicit file changes, never a shell "
         "patch of attacker-controlled input.",
     ),
     (
@@ -343,7 +357,7 @@ ANTI_GAMING = [
     (
         "P1.3",
         "Correct code that also disables the deploy gate",
-        "Rejected before any command runs — passing tests cannot rescue a path violation.",
+        "Rejected before any command runs; passing tests cannot rescue a path violation.",
     ),
     (
         "P0.4",
@@ -388,9 +402,9 @@ def verifier_environment() -> list[tuple[str, str]]:
             ("timeout", f"{spec.timeout_seconds}s"),
             ("egress", spec.egress),
             ("network", f"{spec.network} / {spec.subnet}"),
-            ("service account", spec.service_account or "none — no cloud identity in the sandbox"),
+            ("service account", spec.service_account or "none, no cloud identity in the sandbox"),
             ("writable paths", ", ".join(spec.writable_paths)),
-            ("retries", "0 — a retried evaluation is a second evaluation"),
+            ("retries", "0, a retried evaluation is a second evaluation"),
         ]
     else:
         rows = [("verifier image", "not configured in this environment")]
@@ -416,12 +430,12 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
         rows = [
             {
                 "id": v.id,
-                "task": v.task or "—",
+                "task": v.task or ": ",
                 "amount": f"{v.amount} USDC",
                 "recipient_short": short(v.recipient, 8, 4),
                 "submission_short": short(v.submission_sha, 8, 4),
                 "state": "SETTLED" if v.action == "release" else "REFUNDED",
-                "chain": v.chain or "—",
+                "chain": v.chain or ": ",
                 "settlement_short": short(v.settlement_tx, 10, 4),
                 "explorer": v.settlement_explorer,
             }
@@ -445,7 +459,33 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
 
     @router.get("/receipts", response_class=HTMLResponse)
     def receipts(request: Request) -> Any:
-        return dashboard(request)
+        """A real page. It previously re-rendered the contracts table, so the
+        nav item appeared to do nothing when clicked."""
+        views = bundle.all()
+        cards = []
+        for v in views:
+            result = bundle.verify(v)
+            cards.append(
+                {
+                    "id": v.id,
+                    "decision": v.decision,
+                    "action": v.action,
+                    "amount": v.amount,
+                    "chain": v.chain or "unknown",
+                    "valid": result["valid"],
+                    "checks": result["checks"],
+                }
+            )
+        return templates.TemplateResponse(
+            request,
+            "receipts.html",
+            {
+                "receipts": cards,
+                "network": ", ".join(bundle.networks()) or network,
+                "source_error": bundle.source_error,
+                "active": "Receipts",
+            },
+        )
 
     @router.get("/receipts/{receipt_id}.json")
     def receipt_json(receipt_id: str) -> Any:

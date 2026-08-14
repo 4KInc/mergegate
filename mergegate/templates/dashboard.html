@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}MergeGate — Contracts{% endblock %}
+{% block title %}MergeGate: Contracts{% endblock %}
 {% block content %}
 
 {# The headline fact is the FAIL flow, not the totals. Leading with a stat grid
@@ -15,7 +15,7 @@
   </h1>
   <p class="text-sm text-on-muted mt-4 max-w-2xl leading-relaxed">
     Every row below is a real settlement with a transaction you can open. The
-    refunded one passed the buyer's tests on its merits — it was rejected
+    refunded one passed the buyer's tests on its merits. It was rejected
     before those tests ever ran, because it also edited the deploy gate.
   </p>
 </header>
@@ -65,8 +65,12 @@
       </thead>
       <tbody>
       {% for r in rows %}
-        <tr class="border-b border-line/60 last:border-0 hover:bg-surface-high/40 transition-colors">
+        {# The whole row links to the receipt. A small link in the last column
+           was easy to miss and could be scrolled out of view on a narrow
+           viewport, which made the receipts look unreachable. #}
+        <tr class="relative border-b border-line/60 last:border-0 hover:bg-surface-high/40 transition-colors group">
           <td class="px-5 py-3.5">
+            <a href="/receipts/{{ r.id }}" class="absolute inset-0" aria-label="Open receipt {{ r.id }}"></a>
             <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium
               {% if r.state == 'SETTLED' %}bg-accent-container text-accent{% else %}bg-warn-container text-warn{% endif %}">
               <span class="w-1.5 h-1.5 rounded-full {% if r.state == 'SETTLED' %}bg-accent{% else %}bg-warn{% endif %}"></span>
@@ -82,12 +86,12 @@
             </span>
           </td>
           <td class="px-5 py-3.5">
-            <a class="mono text-xs text-on-muted hover:text-accent transition-colors" target="_blank" rel="noopener"
+            <a class="relative z-10 mono text-xs text-on-muted hover:text-accent transition-colors"
+               target="_blank" rel="noopener"
                href="{{ r.explorer }}">{{ r.settlement_short }} ↗</a>
           </td>
           <td class="px-5 py-3.5 text-right">
-            <a href="/receipts/{{ r.id }}"
-               class="text-xs text-on-faint hover:text-accent transition-colors whitespace-nowrap">Receipt →</a>
+            <span class="text-xs text-on-faint group-hover:text-accent transition-colors whitespace-nowrap">Receipt →</span>
           </td>
         </tr>
       {% else %}
@@ -114,7 +118,7 @@
     </p>
     <div class="rule my-4"></div>
     <p class="text-xs text-on-faint leading-relaxed">
-      Enforced in three independent places — webhook de-duplication, the
+      Enforced in three independent places: webhook de-duplication, the
       settlement state machine, and the payment rail's idempotency key. They
       fail independently, which is the point.
     </p>

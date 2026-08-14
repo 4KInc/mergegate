@@ -182,10 +182,10 @@ def execute_mandate(
         failed_terms = tuple(getattr(manifest, "failed_terms", ()) or ())
         rejection = str(getattr(manifest, "rejection_reason", "") or "")
         if rejection:
-            return refund(f"contract evaluated FAIL — {rejection}")
+            return refund(f"contract evaluated FAIL: {rejection}")
         if failed_terms:
-            return refund(f"contract evaluated FAIL — failed terms: {', '.join(failed_terms)}")
-        return refund("contract evaluated FAIL — pinned commands did not all succeed")
+            return refund(f"contract evaluated FAIL, failed terms: {', '.join(failed_terms)}")
+        return refund("contract evaluated FAIL: pinned commands did not all succeed")
 
     return SettlementDirective(
         action=SettlementAction.RELEASE,

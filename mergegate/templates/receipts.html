@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}MergeGate: Receipts{% endblock %}
+{% block content %}
+
+{# A real page, not the contracts table again. Contracts answers "what settled";
+   this answers "does the evidence hold up", which is a different question and
+   the reason the nav item exists. #}
+<header class="mb-9">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="text-[10px] uppercase tracking-widest text-accent">Independently verifiable</span>
+    <span class="h-px flex-1 bg-line"></span>
+  </div>
+  <h1 class="font-display text-3xl md:text-[34px] leading-tight font-semibold tracking-tight">Receipts</h1>
+  <p class="text-sm text-on-muted mt-3 max-w-2xl leading-relaxed">
+    Each receipt is re-verified against the published signing key on this
+    request, not read from a stored flag. Download the JSON and you can check
+    the same chain yourself, offline, with no access to MergeGate.
+  </p>
+</header>
+
+{% if source_error %}
+<div class="mb-8 rounded-xl border border-danger/40 bg-danger-container p-4">
+  <p class="text-danger text-sm font-medium">Receipt store unreachable</p>
+  <p class="text-xs text-on-muted mt-1 mono">{{ source_error }}</p>
+</div>
+{% endif %}
+
+<div class="grid md:grid-cols-2 gap-4">
+  {% for r in receipts %}
+  <a href="/receipts/{{ r.id }}"
+     class="card p-5 block hover:border-accent/40 hover:bg-surface-high/30 transition-colors group">
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium
+        {% if r.decision == 'PASS' %}bg-accent-container text-accent{% else %}bg-danger-container text-danger{% endif %}">
+        <span class="w-1.5 h-1.5 rounded-full {% if r.decision == 'PASS' %}bg-accent{% else %}bg-danger{% endif %}"></span>
+        {{ r.decision }}
+      </span>
+      <span class="text-[11px] text-on-faint">{{ r.chain }}</span>
+    </div>
+
+    <div class="flex items-baseline gap-2 mb-1">
+      <span class="font-display text-xl font-semibold tracking-tight">{{ r.amount }} USDC</span>
+      <span class="text-xs text-on-faint">
+        {% if r.action == 'release' %}released to provider{% else %}refunded to buyer{% endif %}
+      </span>
+    </div>
+    <p class="mono text-[11px] text-on-faint mb-4">{{ r.id }}</p>
+
+    <div class="rule mb-3"></div>
+
+    <div class="flex items-center justify-between gap-3">
+      {% if r.valid %}
+      <span class="text-xs text-accent">✓ {{ r.checks }} checks passed</span>
+      {% else %}
+      <span class="text-xs text-danger">✗ verification failed</span>
+      {% endif %}
+      <span class="text-xs text-on-faint group-hover:text-accent transition-colors">Open →</span>
+    </div>
+  </a>
+  {% else %}
+  <div class="card p-10 text-center text-on-faint text-sm md:col-span-2">
+    No receipts yet.
+  </div>
+  {% endfor %}
+</div>
+
+<p class="text-[11px] text-on-faint mt-6 max-w-2xl leading-relaxed">
+  Five bound fields rest on the signature alone: settlement_tx, verifier_fee_tx,
+  reason, settlement_asset, settlement_chain. Confirming those means comparing
+  the receipt to the chain, which no offline verifier can do.
+</p>
+
+{% endblock %}
