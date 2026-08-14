@@ -102,6 +102,35 @@ trigger. Publishing the grader bundle alongside its hash would also close it,
 at the cost of revealing the acceptance test up front. Neither is built.
 Trusted-buyer scope avoids the situation rather than solving it.
 
+## Business model and v2
+
+**Today.** MergeGate captures the verifier fee: escrow pays it per evaluation,
+regardless of verdict, as a distinct on-chain transaction bound into the
+receipt. It is implemented and settles on mainnet.
+
+**Pricing.** The demo charges 0.05 on a 0.25 reward, which is 20%. That is a
+demo figure chosen so both numbers are legible in a block explorer, not a rate
+anyone would pay. Production pricing is a low single-digit percentage of task
+value for the settlement, plus a flat sub-cent nanopayment for the evaluation
+itself once x402 settlement lands. Neither is validated against a customer.
+
+**Buyer griefing, and why the obvious fix does not work.** A buyer sets the
+acceptance test, so a bad-faith buyer can pin an unpassable test, read the
+submitted diff, and take a refund. The tempting answer is that the provider
+reads the tests first, but the contract publishes `grader_hash`, not the bundle,
+so a provider can verify the tests **cannot change** and not that they are
+**passable**.
+
+The v2 mechanism is a buyer bond posted alongside escrow, slashable to the
+provider on a successful challenge. The hard part is adjudication, and it is
+worth naming rather than glossing: "prove the tests are unsatisfiable" is not
+decidable in general, so the challenge cannot be a proof obligation. The
+workable shape is narrower, something like a challenge window in which the
+provider submits a candidate the buyer's own pinned grader accepts, run by the
+same neutral verifier. That resolves the tractable case, which is a buyer whose
+tests no submission can satisfy, and leaves the genuinely ambiguous case to
+reputation. None of this is built.
+
 ## What MergeGate does and does not claim
 
 > **Scope of the guarantee: verified contract acceptance, not code quality,
@@ -191,7 +220,7 @@ rows below now do.
 | P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)**: probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial**: quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet**: both run live with real USDC, txs confirmed on-chain (see below) |
-| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: escrow pays the verifier a per-run fee as a distinct mainnet tx, bound into the receipt and settled live. It is a plain USDC transfer; **x402/Gateway integration is deferred**, so anyone expecting the protocol should read this row |
+| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: the fee settles live on mainnet as a plain USDC transfer bound into the receipt. MergeGate additionally serves a real x402 v2 challenge at `/x402/verify`, which `circle services inspect` reports as **payable at $0.05 USDC on Base**; settlement of the signed authorization is not implemented, so no fee moves through x402 yet |
 
 ---
 

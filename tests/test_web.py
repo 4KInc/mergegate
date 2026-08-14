@@ -531,3 +531,48 @@ def test_verifier_page_documents_the_runtime_guard(
     assert "runtime grader guard" in html
     assert "Reading the graded tests at run time" in html
     assert "without implementing anything" in html
+
+
+# -- x402 ----------------------------------------------------------------------
+
+
+def test_x402_challenge_matches_the_live_wire_format(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Shape taken from a real x402 v2 listing, so an off-the-shelf client can
+    read it without special-casing MergeGate."""
+    from mergegate.app import create_app
+    from mergegate.webhook import WebhookReceiver
+
+    monkeypatch.setenv("VERIFIER_FEE_WALLET_ADDRESS", "0xFEE")
+    monkeypatch.setenv("VERIFIER_FEE_USDC", "0.05")
+    app = create_app(receiver=WebhookReceiver(secret="s", repository="r", resolve=lambda p: None))
+    r = TestClient(app).get("/x402/verify")
+
+    assert r.status_code == 402
+    body = r.json()
+    assert body["x402Version"] == 2
+    accept = body["accepts"][0]
+    assert accept["scheme"] == "exact"
+    assert accept["network"] == "eip155:8453"
+    # USDC has six decimals, so 0.05 is 50000 units. A float here could price
+    # the fee at an amount nobody set.
+    assert accept["amount"] == "50000"
+    assert accept["payTo"] == "0xFEE"
+
+
+def test_x402_does_not_claim_a_payment_it_cannot_verify(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Settlement verification is not implemented. Answering 200 to a presented
+    payment would claim a fee that may never have moved, which is worse than
+    charging nothing."""
+    from mergegate.app import create_app
+    from mergegate.webhook import WebhookReceiver
+
+    monkeypatch.setenv("VERIFIER_FEE_WALLET_ADDRESS", "0xFEE")
+    app = create_app(receiver=WebhookReceiver(secret="s", repository="r", resolve=lambda p: None))
+    r = TestClient(app).get("/x402/verify", headers={"X-PAYMENT": "anything"})
+
+    assert r.status_code == 402
+    assert "not implemented" in r.json()["error"]

@@ -16,6 +16,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from fastapi import Request
+
 from .settlement import TaskStateMachine
 from .webhook import GitHubPush, WebhookReceiver
 
@@ -148,6 +150,43 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
     # registered (it appeared in the served OpenAPI spec) and worked locally,
     # so this is infrastructure, not the app. Renaming is cheaper than
     # arguing with a middlebox.
+    # x402: the verifier priced as a service. Serves the challenge; see
+    # mergegate/x402.py for what it deliberately does not yet claim.
+    @app.get("/x402/verify")
+    def x402_verify(request: Request) -> Any:
+        from fastapi.responses import JSONResponse
+
+        from .x402 import X402Price, payment_requirements
+
+        price = X402Price(
+            pay_to=os.environ.get("VERIFIER_FEE_WALLET_ADDRESS", ""),
+            asset=os.environ.get(
+                "USDC_CONTRACT_ADDRESS", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+            ),
+            amount_usdc=os.environ.get("VERIFIER_FEE_USDC", "0.05"),
+        )
+        if not price.pay_to:
+            return JSONResponse({"error": "verifier fee wallet not configured"}, status_code=503)
+
+        body = payment_requirements(price, resource=str(request.url))
+        if not request.headers.get("X-PAYMENT"):
+            return JSONResponse(body, status_code=402)
+
+        # A payment was presented. Settlement verification is not implemented,
+        # and answering 200 here would claim a fee that may never have moved.
+        return JSONResponse(
+            {
+                **body,
+                "error": "payment verification not implemented",
+                "detail": (
+                    "MergeGate serves the x402 challenge but does not yet verify or "
+                    "settle a submitted authorization. The verifier fee that actually "
+                    "moves is a plain USDC transfer bound into the receipt."
+                ),
+            },
+            status_code=402,
+        )
+
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
