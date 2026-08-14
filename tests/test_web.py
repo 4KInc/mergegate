@@ -519,3 +519,15 @@ def test_receipt_links_to_its_evaluation_and_contract(
     html = _client(bundle_dir, key).get("/receipts/receipt-pass").text
     assert 'href="/evaluations/receipt-pass"' in html
     assert f'href="/contracts/{CONTRACT_HASH}"' in html
+
+
+def test_verifier_page_documents_the_runtime_guard(
+    bundle_dir: Path, key: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The page describes the grading pipeline, so it has to describe the step
+    that was added after a submission implementing nothing passed."""
+    monkeypatch.setenv("VERIFIER_IMAGE_DIGEST", IMAGE)
+    html = _client(bundle_dir, key).get("/verifier").text
+    assert "runtime grader guard" in html
+    assert "Reading the graded tests at run time" in html
+    assert "without implementing anything" in html

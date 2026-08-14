@@ -332,6 +332,13 @@ GRADING_PIPELINE = [
     ),
     (
         7,
+        "Install the runtime grader guard",
+        "An audit hook loaded outside the workspace stops provider code reading "
+        "the graded tests. Blocking edits was not enough: code that reads them "
+        "can answer from them without implementing anything.",
+    ),
+    (
+        8,
         "Hash the tree and bind the result",
         "tree_hash and submission_sha go into the receipt, so payment is for that exact artifact.",
     ),
@@ -347,6 +354,12 @@ ANTI_GAMING = [
         "P1.1",
         "A sitecustomize.py that executes before any test is imported",
         "Same quarantine: hooks the provider introduced or modified anywhere are removed.",
+    ),
+    (
+        "P1.1b",
+        "Reading the graded tests at run time and answering from them",
+        "A submission that implemented nothing passed this way before the guard "
+        "existed. Grader reads from provider source now raise.",
     ),
     (
         "P1.2",
