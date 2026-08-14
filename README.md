@@ -72,12 +72,12 @@ and dashboard on Cloud Run, evidence in GCS.
 ## Implementation status
 
 Nothing below is asserted from intent — a row is only marked done when a test
-or a real run demonstrates it. On-chain rows stay "not yet" until they have run
-against real USDC and produced a transaction hash we can cite.
+or a real run demonstrates it. On-chain rows stayed "not yet" until they had run against real USDC and
+produced a transaction hash we can cite; the mainnet rows below now do.
 
 | Gate | What it establishes | Status |
 | --- | --- | --- |
-| P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Done on testnet** — the buyer agent funds escrow and seals the contract with no human step; mainnet session not yet established |
+| P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Done on mainnet** — the buyer agent funds escrow and seals the contract with no human step ([funding tx](https://basescan.org/tx/0xaf13670e060dfa86cd1fddd5da3171525e7934c1e76317769035a5485fa4c27d)) |
 | P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done** — `mergegate/contract.py`, tested |
 | P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)** — `mergegate/verifier/`, attacks tested end to end; verifier image built and pinned by real digest |
 | P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done** — a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
@@ -89,8 +89,8 @@ against real USDC and produced a transaction hash we can cite.
 | P1.3 protected / graded path enforcement | Path violations reject regardless of test results | **Done** — `mergegate/paths.py`, tested |
 | P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)** — probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial** — quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
-| P2.1 two demo flows | PASS→release and protected-path FAIL→refund | **Done on testnet** — both run live with real USDC (see below); **mainnet still required for the prize** |
-| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial** — escrow pays the verifier a per-run fee as a distinct on-chain tx, bound into the receipt; it is a plain USDC transfer, not x402/Gateway |
+| P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet** — both run live with real USDC, txs confirmed on-chain (see below) |
+| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial** — escrow pays the verifier a per-run fee as a distinct mainnet tx, bound into the receipt; it is a plain USDC transfer, **not x402/Gateway** |
 
 ---
 
@@ -145,20 +145,23 @@ the settlement key over a fixed namespace, so the mapping stays deterministic �
 a random UUID would satisfy the format and silently destroy the guard, since a
 retry would present a fresh key.
 
-## The two demo flows, run live
+## The two demo flows, run live on Base MAINNET
 
-Both ran end to end on Base Sepolia with real USDC, driven by `python -m
-mergegate.demo`. Every hash and transaction below came out of those runs.
+Both ran end to end on **Base mainnet** with real USDC, driven by
+`python -m mergegate.demo`. Every hash and transaction below came out of those
+runs. Each settlement transaction was independently confirmed through a public
+Base RPC, not just through Circle's response.
 
 **PASS → release.** The provider fixed the bug; escrow paid out.
 
 | | |
 | --- | --- |
-| contract | `sha256:5e94c2a9fdc805d64f15e1aa40c592de38cd09a93c2c7116c426c78f07b6ce5c` |
+| contract | `sha256:b878016960fa33111fdc3f49840ef5e9aa93ae7cc089c9cb083ba7379b187162` |
 | grader | `sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6` |
-| escrow funded | [`0xc1e3470b…`](https://sepolia.basescan.org/tx/0xc1e3470b8d3e4bb526f02a3de4e764535823ebd11df5eb8a3a4cc2e3dad8eb38) |
-| release, 0.25 USDC | [`0xe5affe62…`](https://sepolia.basescan.org/tx/0xe5affe623a7dff6b39b1ca49c02f94b9c6a02f21070c3129a3200791ae509229) |
-| verifier fee, 0.05 USDC | [`0xf250c971…`](https://sepolia.basescan.org/tx/0xf250c971eea113f69f5953df0da922391e64782769c6cc05ece57e04628f10e8) |
+| submission | `e83964b7b61edcd1eae5c425c0eacd6e0dd210ff` |
+| escrow funded | [`0xaf13670e…`](https://basescan.org/tx/0xaf13670e060dfa86cd1fddd5da3171525e7934c1e76317769035a5485fa4c27d) |
+| release, 0.25 USDC | [`0xb8a45ef2…`](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827) — block 49945815 |
+| verifier fee, 0.05 USDC | [`0xeb5c1603…`](https://basescan.org/tx/0xeb5c16037349ad081168f3dcea99f912366013b45a754c39cce74b22714c0723) — block 49945839 |
 
 **FAIL → refund.** This is the one that matters. The submission's code is
 *correct* — it would have passed the buyer's tests — but it also edited
@@ -167,9 +170,11 @@ and escrow returned to the buyer.
 
 | | |
 | --- | --- |
-| escrow funded | [`0x1066311f…`](https://sepolia.basescan.org/tx/0x1066311f6cc6efacc5db67d90d58360a59befaaf254bb47fdeb34398b6dc7b71) |
-| refund, 0.25 USDC | [`0x34eb52f0…`](https://sepolia.basescan.org/tx/0x34eb52f00b0cfff8f4e675f83b45d3d5b992bfadb5f92ca6fccddd60d223b6c7) |
-| verifier fee, 0.05 USDC | [`0xcc4caa1f…`](https://sepolia.basescan.org/tx/0xcc4caa1f7044f1e2b311982d1682060022264a5592a1a8722baa93324aa4a8f7) |
+| contract | `sha256:7090242fb45b88a3eb1e0f65c2245cff1fc1ce6c5e3b85c03e2af98a2683d346` |
+| submission | `272356dbfc2b165f64e8c55734364d8488a730aa` |
+| escrow funded | [`0x7ae6ca91…`](https://basescan.org/tx/0x7ae6ca918d4466539ee7313015073742033c576ffad49490bcd625b47dfe20ad) |
+| refund, 0.25 USDC | [`0x4581edf6…`](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e) — block 49946711 |
+| verifier fee, 0.05 USDC | [`0x75ca88ed…`](https://basescan.org/tx/0x75ca88edadcf72225b0baddaf7c036449c9952f667b3242cac6df4c3bb928280) — block 49946736 |
 
 The refund receipt names the failed term rather than reporting a generic
 failure:
@@ -177,14 +182,15 @@ failure:
 > contract evaluated FAIL — `.github/workflows/deploy.yml` modifies a
 > contract-protected path (pattern: `.github/**`)
 
-Balances moved exactly as the mandates specified: buyer −0.60 across both runs,
-provider +0.25, verifier fee wallet +0.10. Both receipts re-verify offline
-against the Secret Manager signing key (`mergegate-e5683130`) — 18 and 17 checks
-respectively.
+Mainnet balances moved exactly as the mandates specified: buyer 2.64 → 2.29
+(−0.60 across both runs, of which 0.25 came back as the refund), provider
+0.14 → 0.39 (+0.25), and the verifier-fee wallet 0.00 → 0.10. That fee wallet
+was empty beforehand, so its balance came only from these runs.
 
-**This is Base Sepolia, not mainnet.** The prize requires mainnet, and that is
-one config flag plus a mainnet Circle session away; nothing in the flow changes.
-Until that run happens, no mainnet claim is made here.
+Both receipts re-verify offline against the Secret Manager signing key
+(`mergegate-e5683130`) — 18 and 17 checks. They are committed under
+`demo/receipts/mainnet/`, alongside the earlier Base Sepolia pair in
+`demo/receipts/`.
 
 ## Sandbox network posture — measured, not assumed
 
