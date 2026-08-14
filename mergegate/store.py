@@ -20,7 +20,7 @@ settlement key.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -28,6 +28,9 @@ from .mandate import PaymentMandate
 from .settlement import EventOutcome, TaskState, TaskStateMachine
 
 __all__ = [
+    "ReceiptStore",
+    "FirestoreReceiptStore",
+    "MemoryReceiptStore",
     "TaskStore",
     "FirestoreTaskStore",
     "MemoryTaskStore",
@@ -224,3 +227,104 @@ class FirestoreTaskStore:
 
         result: EventOutcome | None = _txn(self._db.transaction())
         return result
+
+
+# -- receipts -----------------------------------------------------------------
+
+RECEIPT_COLLECTION = "mergegate_receipts"
+
+
+class ReceiptStore(Protocol):
+    """Where issued receipts live so the dashboard can read them.
+
+    Separate from :class:`TaskStore` because their lifetimes differ: task state
+    is mutable until settlement and then frozen, whereas a receipt is written
+    once and never updated. Nothing here offers a way to modify one.
+    """
+
+    def put(self, receipt_id: str, envelope: dict[str, Any]) -> None: ...
+
+    def all(self) -> list[tuple[str, dict[str, Any]]]: ...
+
+    def get(self, receipt_id: str) -> dict[str, Any] | None: ...
+
+
+@dataclass
+class MemoryReceiptStore:
+    """In-process receipts, for tests."""
+
+    receipts: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def put(self, receipt_id: str, envelope: dict[str, Any]) -> None:
+        self.receipts[receipt_id] = envelope
+
+    def all(self) -> list[tuple[str, dict[str, Any]]]:
+        return sorted(self.receipts.items())
+
+    def get(self, receipt_id: str) -> dict[str, Any] | None:
+        return self.receipts.get(receipt_id)
+
+
+class FirestoreReceiptStore:
+    """Receipts in Firestore, one document each.
+
+    The envelope is stored under a single ``envelope`` field rather than spread
+    across top-level fields. Firestore would happily reshape nested data —
+    reordering maps, coercing numbers — and the receipt's signature is over
+    exact canonical bytes. Storing it as one opaque JSON string means what comes
+    back out is byte-identical to what was signed, so it still verifies.
+    """
+
+    def __init__(self, client: Any = None, *, collection: str = RECEIPT_COLLECTION) -> None:
+        if client is None:
+            from google.cloud import firestore
+
+            client = firestore.Client()
+        self._db = client
+        self._collection = collection
+
+    def _ref(self, receipt_id: str) -> Any:
+        return self._db.collection(self._collection).document(document_id(receipt_id))
+
+    def put(self, receipt_id: str, envelope: dict[str, Any]) -> None:
+        import json as _json
+
+        self._ref(receipt_id).set(
+            {
+                "receipt_id": receipt_id,
+                "envelope_json": _json.dumps(envelope),
+                "decision": str(
+                    (envelope.get("body", {}).get("binding") or {}).get("decision", "")
+                ),
+                "chain": str((envelope.get("body", {}).get("mandate") or {}).get("chain", "")),
+                "issued_at": str(envelope.get("body", {}).get("issued_at", "")),
+                "stored_at": datetime.now(UTC).isoformat(),
+            }
+        )
+
+    def _decode(self, doc: dict[str, Any]) -> dict[str, Any] | None:
+        import json as _json
+
+        raw = doc.get("envelope_json")
+        if not isinstance(raw, str):
+            return None
+        try:
+            parsed = _json.loads(raw)
+        except _json.JSONDecodeError:
+            return None
+        return parsed if isinstance(parsed, dict) else None
+
+    def all(self) -> list[tuple[str, dict[str, Any]]]:
+        out: list[tuple[str, dict[str, Any]]] = []
+        for snap in self._db.collection(self._collection).stream():
+            doc = snap.to_dict() or {}
+            envelope = self._decode(doc)
+            if envelope is not None:
+                out.append((str(doc.get("receipt_id") or snap.id), envelope))
+        return sorted(out, key=lambda pair: pair[0])
+
+    def get(self, receipt_id: str) -> dict[str, Any] | None:
+        snap = self._ref(receipt_id).get()
+        if not snap.exists:
+            return None
+        return self._decode(snap.to_dict() or {})

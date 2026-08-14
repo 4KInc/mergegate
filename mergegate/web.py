@@ -164,35 +164,74 @@ class ReceiptView:
         return [(k, str(self.binding.get(k, ""))) for k in keys]
 
 
-class ReceiptBundle:
-    """The receipts on disk, verified on read."""
+class DirectoryReceiptSource:
+    """Receipts from a directory on disk. Used for local runs and tests."""
 
-    def __init__(self, directory: Path = RECEIPTS_DIR, public_key: Ed25519PublicKey | None = None):
+    def __init__(self, directory: Path = RECEIPTS_DIR) -> None:
         self.directory = directory
-        self.public_key = public_key
-
-    def _paths(self) -> list[Path]:
-        if not self.directory.is_dir():
-            return []
-        return sorted(self.directory.rglob("receipt-*.json"))
 
     def _id(self, path: Path) -> str:
         rel = path.relative_to(self.directory).with_suffix("")
         return str(rel).replace("/", "-")
 
-    def all(self) -> list[ReceiptView]:
-        views = []
-        for path in self._paths():
+    def all(self) -> list[tuple[str, dict[str, Any]]]:
+        if not self.directory.is_dir():
+            return []
+        out = []
+        for path in sorted(self.directory.rglob("receipt-*.json")):
             try:
-                views.append(ReceiptView(id=self._id(path), envelope=json.loads(path.read_text())))
+                out.append((self._id(path), json.loads(path.read_text())))
             except (OSError, json.JSONDecodeError):
                 # A receipt we cannot read is omitted rather than rendered as a
                 # blank row that looks like a real settlement.
                 continue
-        return views
+        return out
+
+    def get(self, receipt_id: str) -> dict[str, Any] | None:
+        return next((env for rid, env in self.all() if rid == receipt_id), None)
+
+
+class ReceiptBundle:
+    """Receipts from some source, verified on read.
+
+    The source is pluggable so the dashboard can read live from Firestore in
+    deployment and from a directory in tests, without the rendering layer
+    knowing which. A source that raises is surfaced through
+    :attr:`source_error` rather than swallowed — a dashboard that silently
+    shows nothing when its datastore is unreachable looks identical to one
+    reporting an empty system, and those mean very different things.
+    """
+
+    def __init__(
+        self,
+        directory: Path | None = None,
+        public_key: Ed25519PublicKey | None = None,
+        source: Any = None,
+    ):
+        self.source = (
+            source
+            if source is not None
+            else DirectoryReceiptSource(directory if directory is not None else RECEIPTS_DIR)
+        )
+        self.public_key = public_key
+        self.source_error: str = ""
+
+    def all(self) -> list[ReceiptView]:
+        try:
+            pairs = self.source.all()
+            self.source_error = ""
+        except Exception as exc:  # noqa: BLE001 - surfaced to the page, not hidden
+            self.source_error = f"{type(exc).__name__}: {exc}"
+            return []
+        return [ReceiptView(id=rid, envelope=env) for rid, env in pairs]
 
     def get(self, receipt_id: str) -> ReceiptView | None:
-        return next((v for v in self.all() if v.id == receipt_id), None)
+        try:
+            env = self.source.get(receipt_id)
+        except Exception as exc:  # noqa: BLE001
+            self.source_error = f"{type(exc).__name__}: {exc}"
+            return None
+        return ReceiptView(id=receipt_id, envelope=env) if env else None
 
     def verify(self, view: ReceiptView) -> dict[str, Any]:
         """Re-check a receipt now. Never a cached verdict."""
@@ -258,6 +297,7 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
 
     @router.get("/", response_class=HTMLResponse)
     def dashboard(request: Request) -> Any:
+        views = bundle.all()
         rows = [
             {
                 "id": v.id,
@@ -270,7 +310,7 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
                 "settlement_short": short(v.settlement_tx, 10, 4),
                 "explorer": v.settlement_explorer,
             }
-            for v in bundle.all()
+            for v in views
         ]
         return templates.TemplateResponse(
             request,
@@ -280,6 +320,7 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
                 "stats": bundle.stats(),
                 "badges": SANDBOX_BADGES,
                 "network": ", ".join(bundle.networks()) or network,
+                "source_error": bundle.source_error,
                 "active": "Contracts",
             },
         )
@@ -321,6 +362,7 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
                 "stats": bundle.stats(),
                 "badges": SANDBOX_BADGES,
                 "network": ", ".join(bundle.networks()) or network,
+                "source_error": bundle.source_error,
                 "active": "Verifier",
             },
         )

@@ -227,3 +227,75 @@ def test_network_is_shown_per_row(bundle_dir: Path, key: Ed25519PrivateKey) -> N
     assert "Network" in html
     assert "BASE" in html
     assert "Totals span every network shown" in html
+
+
+# -- live source ---------------------------------------------------------------
+
+
+def test_bundle_reads_from_an_injected_source(key: Ed25519PrivateKey) -> None:
+    """The dashboard is source-agnostic: Firestore in deployment, memory here."""
+    from mergegate.store import MemoryReceiptStore
+
+    store = MemoryReceiptStore()
+    store.put("live-1", _make_receipt(key, passing=True))
+    bundle = ReceiptBundle(public_key=key.public_key(), source=store)
+
+    views = bundle.all()
+    assert [v.id for v in views] == ["live-1"]
+    assert bundle.verify(views[0])["valid"]
+
+
+def test_a_failing_source_is_reported_not_swallowed(key: Ed25519PrivateKey) -> None:
+    """An unreachable datastore and an empty system look identical on screen
+    unless the failure is surfaced. They mean very different things."""
+
+    class Broken:
+        def all(self) -> Any:
+            raise RuntimeError("firestore unavailable")
+
+        def get(self, receipt_id: str) -> Any:
+            raise RuntimeError("firestore unavailable")
+
+    bundle = ReceiptBundle(public_key=key.public_key(), source=Broken())
+    assert bundle.all() == []
+    assert "firestore unavailable" in bundle.source_error
+
+    app = FastAPI()
+    app.include_router(build_web_router(bundle))
+    html = TestClient(app).get("/").text
+    assert "Receipt store unreachable" in html
+    # The page must distinguish "could not read" from "nothing has settled".
+    assert "Those are different things" in html
+    assert "firestore unavailable" in html
+
+
+def test_firestore_round_trip_preserves_signature_bytes(key: Ed25519PrivateKey) -> None:
+    """Receipts are stored as one opaque JSON string on purpose.
+
+    Spread across native fields, Firestore could reorder maps or coerce
+    numbers, and the signature is over exact canonical bytes — the receipt
+    would come back subtly different and stop verifying.
+    """
+    from mergegate.receipt import verify_receipt as _verify
+    from mergegate.store import FirestoreReceiptStore
+
+    envelope = _make_receipt(key, passing=True)
+    captured: dict[str, Any] = {}
+
+    class FakeDoc:
+        def set(self, payload: dict[str, Any]) -> None:
+            captured.update(payload)
+
+    class FakeCollection:
+        def document(self, _id: str) -> FakeDoc:
+            return FakeDoc()
+
+    class FakeDb:
+        def collection(self, _name: str) -> FakeCollection:
+            return FakeCollection()
+
+    store = FirestoreReceiptStore(FakeDb())
+    store.put("r1", envelope)
+
+    restored = json.loads(captured["envelope_json"])
+    assert _verify(restored, public_key=key.public_key()).valid

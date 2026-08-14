@@ -62,6 +62,22 @@ def _dashboard_public_key() -> Any:
         return None
 
 
+def _receipt_source() -> Any:
+    """Where the dashboard reads receipts from.
+
+    Firestore in deployment, so a settlement appears without a redeploy. Falls
+    back to the bundle shipped in the image only when no project is configured
+    — a local run. It does **not** fall back when Firestore is configured but
+    unreachable: stale shipped receipts presented as live state would be a
+    quiet lie, so the page reports the failure instead.
+    """
+    if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+        return None
+    from .store import FirestoreReceiptStore
+
+    return FirestoreReceiptStore()
+
+
 def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> Any:
     """Build the FastAPI app.
 
@@ -110,7 +126,7 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
 
     app.include_router(
         build_web_router(
-            ReceiptBundle(public_key=_dashboard_public_key()),
+            ReceiptBundle(public_key=_dashboard_public_key(), source=_receipt_source()),
             network=os.environ.get("MERGEGATE_NETWORK", "Base mainnet"),
         )
     )

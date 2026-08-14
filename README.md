@@ -192,6 +192,28 @@ Both receipts re-verify offline against the Secret Manager signing key
 `demo/receipts/mainnet/`, alongside the earlier Base Sepolia pair in
 `demo/receipts/`.
 
+## The dashboard
+
+Live at **https://mergegate-api-1031148889398.us-central1.run.app**, served by
+the same Cloud Run service that receives webhooks.
+
+It reads receipts from **Firestore**, not from a bundle baked into the image, so
+a settlement appears without a redeploy. Verified by deleting a receipt from
+Firestore and watching the live page drop from 4 contracts to 3, then restoring
+it — no deploy in between.
+
+Receipts are **re-verified on every request** against the published public key
+rather than trusted from a stored flag: altering a receipt changes what the page
+says. The service holds only the public half of the signing key, so it can
+verify and cannot sign.
+
+Two things it deliberately will not do. It does not fall back to the shipped
+bundle when Firestore is configured but unreachable — stale receipts presented
+as live state would be a quiet lie, so it shows a failure banner distinguishing
+"could not read the datastore" from "nothing has settled". And it does not
+aggregate mainnet and testnet under one label: the table carries a Network
+column, and the header says totals span every network shown.
+
 ## Sandbox network posture — measured, not assumed
 
 The receipt records the sandbox's egress policy, so that field has to be true.

@@ -171,10 +171,12 @@ class DemoRunner:
         store: TaskStore | None = None,
         workdir: Path | None = None,
         signing: tuple[str, Ed25519PrivateKey] | None = None,
+        receipts: Any = None,
     ) -> None:
         self.config = config
         self.rail = rail
         self.store = store or MemoryTaskStore()
+        self.receipts = receipts
         self.workdir = workdir or Path(tempfile.mkdtemp(prefix="mergegate-demo-"))
         self.signing = signing
         self.repo_dir = self.workdir / "repo"
@@ -368,6 +370,13 @@ class DemoRunner:
         result = verify_receipt(envelope, public_key=key_obj.public_key())
         if not result.valid:
             raise RuntimeError(f"the receipt we just issued does not verify: {result.summary()}")
+
+        # Persist so the dashboard reflects this settlement without a redeploy.
+        # Done after verification: an unverifiable receipt is not evidence and
+        # should not be published as though it were.
+        if self.receipts is not None:
+            receipt_id = f"{manifest.task_id}-{manifest.submission_sha[:12]}".replace("/", "-")
+            self.receipts.put(receipt_id, envelope)
 
         return {"receipt": envelope, "state": machine.state.value, "executed": executed}
 
