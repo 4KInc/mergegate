@@ -41,6 +41,9 @@ def build_sealed_env(*, workspace: Path, extra: dict[str, str] | None = None) ->
     # Point the run at the workspace explicitly rather than relying on cwd
     # inheritance, and keep the user's site-packages out of it.
     env["PYTHONNOUSERSITE"] = "1"
+    # PYTHONPATH is deliberately settable by the caller: it is how the runtime
+    # guard's sitecustomize module gets imported at interpreter startup. It is
+    # not inherited from the ambient environment.
     env["HOME"] = str(workspace)
     if extra:
         env.update(extra)

@@ -1,27 +1,97 @@
 # MergeGate
 
-**A deterministic evaluator and conditional USDC settlement layer for autonomous
-coding agents.**
+**Trust and settlement infrastructure for AI agents buying software from AI
+agents.**
 
-A buyer agent pre-authorizes a conditional USDC payment and funds escrow against
-a signed, immutable task contract. A provider coding agent submits a commit. A
-neutral, sealed sandbox runs the **buyer-pinned** grader against the provider's
-diff. Escrow releases to the provider on PASS or refunds the buyer on FAIL.
-Every decision emits one receipt that cryptographically binds contract + grader
-+ artifact + verifier environment + decision + settlement transaction into a
-single independently-verifiable object.
+An agent can write code today. It cannot get paid for it without a human in the
+loop, because nobody can safely answer the question *did this agent actually
+deliver what was asked?* Card rails need a human accountable for the charge;
+"LLM-as-a-judge" replaces that human with a model that can be argued into
+approving anything.
 
-**The release condition is a reproducible test contract, not an LLM opinion, an
-optimistic timeout, or a discretionary approval.** MergeGate implements the
-deterministic *evaluator* of the ERC-8183 agent-job pattern for GitHub code,
-without putting an LLM in the payment-authority path.
+MergeGate answers it differently. A buyer agent funds USDC escrow against a
+signed, immutable task contract whose acceptance test is fixed and hashed before
+any work begins. A provider agent submits a commit. A sealed sandbox runs the
+**buyer-pinned** grader against that diff, in an environment the provider cannot
+influence. Escrow releases on PASS or refunds on FAIL, and one receipt binds
+contract, grader, artifact, environment, decision and settlement transaction
+into a single object anyone can verify offline.
 
-**Live:** [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app)
-· both flows settled on Base mainnet
-· [PASS receipt](https://mergegate-api-1031148889398.us-central1.run.app/receipts/mainnet-receipt-pass)
-· [FAIL receipt](https://mergegate-api-1031148889398.us-central1.run.app/receipts/mainnet-receipt-fail)
+> **No LLM sits in the payment-authority path.** The release condition is a
+> reproducible test contract, not a model's opinion, an optimistic timeout, or a
+> discretionary approval. No model is called at any point in contract creation,
+> evaluation, settlement, or receipt issuance.
+
+This is the deterministic *evaluator* of the ERC-8183 agent-job pattern for
+GitHub code, running on Base mainnet.
+
+### Live, on Base mainnet
+
+| | |
+| --- | --- |
+| **Dashboard** | [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app) |
+| **PASS flow** (0.25 USDC released to the provider) | [receipt](https://mergegate-api-1031148889398.us-central1.run.app/receipts/mainnet-receipt-pass) · [settlement tx](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827) |
+| **FAIL flow** (0.25 USDC refunded to the buyer) | [receipt](https://mergegate-api-1031148889398.us-central1.run.app/receipts/mainnet-receipt-fail) · [refund tx](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e) |
+
+The FAIL flow is the one worth opening. That submission's code was **correct**
+and would have passed the buyer's tests. It was refused anyway, before the tests
+ran, because it also edited a protected CI file. That is the difference between
+a control layer and a test runner wired to a transfer.
 
 ---
+
+## The agent-to-agent protocol
+
+No human appears anywhere in this loop.
+
+| Step | Actor | What happens |
+| --- | --- | --- |
+| 1 | **Buyer agent** | Pins the terms: repo, base commit, grader bundle, writable paths, protected paths, commands, deadline, price. Canonicalizes and hashes them into `contract_hash`. |
+| 2 | **Buyer agent** | Signs a mandate (*pay X to provider Y iff contract C evaluates PASS before T*) and funds escrow itself. No checkout, no approval click. |
+| 3 | **Provider agent** | Reads the published mandate, sees the acceptance test is already fixed and hashed, and submits a commit. |
+| 4 | **Verifier** | Assembles base tree + provider diff + buyer grader in a sealed sandbox and runs only the pinned commands. |
+| 5 | **Settlement** | The mandate is *executed*, not re-decided. PASS releases, FAIL refunds. |
+| 6 | **Receipt** | One signed object binds the whole chain, verifiable by anyone offline. |
+
+The provider agent can inspect the contract before committing work, and knows
+the grader hash was fixed beforehand, so it can tell the terms cannot move after
+submission. That is what makes the deal legible to a machine: the acceptance
+criterion is a hash, not a promise.
+
+The only human action in the entire system is provisioning the wallet credential
+once, the way a service account is provisioned. Every transfer after that is
+agent-initiated.
+
+## Economics
+
+Three parties, two payments, one of which is ours.
+
+| Payment | From | To | Why |
+| --- | --- | --- | --- |
+| Reward | escrow | provider agent | the work, released only on PASS |
+| Verifier fee | escrow | verifier | the evaluation, charged per run regardless of verdict |
+
+Escrow is funded with reward **plus** fee, so the fee is covered whichever way
+the verdict goes. Funding only the reward would leave nothing for the fee after
+a release, and because a failed fee transfer is deliberately non-fatal, that
+shortfall would silently drop the fee rather than fail loudly.
+
+MergeGate captures the verifier fee. That is the revenue mechanism, it is
+implemented, and it settles on mainnet.
+
+**Honest caveat on the rate.** The demo charges 0.05 on a 0.25 reward. That is
+20%, a demo number and not a proposed rate, and anyone dividing those two
+figures should know we know. Sustainable pricing is closer to a small percentage
+of settlement value or a flat per-evaluation fee, and neither is validated.
+
+**Known game-theory gap.** A buyer sets the acceptance test, so a buyer acting
+in bad faith can pin a test the provider cannot pass, collect the work as a
+public diff, and take a refund. The verifier still gets paid, so MergeGate has
+no incentive to police it. Nothing in v1 prevents this; trusted-buyer scope
+avoids the situation rather than solving it. The shape of a fix is a slashable
+buyer bond or a non-refundable attempt fee that survives a refund, so a buyer
+pays something for every evaluation they trigger. Not built, not designed in
+detail, and stated here rather than left for a reviewer to find.
 
 ## What MergeGate does and does not claim
 
@@ -106,6 +176,7 @@ rows below now do.
 | P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Done**: `mergegate/mandate.py`; the executor receives a decision, it does not make one |
 | P0.7 bound receipt | One object binds the whole chain, offline-verifiable | **Done**: `mergegate/receipt.py`; 13 bound fields survive an attacker holding the signing key |
 | P1.1 conftest / persisted-file gaming | Provider test hooks cannot survive grader injection | **Done**: hostile `conftest.py` and `sitecustomize.py` quarantined, asserted against a real pytest run |
+| P1.1b grader confidentiality | Provider code cannot read the graded tests at run time | **Done**: a submission that implemented nothing passed by scraping expected values out of the test file; a startup audit hook outside the workspace now blocks it |
 | P1.2 `.git` history leakage | No reading reference solutions from git history | **Done**: `git archive` never creates `.git`; a run that tries to read the gold patch fails |
 | P1.3 protected / graded path enforcement | Path violations reject regardless of test results | **Done**: `mergegate/paths.py`, tested |
 | P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)**: probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
@@ -130,10 +201,29 @@ overwrites the provider's:
    it. Allowed to write is not allowed to grade.
 5. Purge the grader paths, then inject the buyer's bundle, so the graded bytes
    are the buyer's.
-6. Hash the tree.
+6. Install a runtime guard, outside the workspace, that stops provider code
+   *reading* the grader.
+7. Hash the tree.
 
 Steps 2 and 5 are deliberately redundant: a defense that depends on one check
 being correct fails when that check is wrong.
+
+Step 6 exists because steps 2 to 5 were not enough, and a reviewer's question
+exposed it. They all stop the provider **editing** the tests. None of them stop
+it **reading** them, and reading is sufficient: a submission that implements
+nothing can scrape the expected values out of the test file at import time and
+answer from a lookup table. Every assertion passes and the code does nothing.
+
+That was demonstrated against this system, not imagined, and it passed. The
+defense is a CPython audit hook loaded from a `sitecustomize` module on
+`PYTHONPATH` in a directory outside the workspace: it is in place before any
+test or provider module runs, audit hooks cannot be removed once installed, and
+the provider's diff cannot reach the file. It blocks reads of grader paths only
+from frames belonging to provider source paths, so pytest reading its own test
+files is unaffected. `tests/test_grader_confidentiality.py` runs the original
+attack, a lazy variant that defers the read to call time, and an
+honest-submission control, because a guard that broke honest runs would be worse
+than none.
 
 `tests/test_verifier_neutrality.py` runs the documented attacks against a real
 repository with a real `pytest` process and asserts each one fails: rewriting
@@ -275,9 +365,16 @@ deny-all egress firewall rule, attached to the verifier job with
 | DNS resolution | works | **still works** |
 
 So the claim is `deny-tcp-egress; dns-resolution-available`. A graded run
-cannot fetch anything, but DNS remains a residual signalling channel. That is
-disclosed in the constant, in the receipt, and here, rather than rounded up to
-"default-deny".
+cannot fetch anything, and cannot reach an external model API, but DNS remains a
+residual outbound signalling channel. That is disclosed in the constant, in the
+receipt, and here, rather than rounded up to "default-deny".
+
+What DNS is worth to an attacker is now much smaller than it was. The obvious
+target would be the buyer's grader, and provider code can no longer read it (see
+the runtime guard above). The environment carries no secrets and no cloud
+identity to leak. What remains is a low-bandwidth channel for exfiltrating
+something the provider already possesses, which is its own submission. That is a
+real limit and worth stating, but it is not a route to gaming the grade.
 
 Note this applies to the **verifier job only**. The API service needs outbound
 access to reach Circle and GitHub; applying the sealed VPC to it would silently
@@ -301,6 +398,42 @@ rest on the signature alone. Confirming those means comparing the receipt to the
 chain, which no offline verifier can do. A receipt proves the decision was the
 deterministic result of the mandate and the verdict; confirming the money moved
 requires looking at Base.
+
+## Roadmap to a permissionless market
+
+v1 is trusted-buyer on purpose: private repos, approved providers. That is a
+real limit, and it is worth being precise about *which* problem it defers,
+because the honest answer is not the one that sounds most impressive.
+
+The blocker is not verification. The evaluator already works without trusting
+either party: the grader is pinned before work starts, the sandbox is neutral,
+and the receipt is checkable by anyone. Nothing about that needs a trusted
+buyer.
+
+The blocker is **information asymmetry around delivery**. A provider must reveal
+a working diff to be graded, and a buyer who has seen that diff has most of the
+value whether or not they pay. Three things would have to hold in an open
+market:
+
+1. **A buyer who triggers an evaluation pays for it**, so failing a provider on
+   a pinned technicality is not free. A slashable bond or a non-refundable
+   attempt fee.
+2. **Reputation with stakes**, so a buyer who systematically refuses work is
+   priced out rather than merely disliked.
+3. **Delivery without full disclosure**, so a provider can prove a diff passes
+   without handing over the diff first.
+
+Point 3 is where people reach for zero-knowledge proofs, and it is worth being
+careful. Proving "I ran these tests and they passed" in zero knowledge is
+plausible in principle and enormously expensive for arbitrary code execution
+today. It is not something to promise on a slide. The nearer-term shape is
+commit-reveal with escrowed disclosure: the provider commits to a diff hash, the
+verifier evaluates in an enclave the buyer cannot read, and the diff is revealed
+only on settlement. That trades a cryptographic guarantee for a hardware trust
+assumption, which is a genuine downgrade and should be named as one.
+
+None of this is built. It is stated so the scope limit reads as a considered
+boundary rather than an unexamined one.
 
 ## Development
 

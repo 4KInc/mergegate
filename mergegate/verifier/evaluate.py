@@ -13,6 +13,7 @@ from pathlib import Path
 from ..contract import ContractError, SealedContract
 from ..hashing import hash_directory
 from ..submission import Submission
+from .guard import write_guard
 from .manifest import VerificationManifest
 from .runner import DEFAULT_TIMEOUT_SECONDS, run_pinned_commands
 from .workspace import WorkspaceRejectedError, assemble_workspace
@@ -72,10 +73,19 @@ def evaluate(
             rejection_reason=rejection.report.summary(),
         )
 
+    # The guard lives beside the workspace, never inside it: the provider's diff
+    # must not be able to reach it and the grader purge must not delete it.
+    guard_env = write_guard(
+        destination.parent,
+        source_roots=list(workspace.source_roots),
+        grader_roots=list(workspace.grader_roots),
+    )
+
     results = run_pinned_commands(
         workspace=workspace.root,
         commands=contract.required_commands,
         timeout_seconds=timeout_seconds,
+        env_extra=guard_env,
     )
 
     return VerificationManifest(

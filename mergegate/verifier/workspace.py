@@ -102,6 +102,12 @@ class AssembledWorkspace:
     the path guard; if it is not, the guard has a hole worth knowing about."""
 
     git_stripped: bool = True
+    grader_roots: tuple[Path, ...] = field(default_factory=tuple)
+    """Concrete directories the buyer's grader occupies, for the runtime guard."""
+
+    source_roots: tuple[Path, ...] = field(default_factory=tuple)
+    """Concrete directories provider code occupies. Frames from here are
+    forbidden to read the grader."""
 
     @property
     def tamper_signals(self) -> tuple[str, ...]:
@@ -160,6 +166,9 @@ def assemble_workspace(
     # -- 7. Hash the result.
     tree_hash = hash_directory(destination, domain=TREE_DOMAIN)
 
+    grader_roots = _existing_roots(destination, contract.grader_paths)
+    source_roots = _existing_roots(destination, contract.allowed_source_paths)
+
     return AssembledWorkspace(
         root=destination,
         tree_hash=tree_hash,
@@ -168,7 +177,28 @@ def assemble_workspace(
         quarantined_hooks=quarantined,
         purged_grader_paths=purged,
         git_stripped=git_stripped,
+        grader_roots=grader_roots,
+        source_roots=source_roots,
     )
+
+
+def _existing_roots(root: Path, patterns: tuple[str, ...]) -> tuple[Path, ...]:
+    """Resolve glob patterns to the directories that actually exist.
+
+    The runtime guard compares real filesystem paths, so a pattern like
+    ``tests/**`` has to become the ``tests`` directory rather than staying a
+    glob. Patterns matching nothing are dropped: a guard root that does not
+    exist would silently protect nothing.
+    """
+    out: list[Path] = []
+    for pattern in patterns:
+        head = pattern.split("*", 1)[0].rstrip("/")
+        if not head:
+            continue
+        candidate = root / head
+        if candidate.exists():
+            out.append(candidate)
+    return tuple(dict.fromkeys(out))
 
 
 # -- steps --------------------------------------------------------------------
