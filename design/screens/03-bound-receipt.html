@@ -3,10 +3,10 @@
 <html class="dark" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>MergeGate - Bound Settlement Receipt</title>
+<title>Bound Settlement Receipt - MergeGate</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Public+Sans:wght@400;500;600&amp;family=Space+Grotesk:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Public+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
         tailwind.config = {
@@ -14,305 +14,343 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#4ade80",
-                        "primary-container": "rgba(74, 222, 128, 0.1)",
-                        "on-primary-container": "#4ade80",
-                        "secondary": "#9ca3af",
-                        "secondary-container": "rgba(156, 163, 175, 0.1)",
-                        "on-secondary-container": "#9ca3af",
-                        "surface": "#0f172a",
-                        "surface-container": "#1e293b",
-                        "surface-variant": "#334155",
-                        "on-surface": "#f8fafc",
-                        "on-surface-variant": "#cbd5e1",
-                        "outline": "#475569",
-                        "outline-variant": "#334155",
-                        "error": "#ef4444",
-                        "error-container": "rgba(239, 68, 68, 0.1)",
-                        "on-error-container": "#ef4444",
-                        "success": "#22c55e",
-                        "success-container": "rgba(34, 197, 94, 0.1)",
-                        "on-success-container": "#22c55e",
+                        primary: {
+                            DEFAULT: '#4ade80', // green-400 for PASS status and highlights
+                            dark: '#22c55e',
+                            container: 'rgba(74, 222, 128, 0.1)',
+                        },
+                        surface: {
+                            DEFAULT: '#09090b', // zinc-950
+                            container: '#18181b', // zinc-900
+                            high: '#27272a', // zinc-800
+                        },
+                        on: {
+                            surface: '#f4f4f5', // zinc-100
+                            muted: '#a1a1aa', // zinc-400
+                        },
+                        error: {
+                            DEFAULT: '#f87171', // red-400
+                            container: 'rgba(248, 113, 113, 0.1)'
+                        },
+                        outline: {
+                            DEFAULT: '#3f3f46', // zinc-700
+                            variant: '#27272a', // zinc-800
+                        }
+                    },
+                    fontFamily: {
+                        headline: ["Space Grotesk", "sans-serif"],
+                        display: ["Space Grotesk", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Public Sans", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"],
                     },
                     borderRadius: {
                         "DEFAULT": "0.25rem",
                         "lg": "0.5rem",
                         "xl": "0.75rem",
                         "full": "9999px"
-                    },
-                    fontFamily: {
-                        "headline": ["Space Grotesk", "sans-serif"],
-                        "display": ["Space Grotesk", "sans-serif"],
-                        "body": ["Inter", "sans-serif"],
-                        "label": ["Public Sans", "sans-serif"],
-                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
                     }
                 }
             }
         }
     </script>
 <style>
-        body {
-            background-color: #0f172a;
-            color: #f8fafc;
+        .mono-hash {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            letter-spacing: -0.025em;
         }
-        .mono-text {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        .binding-chain::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 2rem;
+            bottom: 2rem;
+            width: 1px;
+            background: linear-gradient(to bottom, #3f3f46 0%, #3f3f46 100%);
+            z-index: 0;
+        }
+        .copy-hover:hover .copy-icon {
+            opacity: 1;
         }
     </style>
 </head>
-<body class="font-body text-sm antialiased h-screen flex flex-col overflow-hidden">
-<!-- TopNavBar (Shared Component) -->
-<nav class="bg-surface border-b border-outline-variant flex justify-between items-center w-full px-4 h-14 shrink-0">
-<div class="flex items-center gap-4">
-<span class="font-headline text-lg font-bold tracking-tighter text-on-surface">MergeGate</span>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex selection:bg-primary/30">
+<!-- SideNavBar (from JSON) -->
+<nav class="bg-surface dark:bg-surface h-screen w-64 border-r border-outline-variant border-r border-outline-variant dark:border-outline-variant fixed left-0 top-0 h-full flex flex-col p-4 z-40">
+<div class="mb-8 px-4">
+<h1 class="font-headline text-xl font-bold tracking-tighter text-on-surface dark:text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="merge" style="font-variation-settings: 'FILL' 1;">merge</span>
+                MergeGate
+            </h1>
+<p class="text-on-muted text-xs font-label mt-1">Operator Console</p>
 </div>
-<div class="flex items-center gap-4 text-on-surface-variant">
-<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors text-xl">terminal</span>
-<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors text-xl">settings</span>
-<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors text-xl">notifications</span>
-<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden border border-outline-variant ml-2">
-<img alt="System Admin" class="w-full h-full object-cover" data-alt="A futuristic, cyberpunk-style avatar portrait of a system administrator in high-contrast dark mode lighting with subtle neon green accents. Minimalist and sleek." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBm5tMiKqEJL4qtMhwXCZfX-FcwsdZ1Hb0mcROJFMy3LaiH6zfaolfihhrcX73PQgrcBKyZt27hE-aHtRzRbLQm-Zg5Kaud6y72zO-6esmgQb3igMn72ZZnMnXGoyey8LTFOvsDzZ_TFPm1ARlqHLPGNFgNIKWqBQbkVWpRbBk7w28YypP2ScFlVHxwVHQ6TccLbEKYLYG5LCdrDt7q8CSGe2q2UAy_w1-Ghcca36Nd-SJ5o7lMgt_nw8Zn5Fntyl43PZK7GFq7553K"/>
-</div>
-</div>
+<ul class="flex flex-col gap-1">
+<li><a class="flex items-center gap-3 px-4 py-3 font-body text-label-md font-medium tracking-tight text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors rounded-lg" href="#"><span class="material-symbols-outlined" data-icon="description">description</span> Contracts</a></li>
+<li><a class="flex items-center gap-3 px-4 py-3 font-body text-label-md font-medium tracking-tight text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors rounded-lg" href="#"><span class="material-symbols-outlined" data-icon="analytics">analytics</span> Evaluations</a></li>
+<li><a class="flex items-center gap-3 px-4 py-3 font-body text-label-md font-medium tracking-tight text-primary dark:text-primary font-bold bg-secondary-container/30 dark:bg-secondary-container/20 rounded-lg hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors" href="#"><span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span> Receipts</a></li>
+<li><a class="flex items-center gap-3 px-4 py-3 font-body text-label-md font-medium tracking-tight text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors rounded-lg" href="#"><span class="material-symbols-outlined" data-icon="verified_user">verified_user</span> Verifier</a></li>
+<li class="mt-auto"><a class="flex items-center gap-3 px-4 py-3 font-body text-label-md font-medium tracking-tight text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors rounded-lg" href="#"><span class="material-symbols-outlined" data-icon="settings">settings</span> Settings</a></li>
+</ul>
 </nav>
-<div class="flex flex-1 overflow-hidden">
-<!-- SideNavBar (Shared Component) - Suppressed per rules for transactional/receipt screen context. Assuming this is a focus view for a specific receipt -->
-<!-- Main Content Canvas -->
-<main class="flex-1 overflow-y-auto p-6 lg:p-8 bg-surface">
-<!-- Contextual Header: Receipt -->
-<header class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8">
-<div>
-<div class="flex items-center gap-3 mb-1">
-<h1 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Bound Settlement Receipt</h1>
-<span class="px-2 py-0.5 rounded-full bg-success-container text-on-success-container border border-success/20 font-mono text-xs font-medium flex items-center gap-1">
-<span class="material-symbols-outlined text-[14px]">check_circle</span> PASS
-                        </span>
+<!-- TopNavBar (from JSON) -->
+<header class="bg-surface/80 dark:bg-surface/80 backdrop-blur-md border-b border-outline-variant dark:border-outline-variant docked full-width top-0 ml-64 flex justify-between items-center h-16 px-6 fixed right-0 left-0 z-30">
+<div class="text-sm font-label text-on-muted">Receipts / Bound Settlement</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-high"><span class="material-symbols-outlined" data-icon="notifications">notifications</span></button>
+<button class="text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-high"><span class="material-symbols-outlined" data-icon="terminal">terminal</span></button>
+<button class="text-on-surface-variant hover:text-on-surface dark:hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-high"><span class="material-symbols-outlined" data-icon="account_circle">account_circle</span></button>
 </div>
-<div class="flex items-center gap-2 text-on-surface-variant text-sm font-mono">
-<span class="material-symbols-outlined text-[16px]">receipt_long</span>
-                        ID: REC-20231027-8F2C4A91
-                        <span class="material-symbols-outlined text-[14px] cursor-pointer hover:text-on-surface ml-1">content_copy</span>
-</div>
-</div>
-<button class="flex items-center gap-2 px-4 py-2 bg-surface-container hover:bg-surface-variant border border-outline rounded-lg text-sm font-medium transition-colors text-on-surface">
-<span class="material-symbols-outlined text-[18px]">download</span>
-                    Download JSON
-                </button>
 </header>
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-<!-- Left Column: Binding Panel (Hero) -->
-<div class="lg:col-span-2 space-y-6">
-<section class="bg-surface-container border border-outline-variant rounded-xl p-6 relative overflow-hidden">
-<div class="absolute top-0 left-0 w-1 h-full bg-primary/20"></div>
-<h2 class="text-sm font-bold uppercase tracking-wider text-on-surface-variant mb-6 font-label flex items-center gap-2">
-<span class="material-symbols-outlined text-[18px]">link</span> Cryptographic Binding Chain
-                        </h2>
-<div class="relative pl-6 before:content-[''] before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-px before:bg-outline-variant">
-<!-- Chain Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium">contract_hash</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">0x8f2c...4a91</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">content_copy</span>
-</div>
-</div>
-</div>
-<!-- Chain Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium">grader_hash</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">sha256:3b9e...7c22</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">content_copy</span>
-</div>
-</div>
-</div>
-<!-- Chain Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium">base_sha</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">3476768e</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">content_copy</span>
-</div>
-</div>
-</div>
-<!-- Chain Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium">submission_sha</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">0x4d1a...9f8b</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">content_copy</span>
-</div>
-</div>
-</div>
-<!-- Chain Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium">tree_hash</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">0x7a2...f3e1</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">content_copy</span>
-</div>
-</div>
-</div>
-<!-- Chain Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium">verifier_image_digest</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">sha256:cc9...d4e5</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">content_copy</span>
-</div>
-</div>
-</div>
-<!-- Chain Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium">command_output_digest</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">0x9b4...a1c2</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">content_copy</span>
-</div>
-</div>
-</div>
-<!-- Chain Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium">result_digest</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">0xd41...8e21</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">content_copy</span>
-</div>
-</div>
-</div>
-<!-- Decision Item (Highlighted) -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-success border border-surface-container shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 bg-success-container/30 rounded-md border border-success/20">
-<span class="text-sm text-on-surface w-48 font-bold">decision</span>
-<div class="flex items-center gap-2 justify-between sm:justify-end">
-<span class="font-mono text-sm font-bold text-success">PASS</span>
-</div>
-</div>
-</div>
-<!-- Settlement Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">account_balance_wallet</span> settlement_tx</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">0x9e3f...2b1a</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">open_in_new</span>
-</div>
-</div>
-</div>
-<!-- Fee Item -->
-<div class="relative mb-5 last:mb-0 group">
-<div class="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-outline border border-surface-container group-hover:bg-primary transition-colors"></div>
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<span class="text-sm text-on-surface-variant w-48 font-medium flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">local_gas_station</span> verifier_fee_tx</span>
-<div class="flex items-center gap-2 bg-surface p-1.5 rounded-md border border-outline/30 flex-1 justify-between sm:justify-end">
-<span class="font-mono text-sm text-on-surface truncate">0x1a4d...8c2f</span>
-<span class="material-symbols-outlined text-[14px] text-on-surface-variant cursor-pointer hover:text-on-surface">open_in_new</span>
-</div>
-</div>
-</div>
-</div>
-</section>
-</div>
-<!-- Right Column: Secondary Panels -->
-<div class="space-y-6">
-<!-- Offline Verification Panel -->
-<section class="bg-surface-container border border-outline-variant rounded-xl p-5">
-<h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-4 font-label flex items-center gap-2">
-<span class="material-symbols-outlined text-[16px]">verified_user</span> Local Verification
-                        </h2>
-<div class="flex items-start gap-3 mb-4 p-3 bg-surface rounded-lg border border-outline/50">
-<span class="material-symbols-outlined text-success mt-0.5 text-[20px]">check_circle</span>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-16 p-8 w-full max-w-7xl mx-auto flex flex-col gap-8 pb-32">
+<!-- 1. Header -->
+<div class="flex items-start justify-between border-b border-outline pb-6">
 <div>
-<p class="text-sm font-medium text-on-surface">Re-verified from receipt alone</p>
-<p class="text-xs text-on-surface-variant mt-1">signature valid, chain intact</p>
+<div class="flex items-center gap-4 mb-2">
+<h2 class="text-3xl font-headline font-bold">RCPT-e83964b7</h2>
+<span class="bg-primary-container text-primary border border-primary/30 px-3 py-1 rounded-full text-sm font-bold tracking-wider flex items-center gap-1"><span class="material-symbols-outlined text-[18px]" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span> PASS</span>
+</div>
+<p class="text-on-muted font-label text-sm">Bound Settlement Receipt • Finalized</p>
+</div>
+<button class="flex items-center gap-2 bg-surface-container border border-outline hover:border-primary/50 text-sm font-medium px-4 py-2 rounded-lg transition-colors group">
+<span class="material-symbols-outlined text-on-muted group-hover:text-primary transition-colors text-[20px]" data-icon="download">download</span>
+                Download JSON
+            </button>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- 2. Binding Chain (Hero Panel) - Takes 2 columns on lg -->
+<div class="lg:col-span-2 bg-surface-container border border-outline rounded-xl p-6 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+<h3 class="text-sm font-label uppercase tracking-widest text-on-muted mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="link">link</span> Cryptographic Binding Chain
+                </h3>
+<div class="relative binding-chain pl-8 flex flex-col gap-4 z-10">
+<!-- Row Item Template -->
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">contract_hash</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">sha256:b87801...187162</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
 </div>
 </div>
-<div class="bg-[#000000] rounded-lg p-3 border border-outline-variant/50 relative group">
-<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-<span class="material-symbols-outlined text-on-surface-variant text-[14px] cursor-pointer hover:text-on-surface">content_copy</span>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">grader_hash</span>
 </div>
-<div class="font-mono text-xs text-on-surface-variant break-all">
-<span class="text-secondary">$</span> <span class="text-primary">mergegate</span> verify receipt.json
-                            </div>
-</div>
-</section>
-<!-- Settlement Panel -->
-<section class="bg-surface-container border border-outline-variant rounded-xl p-5 relative overflow-hidden">
-<h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-4 font-label flex items-center gap-2">
-<span class="material-symbols-outlined text-[16px]">payments</span> Execution Trace
-                        </h2>
-<div class="space-y-4">
-<div class="flex justify-between items-center pb-3 border-b border-outline-variant/50">
-<span class="text-sm text-on-surface-variant">Escrow release</span>
-<div class="flex items-center gap-2 text-right">
-<span class="font-mono text-sm font-medium text-on-surface">0.25 USDC</span>
-<span class="text-xs text-on-surface-variant">→ provider agent</span>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">sha256:83018d...2a7a6</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
 </div>
 </div>
-<div class="flex justify-between items-center pb-3 border-b border-outline-variant/50">
-<span class="text-sm text-on-surface-variant">Verifier fee</span>
-<div class="flex items-center gap-2 text-right">
-<span class="font-mono text-sm font-medium text-on-surface">0.05 USDC</span>
-<span class="text-xs text-on-surface-variant">via x402</span>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">base_sha</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">3476768e...ddb8</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
+</div>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">submission_sha</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">e83964b7...10ff</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
+</div>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">tree_hash</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">a9f4c1...9b2e</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
+</div>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">verifier_image_digest</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">sha256:2e8150...5b0a</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
+</div>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">command_output_digest</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">7f8c9b...d1a4</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
+</div>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">result_digest</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">d4e5f6...7a8b</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
+</div>
+</div>
+<!-- Highlighted Decision Row -->
+<div class="flex items-center justify-between group mt-2 bg-primary/5 -mx-4 px-4 py-3 rounded-lg border border-primary/20">
+<div class="flex items-center gap-4">
+<div class="w-3 h-3 rounded-full bg-primary z-10 relative -ml-[1.7rem] ring-4 ring-surface-container shadow-[0_0_10px_rgba(74,222,128,0.5)]"></div>
+<span class="text-sm font-bold text-on-surface w-48 uppercase">decision</span>
+</div>
+<div class="font-bold text-primary tracking-widest text-lg">PASS</div>
+</div>
+<div class="flex items-center justify-between group mt-2">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">settlement_tx</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">0xb8a45e...fe827</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
+</div>
+</div>
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-outline z-10 relative -ml-[1.58rem] ring-4 ring-surface-container"></div>
+<span class="text-sm font-medium text-on-muted w-48">verifier_fee_tx</span>
+</div>
+<div class="flex items-center gap-2 copy-hover cursor-pointer bg-surface border border-outline-variant px-3 py-1.5 rounded-md hover:border-outline transition-colors">
+<span class="mono-hash text-on-surface">0xeb5c16...0723</span>
+<span class="material-symbols-outlined text-on-muted opacity-0 copy-icon text-[16px] transition-opacity" data-icon="content_copy">content_copy</span>
 </div>
 </div>
 </div>
-<div class="mt-4 p-3 bg-surface rounded-lg border border-outline/30 text-xs text-on-surface-variant flex gap-2">
-<span class="material-symbols-outlined text-[16px] shrink-0">info</span>
-<p>Settlement executed the buyer's pre-signed mandate. No discretionary approval.</p>
 </div>
-</section>
-<!-- Alternate State Preview (Fail/Refund context) -->
-<section class="bg-surface-container border border-error/30 rounded-xl p-5 relative overflow-hidden opacity-70 hover:opacity-100 transition-opacity">
-<div class="absolute top-0 right-0 w-12 h-12 bg-error-container transform rotate-45 translate-x-6 -translate-y-6"></div>
-<h2 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-3 font-label">
-                            Example: Failed Verdict
-                        </h2>
-<div class="p-3 bg-surface rounded-lg border border-error/20 mb-3">
-<div class="flex items-center gap-2 mb-2">
-<span class="px-1.5 py-0.5 rounded-sm bg-error-container text-on-error-container font-mono text-[10px] font-bold">FAIL</span>
-<span class="text-xs font-medium text-error">Policy Violation</span>
-</div>
-<p class="font-mono text-[11px] text-on-surface-variant break-words">
-                                reason: protected_paths (github/workflows/deploy.yml modified)
-                            </p>
-</div>
-<div class="flex justify-between items-center">
-<span class="text-xs text-on-surface-variant">Refund</span>
-<div class="flex items-center gap-2">
-<span class="font-mono text-xs font-medium text-on-surface">0.25 USDC</span>
-<span class="text-[10px] text-on-surface-variant">→ buyer</span>
+<!-- Right Column Panels -->
+<div class="flex flex-col gap-8">
+<!-- 3. Offline Verification Panel -->
+<div class="bg-surface-container border border-outline rounded-xl p-6">
+<h3 class="text-sm font-label uppercase tracking-widest text-on-muted mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="verified">verified</span> Verification Status
+                    </h3>
+<div class="flex items-start gap-3 mb-4">
+<span class="material-symbols-outlined text-primary mt-0.5" data-icon="check_circle">check_circle</span>
+<div>
+<div class="font-medium text-on-surface mb-1">Re-verified from receipt alone</div>
+<div class="text-sm text-on-muted">18 checks passed, signature valid, chain intact</div>
 </div>
 </div>
-</section>
+<div class="space-y-3 mt-6 border-t border-outline-variant pt-4">
+<div class="flex justify-between items-center text-sm">
+<span class="text-on-muted font-medium">Key ID</span>
+<span class="mono-hash bg-surface px-2 py-1 rounded border border-outline-variant">mergegate-e5683130</span>
+</div>
+<div class="text-xs text-on-muted mb-1 font-medium uppercase tracking-wider">CLI Replay Command</div>
+<div class="bg-[#000000] border border-outline-variant rounded-md p-3 font-mono text-xs text-on-surface overflow-x-auto whitespace-nowrap flex items-center justify-between">
+<span>$ mergegate verify receipt.json</span>
+<span class="material-symbols-outlined text-on-muted hover:text-on-surface cursor-pointer text-[14px]" data-icon="content_copy">content_copy</span>
 </div>
 </div>
-<!-- Global Footer Attestation -->
-<footer class="mt-12 py-6 border-t border-outline-variant text-center">
-<p class="text-xs text-on-surface-variant/70 font-mono tracking-tight flex items-center justify-center gap-2">
-<span class="material-symbols-outlined text-[14px]">gavel</span>
-                    Attests verified contract acceptance only — not code quality, security, or mergeworthiness.
-                </p>
-</footer>
+</div>
+<!-- 5. Refund Receipt Card (Contextual Example) -->
+<div class="bg-surface border border-error/20 rounded-xl p-5 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-24 h-24 bg-error/10 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex justify-between items-start mb-3">
+<h4 class="text-sm font-label font-medium text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-on-muted text-[16px]" data-icon="history">history</span> Related Refund
+                        </h4>
+<span class="text-error font-bold text-xs uppercase tracking-wider border border-error/30 px-2 py-0.5 rounded bg-error-container/20">FAIL</span>
+</div>
+<div class="space-y-2 text-sm">
+<div class="flex flex-col gap-0.5">
+<span class="text-xs text-on-muted uppercase tracking-wider">Reason</span>
+<span class="font-mono text-xs text-on-surface break-all">protected_paths — .github/workflows/deploy.yml</span>
+</div>
+<div class="flex flex-col gap-0.5 mt-2 pt-2 border-t border-outline-variant">
+<span class="text-xs text-on-muted uppercase tracking-wider">Refund Executed</span>
+<span class="text-on-surface">0.25 USDC to <span class="mono-hash">0x5c34e3...31a2</span> (Buyer)</span>
+</div>
+<div class="flex justify-between text-xs text-on-muted mt-2">
+<span>Tx: <span class="mono-hash">0x4581ed...5b1e</span></span>
+<span>Block: 49946711</span>
+</div>
+<div class="text-xs text-on-muted italic mt-1 text-right">Note: 17 checks passed</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. Settlement Panel -->
+<div class="bg-surface-container border border-outline rounded-xl p-6">
+<h3 class="text-sm font-label uppercase tracking-widest text-on-muted mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="account_balance">account_balance</span> Settlement Execution
+            </h3>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm whitespace-nowrap">
+<thead>
+<tr class="border-b border-outline-variant text-on-muted">
+<th class="pb-3 font-medium px-4">Action</th>
+<th class="pb-3 font-medium px-4">Details</th>
+<th class="pb-3 font-medium px-4">Transaction</th>
+<th class="pb-3 font-medium px-4">Block</th>
+<th class="pb-3 font-medium px-4 text-right">Explorer</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant text-on-surface">
+<tr class="hover:bg-surface/50 transition-colors">
+<td class="py-4 px-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> Escrow release</td>
+<td class="py-4 px-4">0.25 USDC to <span class="mono-hash">0xbe1424...ba558</span> (Provider)</td>
+<td class="py-4 px-4 mono-hash text-on-muted">0xb8a45e...</td>
+<td class="py-4 px-4 font-mono text-xs">49945815</td>
+<td class="py-4 px-4 text-right">
+<a class="text-on-muted hover:text-primary transition-colors flex items-center justify-end gap-1" href="#">
+                                    Basescan <span class="material-symbols-outlined text-[14px]" data-icon="open_in_new">open_in_new</span>
+</a>
+</td>
+</tr>
+<tr class="hover:bg-surface/50 transition-colors">
+<td class="py-4 px-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> Verifier fee</td>
+<td class="py-4 px-4">0.05 USDC to Verifier</td>
+<td class="py-4 px-4 mono-hash text-on-muted">0xeb5c16...</td>
+<td class="py-4 px-4 font-mono text-xs">49945839</td>
+<td class="py-4 px-4 text-right">
+<a class="text-on-muted hover:text-primary transition-colors flex items-center justify-end gap-1" href="#">
+                                    Basescan <span class="material-symbols-outlined text-[14px]" data-icon="open_in_new">open_in_new</span>
+</a>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-4 p-3 bg-surface border border-outline-variant rounded-lg text-sm text-on-muted flex items-start gap-2">
+<span class="material-symbols-outlined text-[18px] text-on-surface" data-icon="info">info</span>
+<p>Settlement executed the buyer pre-signed mandate. No discretionary approval.</p>
+</div>
+</div>
 </main>
+<!-- Footer (from JSON) -->
+<footer class="bg-surface dark:bg-surface border-t border-outline-variant dark:border-outline-variant full-width bottom-0 ml-64 flex justify-between items-center py-3 px-6 fixed bottom-0 right-0 left-0 z-30">
+<div class="text-on-muted text-xs flex gap-2 items-center">
+<span class="material-symbols-outlined text-[14px]" data-icon="gavel">gavel</span>
+            Attests verified contract acceptance only — not code quality, security, or mergeworthiness.
+        </div>
+<div class="flex items-center gap-6">
+<span class="font-label text-xs uppercase tracking-widest text-on-surface-variant dark:text-on-surface-variant">© 2024 MergeGate Protocol • v1.0.4-stable</span>
+<div class="flex gap-4">
+<a class="font-label text-xs uppercase tracking-widest text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="font-label text-xs uppercase tracking-widest text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors" href="#">API Status</a>
+<a class="font-label text-xs uppercase tracking-widest text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
 </div>
+</div>
+</footer>
 </body></html>
