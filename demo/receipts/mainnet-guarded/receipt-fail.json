@@ -1,0 +1,68 @@
+{
+  "body": {
+    "schema_version": "mergegate.receipt/v1",
+    "issued_at": "2026-08-14T19:22:50.151328Z",
+    "binding": {
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:5fad3810abcb6705dad2f88fb8bd447fbc2dd6e61eb5d193968b200dd91e139d",
+      "grader_hash": "sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6",
+      "base_sha": "3476768e6dff4d7a39c3ae3fef2f188ab6ffddb8",
+      "submission_sha": "1758ca302557dcc9d6c1eee6b5aad92cd7bcfe0e",
+      "tree_hash": "",
+      "verifier_image_digest": "us-central1-docker.pkg.dev/quick-catcher-470218-b0/mergegate/verifier@sha256:2e81501ef459f2a520c0ac08c5fd51962af2290c666d2374681e9619cc015b0a",
+      "command_output_digest": "sha256:27c7e64be0e78cfe38a90ae791b152694202a58492702a2e512d1f3b51f496fd",
+      "result_digest": "sha256:cbe01e0948d86e4a47cd125143dee13e5ae9dcc8478c601b7b35dcc11f618515",
+      "mandate_hash": "sha256:edae4ed758322d95a802e4dc9117a99ccbc4de8c59572f911fb03cb3be52a5df",
+      "settlement_key": "sha256:e604e425d39bb1d50425ab239b4de398d45b02277980aee43735c3ce75ac3a10",
+      "decision": "FAIL",
+      "settlement_action": "refund",
+      "settlement_recipient": "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2",
+      "settlement_amount_usdc": "0.25",
+      "settlement_asset": "USDC",
+      "settlement_chain": "BASE",
+      "reason": "contract evaluated FAIL: .github/workflows/deploy.yml modifies a contract-protected path (pattern: .github/**)",
+      "settlement_tx": "0x8362ac904dad8ce8f740b29d3183d8a1659ba01b2a71a1b09fe35e5c97245354",
+      "verifier_fee_tx": "0x2426472b1c6ac01538d2e776fe8f7fa94f1c18cfc9fd86611238b389de15b6c5"
+    },
+    "manifest": {
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:5fad3810abcb6705dad2f88fb8bd447fbc2dd6e61eb5d193968b200dd91e139d",
+      "grader_hash": "sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6",
+      "base_sha": "3476768e6dff4d7a39c3ae3fef2f188ab6ffddb8",
+      "submission_sha": "1758ca302557dcc9d6c1eee6b5aad92cd7bcfe0e",
+      "tree_hash": "",
+      "verifier_image_digest": "us-central1-docker.pkg.dev/quick-catcher-470218-b0/mergegate/verifier@sha256:2e81501ef459f2a520c0ac08c5fd51962af2290c666d2374681e9619cc015b0a",
+      "commands": [],
+      "command_output_digest": "sha256:27c7e64be0e78cfe38a90ae791b152694202a58492702a2e512d1f3b51f496fd",
+      "failed_terms": [
+        "protected_path"
+      ],
+      "rejection_reason": ".github/workflows/deploy.yml modifies a contract-protected path (pattern: .github/**)",
+      "tamper_signals": [],
+      "git_stripped": true,
+      "egress_policy": "deny-tcp-egress; dns-resolution-available",
+      "verdict": "FAIL"
+    },
+    "mandate": {
+      "schema_version": "mergegate.mandate/v1",
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:5fad3810abcb6705dad2f88fb8bd447fbc2dd6e61eb5d193968b200dd91e139d",
+      "buyer_agent": "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2",
+      "provider_agent": "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558",
+      "amount_usdc": "0.25",
+      "asset": "USDC",
+      "chain": "BASE",
+      "deadline": "2026-08-15T01:21:10.100331Z",
+      "nonce": "968b200dd91e139d"
+    },
+    "mandate_statement": "pay exactly 0.25 USDC to 0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558 if and only if contract sha256:5fad3810abcb6705dad2f88fb8bd447fbc2dd6e61eb5d193968b200dd91e139d evaluates PASS before 2026-08-15T01:21:10.100331Z",
+    "scope": "Attests verified contract acceptance only, not code quality, security, or mergeworthiness.",
+    "custody": "Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority."
+  },
+  "sig": {
+    "alg": "EdDSA",
+    "kid": "mergegate-e5683130",
+    "value": "3NKOyVIJwZg_zQIuucFrp7im1h3p41kBFWQpg0z0pXfPXelsN59I83vFZo6jle9g6U6NWit5N7O9pT0qGqjxDQ"
+  },
+  "receipt_hash": "sha256:46d7e72770ea9e0eaf90411e367c909c443333414ef621829af4122d02e149d7"
+}

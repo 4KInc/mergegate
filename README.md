@@ -30,8 +30,8 @@ GitHub code, running on Base mainnet.
 | | |
 | --- | --- |
 | **Dashboard** | [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app) |
-| **PASS flow** (0.25 USDC released to the provider) | [receipt](https://mergegate-api-1031148889398.us-central1.run.app/receipts/mainnet-receipt-pass) · [settlement tx](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827) |
-| **FAIL flow** (0.25 USDC refunded to the buyer) | [receipt](https://mergegate-api-1031148889398.us-central1.run.app/receipts/mainnet-receipt-fail) · [refund tx](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e) |
+| **PASS flow** (0.25 USDC released to the provider) | [settlement tx](https://basescan.org/tx/0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6) · block 49972831 |
+| **FAIL flow** (0.25 USDC refunded to the buyer) | [refund tx](https://basescan.org/tx/0x8362ac904dad8ce8f740b29d3183d8a1659ba01b2a71a1b09fe35e5c97245354) · block 49972989 |
 
 The FAIL flow is the one worth opening. That submission's code was **correct**
 and would have passed the buyer's tests. It was refused anyway, before the tests
@@ -267,12 +267,12 @@ Base RPC, not just through Circle's response.
 
 | | |
 | --- | --- |
-| contract | `sha256:b878016960fa33111fdc3f49840ef5e9aa93ae7cc089c9cb083ba7379b187162` |
+| contract | `sha256:be8e3ab1a764ef807cbd31db06417bd23af7250ff8519d935a17deffcbf1b9e0` |
 | grader | `sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6` |
-| submission | `e83964b7b61edcd1eae5c425c0eacd6e0dd210ff` |
-| escrow funded | [`0xaf13670e…`](https://basescan.org/tx/0xaf13670e060dfa86cd1fddd5da3171525e7934c1e76317769035a5485fa4c27d) |
-| release, 0.25 USDC | [`0xb8a45ef2…`](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827), block 49945815 |
-| verifier fee, 0.05 USDC | [`0xeb5c1603…`](https://basescan.org/tx/0xeb5c16037349ad081168f3dcea99f912366013b45a754c39cce74b22714c0723), block 49945839 |
+| submission | `97e4bd614868913199f264effb1e954a2f799373` |
+| escrow funded | [`0x2d41e529…`](https://basescan.org/tx/0x2d41e529c3567f31195355cf82c4e789d8373a940647ec33993910bdd629b0a2) |
+| release, 0.25 USDC | [`0xf8cb4b0f…`](https://basescan.org/tx/0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6), block 49972831 |
+| verifier fee, 0.05 USDC | [`0x58a5bdd3…`](https://basescan.org/tx/0x58a5bdd3d8f82eb2c3d6c7729761d56b160a4e8df87dbb1718ed5384c0417d92), block 49972855 |
 
 **FAIL → refund.** This is the one that matters. The submission's code is
 *correct*: it would have passed the buyer's tests, but it also edited
@@ -281,11 +281,11 @@ and escrow returned to the buyer.
 
 | | |
 | --- | --- |
-| contract | `sha256:7090242fb45b88a3eb1e0f65c2245cff1fc1ce6c5e3b85c03e2af98a2683d346` |
-| submission | `272356dbfc2b165f64e8c55734364d8488a730aa` |
-| escrow funded | [`0x7ae6ca91…`](https://basescan.org/tx/0x7ae6ca918d4466539ee7313015073742033c576ffad49490bcd625b47dfe20ad) |
-| refund, 0.25 USDC | [`0x4581edf6…`](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e), block 49946711 |
-| verifier fee, 0.05 USDC | [`0x75ca88ed…`](https://basescan.org/tx/0x75ca88edadcf72225b0baddaf7c036449c9952f667b3242cac6df4c3bb928280), block 49946736 |
+| contract | `sha256:5fad3810abcb6705dad2f88fb8bd447fbc2dd6e61eb5d193968b200dd91e139d` |
+| submission | `1758ca302557dcc9d6c1eee6b5aad92cd7bcfe0e` |
+| escrow funded | [`0x39913b9f…`](https://basescan.org/tx/0x39913b9fc210c35e1ff55df04ea828fcf206b4f47a098c6e3cfe5dd964062ba9) |
+| refund, 0.25 USDC | [`0x8362ac90…`](https://basescan.org/tx/0x8362ac904dad8ce8f740b29d3183d8a1659ba01b2a71a1b09fe35e5c97245354), block 49972989 |
+| verifier fee, 0.05 USDC | [`0x2426472b…`](https://basescan.org/tx/0x2426472b1c6ac01538d2e776fe8f7fa94f1c18cfc9fd86611238b389de15b6c5), block 49973001 |
 
 The refund receipt names the failed term rather than reporting a generic
 failure:
@@ -293,15 +293,19 @@ failure:
 > contract evaluated FAIL: `.github/workflows/deploy.yml` modifies a
 > contract-protected path (pattern: `.github/**`)
 
-Mainnet balances moved exactly as the mandates specified: buyer 2.64 → 2.29
-(−0.60 across both runs, of which 0.25 came back as the refund), provider
-0.14 → 0.39 (+0.25), and the verifier-fee wallet 0.00 → 0.10. That fee wallet
-was empty beforehand, so its balance came only from these runs.
+Both runs happened **with the runtime grader guard active**, so these receipts
+attest the pipeline as it stands rather than an earlier version of it.
 
-Both receipts re-verify offline against the Secret Manager signing key
+Mainnet balances moved exactly as the mandates specified: buyer 2.29 → 1.94
+(−0.35, being 0.10 of fees plus the 0.25 released, since the refunded 0.25 came
+back), provider 0.39 → 0.64 (+0.25), verifier-fee wallet 0.10 → 0.20 (+0.10),
+and escrow net zero at 2.01 with 0.60 in and 0.60 out.
+
+Both receipts re-verify offline against the published signing key
 (`mergegate-e5683130`): 18 and 17 checks. They are committed under
-`demo/receipts/mainnet/`, alongside the earlier Base Sepolia pair in
-`demo/receipts/`.
+`demo/receipts/mainnet-guarded/`. The earlier pair, run before the guard
+existed, is kept in `demo/receipts/mainnet/` rather than deleted: they are
+honest records of what the system did at the time, and both still verify.
 
 ## The app
 

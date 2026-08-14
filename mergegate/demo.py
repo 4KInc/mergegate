@@ -402,6 +402,48 @@ class DemoRunner:
         return {"receipt": envelope, "state": machine.state.value, "executed": executed}
 
 
+def _firestore_client() -> Any:
+    """A Firestore client, preferring Application Default Credentials.
+
+    Falls back to the gcloud access token when ADC is not configured. A local
+    operator has usually run ``gcloud auth login`` but not
+    ``gcloud auth application-default login``, and those are separate
+    credentials; without the fallback a real run would settle on-chain and then
+    fail to record anything, which is the worst of both.
+    """
+    from google.cloud import firestore
+
+    try:
+        return firestore.Client()
+    except Exception:
+        from google.oauth2.credentials import Credentials
+
+        proc = subprocess.run(  # noqa: S603 - argv vector, shell=False
+            ["gcloud", "auth", "print-access-token"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                "no Firestore credentials: run `gcloud auth application-default "
+                f"login`, or `gcloud auth login`. {proc.stderr.strip()}"
+            ) from None
+        # google-auth ships partial stubs; the constructor is untyped upstream.
+        creds = Credentials(token=proc.stdout.strip())  # type: ignore[no-untyped-call]
+        return firestore.Client(project=os.environ.get("GOOGLE_CLOUD_PROJECT"), credentials=creds)
+
+
+def _stores() -> tuple[Any, Any]:
+    """Receipt and contract stores, when a project is configured."""
+    if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+        return None, None
+    from .store import FirestoreContractStore, FirestoreReceiptStore
+
+    client = _firestore_client()
+    return FirestoreReceiptStore(client), FirestoreContractStore(client)
+
+
 def _print_flow(title: str, config: DemoConfig, result: dict[str, Any]) -> None:
     binding = result["receipt"]["body"]["binding"]
     print(f"\n=== {title} ===")
@@ -431,7 +473,10 @@ def main(argv: list[str] | None = None) -> int:
         usdc_address=config.usdc_address,
         binary=config.circle_cli or None,
     )
-    runner = DemoRunner(config, rail=rail)
+    receipts, contracts = _stores()
+    runner = DemoRunner(config, rail=rail, receipts=receipts, contracts=contracts)
+    if receipts is None:
+        print("  note: no GOOGLE_CLOUD_PROJECT, this run will not reach the dashboard")
 
     print(f"chain {config.chain}  reward {config.reward_usdc} USDC  repo {config.repo}")
     repo = runner.clone()

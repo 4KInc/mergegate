@@ -1,0 +1,79 @@
+{
+  "body": {
+    "schema_version": "mergegate.receipt/v1",
+    "issued_at": "2026-08-14T19:17:42.867290Z",
+    "binding": {
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:be8e3ab1a764ef807cbd31db06417bd23af7250ff8519d935a17deffcbf1b9e0",
+      "grader_hash": "sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6",
+      "base_sha": "3476768e6dff4d7a39c3ae3fef2f188ab6ffddb8",
+      "submission_sha": "97e4bd614868913199f264effb1e954a2f799373",
+      "tree_hash": "sha256:c54eba00d2f07293d568f73f81870af675d29f05f42abf63063cd842c4d1ac35",
+      "verifier_image_digest": "us-central1-docker.pkg.dev/quick-catcher-470218-b0/mergegate/verifier@sha256:2e81501ef459f2a520c0ac08c5fd51962af2290c666d2374681e9619cc015b0a",
+      "command_output_digest": "sha256:e66524016367d2920f0ea77f70f22c9201686ee72fcadaf325cf1821bbedab30",
+      "result_digest": "sha256:948eb0e218988dd596ccca03a11a20f0c177259763396e7125ae31091870d780",
+      "mandate_hash": "sha256:f19a1f3eb867e358c59a93cb276007677db18910135bd4c93adbceead8bf306c",
+      "settlement_key": "sha256:eddf2b269cdd03305c67df3a29c031760849754916e431dd81c945bf5f6ea891",
+      "decision": "PASS",
+      "settlement_action": "release",
+      "settlement_recipient": "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558",
+      "settlement_amount_usdc": "0.25",
+      "settlement_asset": "USDC",
+      "settlement_chain": "BASE",
+      "reason": "contract evaluated PASS before the deadline",
+      "settlement_tx": "0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6",
+      "verifier_fee_tx": "0x58a5bdd3d8f82eb2c3d6c7729761d56b160a4e8df87dbb1718ed5384c0417d92"
+    },
+    "manifest": {
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:be8e3ab1a764ef807cbd31db06417bd23af7250ff8519d935a17deffcbf1b9e0",
+      "grader_hash": "sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6",
+      "base_sha": "3476768e6dff4d7a39c3ae3fef2f188ab6ffddb8",
+      "submission_sha": "97e4bd614868913199f264effb1e954a2f799373",
+      "tree_hash": "sha256:c54eba00d2f07293d568f73f81870af675d29f05f42abf63063cd842c4d1ac35",
+      "verifier_image_digest": "us-central1-docker.pkg.dev/quick-catcher-470218-b0/mergegate/verifier@sha256:2e81501ef459f2a520c0ac08c5fd51962af2290c666d2374681e9619cc015b0a",
+      "commands": [
+        {
+          "argv": [
+            "/Users/heartlinmachado/Projects/mergegate/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-q"
+          ],
+          "exit_code": 0,
+          "stdout_digest": "sha256:cf78f3a041dbf07458abe3bc0f884ef99c7a2b58251860fb36bfb938b1b700fd",
+          "stderr_digest": "sha256:2065658755571b80faa0b152eeb0d500e7599e7d1823b416b017d0eb89a93823",
+          "timed_out": false
+        }
+      ],
+      "command_output_digest": "sha256:e66524016367d2920f0ea77f70f22c9201686ee72fcadaf325cf1821bbedab30",
+      "failed_terms": [],
+      "rejection_reason": "",
+      "tamper_signals": [],
+      "git_stripped": false,
+      "egress_policy": "deny-tcp-egress; dns-resolution-available",
+      "verdict": "PASS"
+    },
+    "mandate": {
+      "schema_version": "mergegate.mandate/v1",
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:be8e3ab1a764ef807cbd31db06417bd23af7250ff8519d935a17deffcbf1b9e0",
+      "buyer_agent": "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2",
+      "provider_agent": "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558",
+      "amount_usdc": "0.25",
+      "asset": "USDC",
+      "chain": "BASE",
+      "deadline": "2026-08-15T01:16:02.019692Z",
+      "nonce": "5a17deffcbf1b9e0"
+    },
+    "mandate_statement": "pay exactly 0.25 USDC to 0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558 if and only if contract sha256:be8e3ab1a764ef807cbd31db06417bd23af7250ff8519d935a17deffcbf1b9e0 evaluates PASS before 2026-08-15T01:16:02.019692Z",
+    "scope": "Attests verified contract acceptance only, not code quality, security, or mergeworthiness.",
+    "custody": "Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority."
+  },
+  "sig": {
+    "alg": "EdDSA",
+    "kid": "mergegate-e5683130",
+    "value": "td7YuFHNHI1ENy9wRTCHRB1HblF8gtKPA6YrlhAxy7_hbNd4K8QFOJ72PX4mDUitLrrkB-zlXB2dBDGqpSPdCw"
+  },
+  "receipt_hash": "sha256:3962c5d26a656ed1e51c91b6d627b3639820d9389db35ff8d4e0e383a1f6857c"
+}
