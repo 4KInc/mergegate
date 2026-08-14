@@ -2,77 +2,96 @@
 {% block title %}MergeGate — Contracts{% endblock %}
 {% block content %}
 
-<header class="mb-8">
-  <h1 class="font-display text-2xl font-semibold tracking-tight">Contracts</h1>
-  <p class="text-sm text-on-surface-variant mt-1">
-    Settled from real receipts. Every figure below is derived from a run that
-    happened; nothing here is illustrative. Totals span every network shown —
-    the Network column distinguishes mainnet settlements from testnet
-    rehearsals.
+{# The headline fact is the FAIL flow, not the totals. Leading with a stat grid
+   buried the one thing that distinguishes this from CI plus a transfer. #}
+<header class="mb-10">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="text-[10px] uppercase tracking-widest text-accent">Settled on-chain</span>
+    <span class="h-px flex-1 bg-line"></span>
+  </div>
+  <h1 class="font-display text-3xl md:text-[38px] leading-[1.1] font-semibold tracking-tight max-w-3xl">
+    Correct code still gets refunded<br class="hidden md:block"/>
+    if it touches a protected path.
+  </h1>
+  <p class="text-sm text-on-muted mt-4 max-w-2xl leading-relaxed">
+    Every row below is a real settlement with a transaction you can open. The
+    refunded one passed the buyer's tests on its merits — it was rejected
+    before those tests ever ran, because it also edited the deploy gate.
   </p>
 </header>
 
 {% if source_error %}
-<div class="mb-8 rounded-xl border border-danger/40 bg-danger/10 p-4">
+<div class="mb-8 rounded-xl border border-danger/40 bg-danger-container p-4">
   <p class="text-danger text-sm font-medium">Receipt store unreachable</p>
-  <p class="text-xs text-on-surface-variant mt-1 mono">{{ source_error }}</p>
-  <p class="text-xs text-on-surface-variant mt-2">
+  <p class="text-xs text-on-muted mt-1 mono">{{ source_error }}</p>
+  <p class="text-xs text-on-muted mt-2">
     The table below is empty because the datastore could not be read, not
     because no contracts have settled. Those are different things.
   </p>
 </div>
 {% endif %}
 
-<section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+{# Compact strip rather than four large tiles holding four short numbers. #}
+<section class="card divide-y md:divide-y-0 md:divide-x divide-line grid md:grid-cols-4 mb-10">
   {% for label, value in stats %}
-  <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/30">
-    <div class="font-display text-2xl font-semibold">{{ value }}</div>
-    <div class="text-xs text-on-surface-variant mt-1">{{ label }}</div>
+  <div class="px-5 py-4">
+    <div class="font-display text-2xl font-semibold tracking-tight
+      {% if 'released' in label %}text-accent{% elif 'refunded' in label %}text-warn{% endif %}">{{ value }}</div>
+    <div class="text-[11px] uppercase tracking-wider text-on-faint mt-1">{{ label }}</div>
   </div>
   {% endfor %}
 </section>
 
-<section class="bg-surface-container rounded-xl border border-outline-variant/30 overflow-hidden">
+<section class="mb-4 flex items-baseline justify-between gap-4">
+  <h2 class="font-display text-lg font-semibold tracking-tight">Settlements</h2>
+  {% if repository %}
+  <span class="mono text-xs text-on-faint truncate">{{ repository }}</span>
+  {% endif %}
+</section>
+
+<section class="card overflow-hidden">
   <div class="overflow-x-auto">
-    <table class="w-full text-sm min-w-[820px]">
-      <thead class="text-xs text-on-surface-variant border-b border-outline-variant/40">
-        <tr>
-          <th class="text-left font-medium px-5 py-3">Task</th>
-          <th class="text-left font-medium px-5 py-3">Repository</th>
-          <th class="text-right font-medium px-5 py-3">Reward</th>
+    <table class="w-full text-sm min-w-[780px]">
+      <thead>
+        <tr class="text-[10px] uppercase tracking-widest text-on-faint border-b border-line">
+          <th class="text-left font-medium px-5 py-3">Verdict</th>
           <th class="text-left font-medium px-5 py-3">Submission</th>
+          <th class="text-right font-medium px-5 py-3">Amount</th>
+          <th class="text-left font-medium px-5 py-3">Recipient</th>
           <th class="text-left font-medium px-5 py-3">Network</th>
-          <th class="text-left font-medium px-5 py-3">State</th>
           <th class="text-left font-medium px-5 py-3">Settlement</th>
+          <th class="px-5 py-3"></th>
         </tr>
       </thead>
       <tbody>
       {% for r in rows %}
-        <tr class="border-b border-outline-variant/20 last:border-0 hover:bg-surface-variant/20">
-          <td class="px-5 py-3">
-            <a class="hover:text-primary" href="/receipts/{{ r.id }}">{{ r.task }}</a>
-          </td>
-          <td class="px-5 py-3 text-on-surface-variant mono text-xs">{{ r.repository }}</td>
-          <td class="px-5 py-3 text-right mono">{{ r.amount }} USDC</td>
-          <td class="px-5 py-3 mono text-xs">{{ r.submission_short }}</td>
-          <td class="px-5 py-3">
-            <span class="text-xs {% if 'SEPOLIA' in r.chain|upper %}text-warning{% else %}text-on-surface-variant{% endif %}">{{ r.chain }}</span>
-          </td>
-          <td class="px-5 py-3">
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium
-              {% if r.state == 'SETTLED' %}bg-success/15 text-success
-              {% elif r.state == 'REFUNDED' %}bg-warning/15 text-warning
-              {% else %}bg-surface-variant text-on-surface-variant{% endif %}">
+        <tr class="border-b border-line/60 last:border-0 hover:bg-surface-high/40 transition-colors">
+          <td class="px-5 py-3.5">
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium
+              {% if r.state == 'SETTLED' %}bg-accent-container text-accent{% else %}bg-warn-container text-warn{% endif %}">
+              <span class="w-1.5 h-1.5 rounded-full {% if r.state == 'SETTLED' %}bg-accent{% else %}bg-warn{% endif %}"></span>
               {{ r.state }}
             </span>
           </td>
-          <td class="px-5 py-3">
-            <a class="mono text-xs text-primary hover:underline" target="_blank" rel="noopener"
+          <td class="px-5 py-3.5"><span class="mono text-xs chip">{{ r.submission_short }}</span></td>
+          <td class="px-5 py-3.5 text-right mono text-[13px]">{{ r.amount }}</td>
+          <td class="px-5 py-3.5 mono text-xs text-on-muted">{{ r.recipient_short }}</td>
+          <td class="px-5 py-3.5">
+            <span class="text-[11px] text-on-muted">
+              {{ r.chain }}{% if 'SEPOLIA' in r.chain|upper %} <span class="text-on-faint">· rehearsal</span>{% endif %}
+            </span>
+          </td>
+          <td class="px-5 py-3.5">
+            <a class="mono text-xs text-on-muted hover:text-accent transition-colors" target="_blank" rel="noopener"
                href="{{ r.explorer }}">{{ r.settlement_short }} ↗</a>
+          </td>
+          <td class="px-5 py-3.5 text-right">
+            <a href="/receipts/{{ r.id }}"
+               class="text-xs text-on-faint hover:text-accent transition-colors whitespace-nowrap">Receipt →</a>
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="7" class="px-5 py-8 text-center text-on-surface-variant">
+        <tr><td colspan="7" class="px-5 py-12 text-center text-on-faint text-sm">
           No settled contracts yet.
         </td></tr>
       {% endfor %}
@@ -81,29 +100,37 @@
   </div>
 </section>
 
-<section class="mt-8 grid md:grid-cols-2 gap-4">
-  <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/30">
-    <h2 class="font-display font-semibold mb-3">Settlement integrity</h2>
-    <ul class="text-sm text-on-surface-variant space-y-1.5">
-      <li>One contract → one eligible submission SHA</li>
-      <li>→ one verification result → one terminal settlement</li>
-    </ul>
-    <p class="text-xs text-on-surface-variant mt-4 leading-relaxed">
-      Enforced in three independent places: webhook delivery de-duplication, the
+<p class="text-[11px] text-on-faint mt-3">
+  Totals span every network shown. Rows marked
+  <span class="text-on-muted">rehearsal</span> settled on Base Sepolia, not mainnet.
+</p>
+
+<section class="mt-10 grid md:grid-cols-2 gap-4">
+  <div class="card p-5">
+    <h3 class="font-display font-semibold mb-3 text-[15px]">Settlement integrity</h3>
+    <p class="mono text-xs text-on-muted leading-relaxed">
+      one contract → one eligible SHA<br/>
+      → one verification → one terminal settlement
+    </p>
+    <div class="rule my-4"></div>
+    <p class="text-xs text-on-faint leading-relaxed">
+      Enforced in three independent places — webhook de-duplication, the
       settlement state machine, and the payment rail's idempotency key. They
       fail independently, which is the point.
     </p>
   </div>
-  <div class="bg-surface-container rounded-xl p-5 border border-outline-variant/30">
-    <h2 class="font-display font-semibold mb-3">Sandbox posture</h2>
+  <div class="card p-5">
+    <h3 class="font-display font-semibold mb-3 text-[15px]">Sandbox posture</h3>
     <div class="flex flex-wrap gap-1.5">
       {% for badge in badges %}
-      <span class="px-2 py-0.5 rounded-full bg-surface-variant text-xs text-on-surface-variant">{{ badge }}</span>
+      <span class="px-2 py-1 rounded-md bg-surface-high text-[11px] text-on-muted border border-line">{{ badge }}</span>
       {% endfor %}
     </div>
-    <p class="text-xs text-on-surface-variant mt-4 leading-relaxed">
+    <div class="rule my-4"></div>
+    <p class="text-xs text-on-faint leading-relaxed">
       Measured by probing inside a live Cloud Run Job, not assumed. DNS still
       resolves and is disclosed rather than rounded up to "default-deny".
+      <a href="/verifier" class="text-on-muted hover:text-accent">See the probe →</a>
     </p>
   </div>
 </section>

@@ -3,24 +3,25 @@
 {% block content %}
 
 <header class="mb-8">
-  <h1 class="font-display text-2xl font-semibold tracking-tight">Verifier</h1>
-  <p class="text-sm text-on-surface-variant mt-1 max-w-3xl">
+  <div class="flex items-center gap-3 mb-3"><span class="text-[10px] uppercase tracking-widest text-accent">Measured, not asserted</span><span class="h-px flex-1 bg-line"></span></div>
+  <h1 class="font-display text-3xl md:text-[34px] leading-tight font-semibold tracking-tight">Verifier</h1>
+  <p class="text-sm text-on-faint mt-1 max-w-3xl">
     The advantage is not that grading happens in a sandbox — plenty of things
     run in sandboxes. It is that the provider cannot influence the grader, and
     that this is demonstrable rather than asserted.
   </p>
 </header>
 
-<section class="bg-surface-container rounded-xl border border-outline-variant/30 p-5 mb-6">
-  <h2 class="font-display font-semibold mb-1">Pinned environment</h2>
-  <p class="text-xs text-on-surface-variant mb-4">
+<section class="card p-6 mb-4">
+  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">Pinned environment</h2>
+  <p class="text-xs text-on-faint mb-4">
     Contracts pin this image <em>by digest</em>. A tag would let the graded
     environment drift after funding.
   </p>
   <div class="space-y-2.5">
     {% for label, value in environment %}
     <div class="grid md:grid-cols-[190px_1fr] gap-1 md:gap-3">
-      <div class="text-xs text-on-surface-variant pt-0.5">{{ label }}</div>
+      <div class="text-xs text-on-faint pt-0.5">{{ label }}</div>
       <div class="mono text-xs hash">{{ value }}</div>
     </div>
     {% endfor %}
@@ -29,9 +30,9 @@
 
 {# The ordering is the argument: the buyer's contribution always overwrites the
    provider's, and two of the steps are deliberately redundant. #}
-<section class="bg-surface-container rounded-xl border border-outline-variant/30 p-5 mb-6">
-  <h2 class="font-display font-semibold mb-1">How a submission is graded</h2>
-  <p class="text-xs text-on-surface-variant mb-4">
+<section class="card p-6 mb-4">
+  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">How a submission is graded</h2>
+  <p class="text-xs text-on-faint mb-4">
     Steps 2 and 5 are deliberately redundant. The guard already rejects
     grader-path edits, so the purge should never find anything — but a defense
     that depends on one check being correct fails when that check is wrong.
@@ -39,24 +40,24 @@
   <ol class="space-y-3">
     {% for n, title, detail in pipeline %}
     <li class="flex gap-3">
-      <span class="shrink-0 w-6 h-6 rounded-full bg-surface-variant text-xs flex items-center justify-center mono">{{ n }}</span>
+      <span class="shrink-0 w-6 h-6 rounded-full bg-surface-high text-xs flex items-center justify-center mono">{{ n }}</span>
       <div>
         <div class="text-sm">{{ title }}</div>
-        <div class="text-xs text-on-surface-variant mt-0.5">{{ detail }}</div>
+        <div class="text-xs text-on-faint mt-0.5">{{ detail }}</div>
       </div>
     </li>
     {% endfor %}
   </ol>
 </section>
 
-<section class="bg-surface-container rounded-xl border border-outline-variant/30 p-5 mb-6">
-  <h2 class="font-display font-semibold mb-1">Network posture — measured</h2>
-  <p class="text-xs text-on-surface-variant mb-4 max-w-3xl">
+<section class="card p-6 mb-4">
+  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">Network posture — measured</h2>
+  <p class="text-xs text-on-faint mb-4 max-w-3xl">
     {{ probe.method }}
   </p>
   <div class="overflow-x-auto">
     <table class="w-full text-sm min-w-[420px]">
-      <thead class="text-xs text-on-surface-variant border-b border-outline-variant/40">
+      <thead class="text-xs text-on-faint border-b border-line">
         <tr>
           <th class="text-left font-medium py-2">Destination</th>
           <th class="text-left font-medium py-2">Default Cloud Run</th>
@@ -65,12 +66,12 @@
       </thead>
       <tbody>
         {% for dest, before, after in probe.results %}
-        <tr class="border-b border-outline-variant/20 last:border-0">
+        <tr class="border-b border-line/60 last:border-0">
           <td class="py-2 mono text-xs">{{ dest }}</td>
-          <td class="py-2 text-xs {% if before %}text-danger{% else %}text-on-surface-variant{% endif %}">
+          <td class="py-2 text-xs {% if before %}text-danger{% else %}text-on-faint{% endif %}">
             {{ "reachable" if before else "blocked" }}
           </td>
-          <td class="py-2 text-xs {% if after %}text-warning{% else %}text-success{% endif %}">
+          <td class="py-2 text-xs {% if after %}text-warn{% else %}text-accent{% endif %}">
             {{ "reachable" if after else "blocked" }}
           </td>
         </tr>
@@ -78,7 +79,7 @@
       </tbody>
     </table>
   </div>
-  <p class="text-xs text-on-surface-variant mt-4 leading-relaxed max-w-3xl">
+  <p class="text-xs text-on-faint mt-4 leading-relaxed max-w-3xl">
     The first configuration reached the public internet — Cloud Run grants
     egress by default. An earlier version of this system asserted
     <span class="mono">default-deny</span> while the deployed job could reach
@@ -87,14 +88,14 @@
     <span class="mono">{{ egress_claim }}</span>: DNS still resolves and is
     disclosed as a residual signalling channel rather than rounded up.
   </p>
-  <p class="text-xs text-on-surface-variant mt-2 mono">
+  <p class="text-xs text-on-faint mt-2 mono">
     probe exit codes — before {{ probe.before_exit_code }}, after {{ probe.after_exit_code }}
   </p>
 </section>
 
-<section class="bg-surface-container rounded-xl border border-outline-variant/30 p-5">
-  <h2 class="font-display font-semibold mb-1">Anti-gaming defenses</h2>
-  <p class="text-xs text-on-surface-variant mb-4 max-w-3xl">
+<section class="card p-6">
+  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">Anti-gaming defenses</h2>
+  <p class="text-xs text-on-faint mb-4 max-w-3xl">
     Each attack below is executed against a real repository with a real pytest
     process and asserted to fail. Mocking the runner would prove nothing — the
     grade has to actually be computed.
@@ -102,17 +103,17 @@
   <div class="space-y-3">
     {% for gate, attack, defense in defenses %}
     <div class="grid md:grid-cols-[70px_1fr] gap-1 md:gap-3">
-      <div class="text-xs mono text-primary pt-0.5">{{ gate }}</div>
+      <div class="text-[11px] mono text-accent pt-0.5">{{ gate }}</div>
       <div>
         <div class="text-sm">{{ attack }}</div>
-        <div class="text-xs text-on-surface-variant mt-0.5">{{ defense }}</div>
+        <div class="text-xs text-on-faint mt-0.5">{{ defense }}</div>
       </div>
     </div>
     {% endfor %}
   </div>
 </section>
 
-<p class="text-xs text-on-surface-variant mt-6 max-w-3xl">
+<p class="text-xs text-on-faint mt-6 max-w-3xl">
   Scope: a run proves whether the submission satisfied the buyer's pinned
   contract. It does not assess code quality, security, or mergeworthiness.
 </p>

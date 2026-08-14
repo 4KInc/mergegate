@@ -141,6 +141,14 @@ class ReceiptView:
         return str(self.binding.get("task_id", ""))
 
     @property
+    def recipient(self) -> str:
+        return str(self.binding.get("settlement_recipient", ""))
+
+    @property
+    def recipient_short(self) -> str:
+        return short(self.recipient, 8, 4)
+
+    @property
     def submission_sha(self) -> str:
         return str(self.binding.get("submission_sha", ""))
 
@@ -409,8 +417,8 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
             {
                 "id": v.id,
                 "task": v.task or "—",
-                "repository": v.task or "—",
-                "amount": v.amount,
+                "amount": f"{v.amount} USDC",
+                "recipient_short": short(v.recipient, 8, 4),
                 "submission_short": short(v.submission_sha, 8, 4),
                 "state": "SETTLED" if v.action == "release" else "REFUNDED",
                 "chain": v.chain or "—",
@@ -428,6 +436,9 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
                 "badges": SANDBOX_BADGES,
                 "network": ", ".join(bundle.networks()) or network,
                 "source_error": bundle.source_error,
+                # Every row is the same repository, so it belongs in the header
+                # once rather than repeated down a column.
+                "repository": views[0].task if views else "",
                 "active": "Contracts",
             },
         )

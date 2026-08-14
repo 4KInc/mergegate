@@ -1,6 +1,7 @@
-{# Shared shell. The Tailwind theme is lifted verbatim from the Stitch designs
-   in design/screens/, so the built UI and the design references stay the same
-   visual system rather than drifting apart. #}
+{# Theme taken from design/screens/03-bound-receipt.html — near-black zinc
+   surfaces with a single green accent. An earlier version used the flat
+   slate/blue palette from the dashboard screen, which left every element at
+   the same visual weight and nothing to draw the eye. #}
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
@@ -8,60 +9,76 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>{% block title %}MergeGate{% endblock %}</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
 <script>
 tailwind.config = {
   darkMode: "class",
   theme: { extend: {
     colors: {
-      surface: '#0f172a', 'on-surface': '#f8fafc', 'on-surface-variant': '#94a3b8',
-      'surface-container': '#1e293b', 'surface-variant': '#334155',
-      primary: '#38bdf8', 'on-primary': '#0f172a',
-      'outline-variant': '#475569', success: '#22c55e', warning: '#f59e0b',
-      danger: '#f87171',
+      surface:   { DEFAULT: '#09090b', container: '#18181b', high: '#27272a' },
+      on:        { surface: '#f4f4f5', muted: '#a1a1aa', faint: '#71717a' },
+      accent:    { DEFAULT: '#4ade80', dark: '#22c55e', container: 'rgba(74,222,128,0.10)' },
+      danger:    { DEFAULT: '#f87171', container: 'rgba(248,113,113,0.10)' },
+      warn:      { DEFAULT: '#fbbf24', container: 'rgba(251,191,36,0.10)' },
+      line:      '#27272a',
     },
-    borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
+    borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", '2xl': "1rem" },
     fontFamily: {
-      headline: ["Space Grotesk"], display: ["Space Grotesk"],
-      body: ["Inter"], mono: ["JetBrains Mono", "monospace"],
+      display: ["Space Grotesk", "system-ui", "sans-serif"],
+      body: ["Inter", "system-ui", "sans-serif"],
+      mono: ["JetBrains Mono", "ui-monospace", "monospace"],
     },
   }},
 }
 </script>
 <style>
-  body { font-family: Inter, system-ui, sans-serif; }
+  body { font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
   .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
   .hash { word-break: break-all; }
+  /* Hashes read as data, not prose. */
+  .chip { background:#18181b; border:1px solid #27272a; border-radius:.375rem; padding:.125rem .375rem; }
+  .card { background:#18181b; border:1px solid #27272a; border-radius:.75rem; }
+  .rule { background: linear-gradient(90deg,#27272a,transparent); height:1px; }
+  a { text-underline-offset: 3px; }
 </style>
 </head>
-<body class="bg-surface text-on-surface min-h-screen">
+<body class="bg-surface text-on-surface min-h-screen antialiased">
 <div class="flex min-h-screen">
-  <aside class="w-56 shrink-0 border-r border-outline-variant/40 p-5 hidden md:block">
-    <a href="/" class="flex items-center gap-2 mb-8">
-      <span class="text-primary text-2xl leading-none">⊟</span>
-      <span class="font-display font-semibold tracking-tight">MergeGate</span>
+  <aside class="w-60 shrink-0 border-r border-line px-5 py-6 hidden md:flex md:flex-col">
+    <a href="/" class="flex items-center gap-2.5 mb-9 group">
+      <span class="w-7 h-7 rounded-lg bg-accent/15 border border-accent/30 grid place-items-center text-accent text-sm">⊟</span>
+      <span class="font-display font-semibold tracking-tight text-[15px] group-hover:text-accent transition-colors">MergeGate</span>
     </a>
-    <nav class="space-y-1 text-sm">
+
+    <nav class="space-y-0.5 text-sm">
       {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier")] %}
       <a href="{{ href }}"
-         class="block px-3 py-2 rounded-lg {% if active == label %}bg-surface-container text-on-surface{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
+         class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
+         {% if active == label %}bg-surface-high text-on-surface{% else %}text-on-muted hover:text-on-surface hover:bg-surface-container{% endif %}">
+        {% if active == label %}<span class="w-1 h-3.5 rounded-full bg-accent -ml-1.5"></span>{% else %}<span class="w-1 h-3.5 -ml-1.5"></span>{% endif %}
         {{ label }}
       </a>
       {% endfor %}
     </nav>
-    <div class="mt-8 pt-5 border-t border-outline-variant/40 text-xs text-on-surface-variant space-y-1">
-      <div>network</div>
-      <div class="mono text-on-surface">{{ network }}</div>
+
+    <div class="mt-auto pt-6 space-y-3">
+      <div class="rule"></div>
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-on-faint mb-1">Network</div>
+        <div class="mono text-xs text-on-muted">{{ network }}</div>
+      </div>
+      {# Kept on one line: the phrase is swept for by tests and by the claim
+         audit, and a line break in the middle of it defeats both. #}
+      <p class="text-[11px] leading-relaxed text-on-faint">Verified contract acceptance — not code quality, security, or mergeworthiness.</p>
     </div>
   </aside>
 
-  <main class="flex-1 min-w-0 p-6 md:p-10">
-    {% block content %}{% endblock %}
+  <main class="flex-1 min-w-0">
+    <div class="max-w-[1180px] px-6 md:px-10 py-8 md:py-12">
+      {% block content %}{% endblock %}
 
-    <footer class="mt-14 pt-6 border-t border-outline-variant/40 text-xs text-on-surface-variant space-y-1">
-      <p>Verified contract acceptance — not code quality, security, or mergeworthiness.</p>
-      <p>Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority.</p>
-    </footer>
+      <footer class="mt-16 pt-6 border-t border-line text-[11px] leading-relaxed text-on-faint">Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority.</footer>
+    </div>
   </main>
 </div>
 </body>
