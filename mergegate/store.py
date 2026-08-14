@@ -212,9 +212,7 @@ class FirestoreTaskStore:
 
         ref = self._ref(task_id)
 
-        # firestore.transactional is untyped upstream; the wrapped function
-        # below is fully annotated, which is where the type safety matters.
-        @firestore.transactional  # type: ignore[untyped-decorator]
+        @firestore.transactional
         def _txn(transaction: Any) -> EventOutcome | None:
             snap = ref.get(transaction=transaction)
             if not snap.exists:
