@@ -33,6 +33,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from .receipt import verify_receipt
+from .verifier.sandbox import EGRESS_DENY_TCP, EGRESS_PROBE, SandboxSpec
 
 __all__ = ["ReceiptBundle", "build_web_router", "short"]
 
@@ -270,6 +271,79 @@ class ReceiptBundle:
         ]
 
 
+GRADING_PIPELINE = [
+    (
+        1,
+        "Materialize the pinned base tree",
+        "git archive emits tree contents only, so .git never exists to leak a reference solution.",
+    ),
+    (
+        2,
+        "Guard every touched path",
+        "A protected- or grader-path violation is a hard reject and the pinned commands never run.",
+    ),
+    (
+        3,
+        "Apply the provider diff",
+        "Allowed source paths only, as explicit file changes — never a shell "
+        "patch of attacker-controlled input.",
+    ),
+    (
+        4,
+        "Quarantine provider test hooks",
+        "src/conftest.py sits inside an allowed path and pytest would still execute it. "
+        "Allowed to write is not allowed to grade.",
+    ),
+    (
+        5,
+        "Purge grader paths, inject the buyer's bundle",
+        "The graded bytes are the buyer's, whatever the provider submitted.",
+    ),
+    (
+        6,
+        "Run only the pinned commands",
+        "argv vectors with no shell, in a rebuilt environment with no inherited secrets.",
+    ),
+    (
+        7,
+        "Hash the tree and bind the result",
+        "tree_hash and submission_sha go into the receipt, so payment is for that exact artifact.",
+    ),
+]
+
+ANTI_GAMING = [
+    (
+        "P1.1",
+        "A conftest.py hook that forces every outcome to pass",
+        "Quarantined before the run and recorded as a tamper signal, not silently fixed up.",
+    ),
+    (
+        "P1.1",
+        "A sitecustomize.py that executes before any test is imported",
+        "Same quarantine: hooks the provider introduced or modified anywhere are removed.",
+    ),
+    (
+        "P1.2",
+        "Reading the reference solution out of .git history",
+        "History never reaches the workspace, so there is nothing to read.",
+    ),
+    (
+        "P1.3",
+        "Rewriting the graded tests",
+        "Rejected outright; the buyer's bundle also overwrites them regardless.",
+    ),
+    (
+        "P1.3",
+        "Correct code that also disables the deploy gate",
+        "Rejected before any command runs — passing tests cannot rescue a path violation.",
+    ),
+    (
+        "P0.4",
+        "Force-pushing a new head SHA after a PASS",
+        "A new SHA supersedes the previous artifact and invalidates its verification.",
+    ),
+]
+
 SANDBOX_BADGES = [
     "gVisor isolation",
     "No outbound TCP",
@@ -280,6 +354,39 @@ SANDBOX_BADGES = [
     "Ephemeral",
     ".git history stripped",
 ]
+
+
+def verifier_environment() -> list[tuple[str, str]]:
+    """The pinned environment, read from the spec rather than retyped.
+
+    Built through :class:`SandboxSpec` so its validation applies: if the
+    configured image were a tag rather than a digest, this page would fail
+    loudly instead of displaying an unpinnable environment as though it were
+    pinned.
+    """
+    import os
+
+    image = os.environ.get("VERIFIER_IMAGE_DIGEST", "")
+    rows: list[tuple[str, str]] = []
+    if image:
+        try:
+            spec = SandboxSpec(image_digest=image, argv=("python", "-m", "pytest", "-q"))
+        except Exception as exc:  # noqa: BLE001 - shown, not hidden
+            return [("configuration error", str(exc))]
+        rows = [
+            ("verifier image", spec.image_digest),
+            ("execution environment", f"{spec.execution_environment} (gVisor)"),
+            ("resources", f"{spec.cpu} vCPU / {spec.memory}"),
+            ("timeout", f"{spec.timeout_seconds}s"),
+            ("egress", spec.egress),
+            ("network", f"{spec.network} / {spec.subnet}"),
+            ("service account", spec.service_account or "none — no cloud identity in the sandbox"),
+            ("writable paths", ", ".join(spec.writable_paths)),
+            ("retries", "0 — a retried evaluation is a second evaluation"),
+        ]
+    else:
+        rows = [("verifier image", "not configured in this environment")]
+    return rows
 
 
 def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") -> Any:
@@ -356,13 +463,14 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
     def verifier(request: Request) -> Any:
         return templates.TemplateResponse(
             request,
-            "dashboard.html",
+            "verifier.html",
             {
-                "rows": [],
-                "stats": bundle.stats(),
-                "badges": SANDBOX_BADGES,
+                "environment": verifier_environment(),
+                "pipeline": GRADING_PIPELINE,
+                "defenses": ANTI_GAMING,
+                "probe": EGRESS_PROBE,
+                "egress_claim": EGRESS_DENY_TCP,
                 "network": ", ".join(bundle.networks()) or network,
-                "source_error": bundle.source_error,
                 "active": "Verifier",
             },
         )

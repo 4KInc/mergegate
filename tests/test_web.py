@@ -299,3 +299,77 @@ def test_firestore_round_trip_preserves_signature_bytes(key: Ed25519PrivateKey) 
 
     restored = json.loads(captured["envelope_json"])
     assert _verify(restored, public_key=key.public_key()).valid
+
+
+# -- the verifier page ---------------------------------------------------------
+
+
+def test_verifier_page_shows_the_measured_probe(
+    bundle_dir: Path, key: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The page reports what the probe returned, including the failure it found.
+
+    The first configuration reached the internet. Showing only the fixed state
+    would present the guarantee as though it had always held.
+    """
+    monkeypatch.setenv("VERIFIER_IMAGE_DIGEST", IMAGE)
+    html = _client(bundle_dir, key).get("/verifier").text
+
+    assert "1.1.1.1:443" in html
+    assert "loopback (control)" in html
+    assert "reachable" in html and "blocked" in html
+    assert "probe exit codes" in html
+    assert "before 21" in html and "after 17" in html
+
+
+def test_verifier_page_states_the_egress_claim_exactly(
+    bundle_dir: Path, key: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mergegate.verifier.sandbox import EGRESS_DENY_TCP
+
+    monkeypatch.setenv("VERIFIER_IMAGE_DIGEST", IMAGE)
+    html = _client(bundle_dir, key).get("/verifier").text
+    assert EGRESS_DENY_TCP in html
+    assert "Default-deny egress" not in html
+
+
+def test_verifier_page_shows_the_pinned_image(
+    bundle_dir: Path, key: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VERIFIER_IMAGE_DIGEST", IMAGE)
+    html = _client(bundle_dir, key).get("/verifier").text
+    assert IMAGE in html
+    assert "gVisor" in html
+
+
+def test_verifier_page_refuses_an_unpinned_image(
+    bundle_dir: Path, key: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A tag would let the graded environment drift, so the page says so rather
+    than rendering it as a pinned environment."""
+    monkeypatch.setenv("VERIFIER_IMAGE_DIGEST", "mergegate/verifier:latest")
+    html = _client(bundle_dir, key).get("/verifier").text
+    assert "configuration error" in html
+    assert "pinned by digest" in html
+
+
+def test_verifier_page_lists_the_grading_order(
+    bundle_dir: Path, key: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The ordering is the argument, so it has to be on the page."""
+    monkeypatch.setenv("VERIFIER_IMAGE_DIGEST", IMAGE)
+    html = _client(bundle_dir, key).get("/verifier").text
+    assert (
+        "Purge grader paths, inject the buyer&#39;s bundle" in html or "Purge grader paths" in html
+    )
+    assert "Allowed to write is not allowed to grade" in html
+    assert "deliberately redundant" in html
+
+
+def test_verifier_page_lists_the_attacks(
+    bundle_dir: Path, key: Ed25519PrivateKey, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VERIFIER_IMAGE_DIGEST", IMAGE)
+    html = _client(bundle_dir, key).get("/verifier").text
+    for marker in ("conftest.py", "sitecustomize.py", ".git history", "Force-pushing"):
+        assert marker in html

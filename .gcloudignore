@@ -11,4 +11,7 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 tests/
-verifier/
+# Leading slash matters: a bare "verifier/" also matches mergegate/verifier/,
+# which silently dropped that subpackage from the image. Nothing imported it at
+# runtime until the dashboard did, so the omission went unnoticed.
+/verifier/

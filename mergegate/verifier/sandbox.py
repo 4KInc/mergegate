@@ -29,7 +29,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-__all__ = ["SandboxSpec", "SandboxPolicyError", "build_job_request", "EGRESS_DENY_TCP"]
+__all__ = [
+    "SandboxSpec",
+    "SandboxPolicyError",
+    "build_job_request",
+    "EGRESS_DENY_TCP",
+    "EGRESS_PROBE",
+]
 
 EGRESS_DENY_TCP = "deny-tcp-egress; dns-resolution-available"
 """The network posture that was **measured**, not the one we wanted to claim.
@@ -44,6 +50,34 @@ DNS is therefore a residual side channel: a submission cannot retrieve data over
 it, but it could signal outward through crafted lookups. That is a stated limit
 of v1, disclosed here and in the receipt, rather than a gap papered over by
 calling this "default-deny".
+"""
+
+
+EGRESS_PROBE = {
+    "job": "mergegate-egress-probe",
+    "method": (
+        "A probe executed inside a real Cloud Run Job, encoding each result as a "
+        "bit of its exit code. Cloud Run surfaced neither stdout nor stderr, so the "
+        "exit code was the only channel; a loopback control bit was included so a "
+        "broken probe reports itself instead of masquerading as a passing guarantee."
+    ),
+    # Destination -> (reachable before the sealed VPC, reachable after)
+    "results": [
+        ("loopback (control)", True, True),
+        ("1.1.1.1:443", True, False),
+        ("142.250.72.46:443", False, False),
+        ("93.184.216.34:80", False, False),
+        ("DNS resolution", True, True),
+    ],
+    "before_exit_code": 21,
+    "after_exit_code": 17,
+}
+"""What the egress probe actually returned, before and after the sealed VPC.
+
+Recorded here rather than retyped into a template so the page cannot drift from
+what was measured. The first configuration reached the public internet — Cloud
+Run grants egress by default — which is why an earlier version of this module
+asserting "default-deny" would have signed a false claim.
 """
 
 
