@@ -62,6 +62,15 @@ def _dashboard_public_key() -> Any:
         return None
 
 
+def _contract_store() -> Any:
+    """Funded contracts, for the contract page. None locally."""
+    if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+        return None
+    from .store import FirestoreContractStore
+
+    return FirestoreContractStore()
+
+
 def _receipt_source() -> Any:
     """Where the dashboard reads receipts from.
 
@@ -128,6 +137,7 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
         build_web_router(
             ReceiptBundle(public_key=_dashboard_public_key(), source=_receipt_source()),
             network=os.environ.get("MERGEGATE_NETWORK", "Base mainnet"),
+            contracts=_contract_store(),
         )
     )
 

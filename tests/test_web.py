@@ -412,3 +412,110 @@ def test_no_em_dashes_anywhere_in_the_ui(bundle_dir: Path, key: Ed25519PrivateKe
         "/receipts/mainnet-receipt-fail",
     ):
         assert "—" not in client.get(path).text, f"em-dash rendered on {path}"
+
+
+# -- evaluation page -----------------------------------------------------------
+
+
+def _eval_client(bundle_dir: Path, key: Ed25519PrivateKey) -> TestClient:
+    return _client(bundle_dir, key)
+
+
+def test_evaluation_page_reflects_a_passing_run(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    html = _eval_client(bundle_dir, key).get("/evaluations/receipt-pass").text
+    assert "Sealed evaluation run" in html
+    assert "No path violations" in html
+    assert "exit 0" in html
+    assert "stdout digest" in html
+
+
+def test_evaluation_page_shows_which_stage_stopped_a_rejected_run(
+    bundle_dir: Path, key: Ed25519PrivateKey
+) -> None:
+    """Stage states come from the manifest. A page that always showed the same
+    ticks would be describing a run it never read."""
+    html = _eval_client(bundle_dir, key).get("/evaluations/mainnet-receipt-fail").text
+    assert "not run" in html.lower()
+    assert "No commands executed" in html
+    assert "protected_path" in html
+    assert "decided the verdict" in html.lower()
+
+
+def test_evaluation_page_binds_the_verification_identity(
+    bundle_dir: Path, key: Ed25519PrivateKey
+) -> None:
+    html = _eval_client(bundle_dir, key).get("/evaluations/receipt-pass").text
+    for label in ("base sha", "submission sha", "tree hash", "grader hash", "verifier image"):
+        assert label in html
+
+
+def test_unknown_evaluation_is_404(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    assert _eval_client(bundle_dir, key).get("/evaluations/nope").status_code == 404
+
+
+# -- contract page -------------------------------------------------------------
+
+
+def _contract_client(bundle_dir: Path, key: Ed25519PrivateKey, store: Any = None) -> TestClient:
+    app = FastAPI()
+    app.include_router(
+        build_web_router(ReceiptBundle(bundle_dir, public_key=key.public_key()), contracts=store)
+    )
+    return TestClient(app)
+
+
+def test_contract_page_renders_stored_terms(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    from mergegate.store import MemoryContractStore
+
+    store = MemoryContractStore()
+    store.put(
+        {
+            "contract_hash": CONTRACT_HASH,
+            "task_id": "4KInc/mergegate-demo-task",
+            "repository": "4KInc/mergegate-demo-task",
+            "funding_tx": "0x" + "a" * 64,
+            "funded_amount_usdc": "0.30",
+            "chain": "BASE",
+            "mandate_hash": "sha256:" + "b" * 64,
+            "mandate_statement": "pay exactly 0.25 USDC to provider",
+            "terms": {
+                "repository": "4KInc/mergegate-demo-task",
+                "base_sha": BASE_SHA,
+                "reward_usdc": "0.25",
+                "protected_paths": [".github/**"],
+                "allowed_source_paths": ["src/**"],
+                "grader_paths": ["tests/**"],
+                "required_commands": [["python", "-m", "pytest", "-q"]],
+            },
+        }
+    )
+    html = _contract_client(bundle_dir, key, store).get(f"/contracts/{CONTRACT_HASH}").text
+
+    assert "FUNDED" in html
+    assert ".github/**" in html and "src/**" in html
+    assert "python -m pytest -q" in html
+    assert "0x" + "a" * 64 in html
+    assert "Terms not recorded" not in html
+
+
+def test_contract_page_admits_when_terms_were_not_recorded(
+    bundle_dir: Path, key: Ed25519PrivateKey
+) -> None:
+    """Contracts funded before terms were persisted must say so rather than
+    render terms the page cannot produce."""
+    html = _contract_client(bundle_dir, key, None).get(f"/contracts/{CONTRACT_HASH}").text
+    assert "Terms not recorded" in html
+    assert "still fully verifiable" in html
+
+
+def test_unknown_contract_is_404(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    r = _contract_client(bundle_dir, key, None).get("/contracts/sha256:" + "0" * 64)
+    assert r.status_code == 404
+
+
+def test_receipt_links_to_its_evaluation_and_contract(
+    bundle_dir: Path, key: Ed25519PrivateKey
+) -> None:
+    html = _client(bundle_dir, key).get("/receipts/receipt-pass").text
+    assert 'href="/evaluations/receipt-pass"' in html
+    assert f'href="/contracts/{CONTRACT_HASH}"' in html

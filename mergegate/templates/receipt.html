@@ -2,7 +2,13 @@
 {% block title %}MergeGate: Receipt {{ receipt.id }}{% endblock %}
 {% block content %}
 
-<a href="/" class="text-xs text-on-faint hover:text-accent transition-colors">← Contracts</a>
+<div class="flex flex-wrap items-center gap-4">
+  <a href="/" class="text-xs text-on-faint hover:text-accent transition-colors">← Contracts</a>
+  <a href="/evaluations/{{ receipt.id }}" class="text-xs text-on-muted hover:text-accent transition-colors">View the evaluation run →</a>
+  {% if receipt.contract_hash %}
+  <a href="/contracts/{{ receipt.contract_hash }}" class="text-xs text-on-muted hover:text-accent transition-colors">View the funded contract →</a>
+  {% endif %}
+</div>
 
 <header class="mt-4 mb-9">
   <div class="flex flex-wrap items-center gap-3 mb-3">

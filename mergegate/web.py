@@ -155,6 +155,10 @@ class ReceiptView:
         return str(self.binding.get("task_id", ""))
 
     @property
+    def contract_hash(self) -> str:
+        return str(self.binding.get("contract_hash", ""))
+
+    @property
     def recipient(self) -> str:
         return str(self.binding.get("settlement_recipient", ""))
 
@@ -411,7 +415,121 @@ def verifier_environment() -> list[tuple[str, str]]:
     return rows
 
 
-def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") -> Any:
+def evaluation_view(v: ReceiptView) -> dict[str, Any]:
+    """Flatten a manifest into the evaluation page's shape.
+
+    Stage states are derived from the manifest, not fixed decoration: which
+    stage stopped the run is the entire story of a rejection, so a page that
+    always showed the same ticks would be describing a run it did not read.
+    """
+    rejected = bool(v.failed_terms)
+    ran = v.command_count > 0
+    stages = [
+        {
+            "state": "done",
+            "title": "Materialize the pinned base tree",
+            "detail": "git archive emits tree contents only, so .git never exists "
+            "to leak a reference solution.",
+        },
+        {
+            "state": "failed" if rejected else "done",
+            "title": "Guard every touched path",
+            "detail": v.reason if rejected else "No protected or grader path was touched.",
+        },
+        {
+            "state": "skipped" if rejected else "done",
+            "title": "Apply the provider diff",
+            "detail": "Allowed source paths only, as explicit file changes.",
+        },
+        {
+            "state": "skipped" if rejected else "done",
+            "title": "Inject the buyer grader bundle",
+            "detail": "Overwrites whatever the provider left at the grader paths.",
+        },
+        {
+            "state": "done" if ran else "skipped",
+            "title": "Run the pinned commands",
+            "detail": f"{v.command_count} command(s) executed."
+            if ran
+            else "Not reached: the violation decided the verdict first.",
+        },
+    ]
+    commands = [
+        {
+            "argv": " ".join(c.get("argv", [])),
+            "exit_code": c.get("exit_code", 0),
+            "timed_out": c.get("timed_out", False),
+            "stdout_digest": short(str(c.get("stdout_digest", "")), 16, 6),
+            "stderr_digest": short(str(c.get("stderr_digest", "")), 16, 6),
+        }
+        for c in v.manifest.get("commands", [])
+    ]
+    return {
+        "id": v.id,
+        "verdict": v.decision,
+        "submission_short": short(v.submission_sha, 10, 6),
+        "stages": stages,
+        "commands": commands,
+        "failed_terms": v.failed_terms,
+        "rejection_reason": display(str(v.manifest.get("rejection_reason", "")) or v.reason),
+        "tamper_signals": [display(str(t)) for t in (v.manifest.get("tamper_signals") or [])],
+        "egress": v.manifest.get("egress_policy", "unknown"),
+        "git_stripped": bool(v.manifest.get("git_stripped", True)),
+        "identity": [
+            ("base sha", v.manifest.get("base_sha", "")),
+            ("submission sha", v.submission_sha),
+            ("tree hash", v.manifest.get("tree_hash", "")),
+            ("grader hash", v.manifest.get("grader_hash", "")),
+            ("verifier image", v.manifest.get("verifier_image_digest", "")),
+            ("result digest", v.binding.get("result_digest", "")),
+        ],
+    }
+
+
+def contract_view(record: dict[str, Any] | None, views: list[ReceiptView]) -> dict[str, Any]:
+    """Flatten a stored contract for rendering.
+
+    ``record`` is ``None`` for contracts funded before terms were persisted.
+    The page then says so rather than describing terms it cannot produce.
+    """
+    terms = dict((record or {}).get("terms") or {})
+    chain = str((record or {}).get("chain", ""))
+    host = "sepolia.basescan.org" if "SEPOLIA" in chain.upper() else "basescan.org"
+    funding_tx = str((record or {}).get("funding_tx", ""))
+    rows = []
+    for label, key in (
+        ("repository", "repository"),
+        ("base commit", "base_sha"),
+        ("grader hash", "grader_hash"),
+        ("verifier image", "verifier_image_digest"),
+        ("reward", "reward_usdc"),
+        ("deadline", "deadline"),
+    ):
+        if terms.get(key):
+            rows.append((label, str(terms[key])))
+    if record:
+        rows.append(("contract hash", str(record.get("contract_hash", ""))))
+    return {
+        "stored": record is not None,
+        "rows": rows,
+        "allowed_paths": terms.get("allowed_source_paths") or [],
+        "protected_paths": terms.get("protected_paths") or [],
+        "grader_paths": terms.get("grader_paths") or [],
+        "commands": [" ".join(c) for c in (terms.get("required_commands") or [])],
+        "funding_tx": funding_tx,
+        "funding_explorer": f"https://{host}/tx/{funding_tx}" if funding_tx else "",
+        "funded_amount": (record or {}).get("funded_amount_usdc", terms.get("reward_usdc", "")),
+        "mandate_statement": display(str((record or {}).get("mandate_statement", ""))),
+        "mandate_hash_short": short(str((record or {}).get("mandate_hash", "")), 12, 6),
+        "buyer_short": short(str(terms.get("buyer_agent", "")), 10, 4),
+        "provider_short": short(str(terms.get("provider_agent", "")), 10, 4),
+        "receipts": [{"id": v.id, "decision": v.decision} for v in views],
+    }
+
+
+def build_web_router(
+    bundle: ReceiptBundle, *, network: str = "Base mainnet", contracts: Any = None
+) -> Any:
     """Mount the dashboard.
 
     FastAPI is imported at module scope, not inside this function. With
@@ -507,6 +625,42 @@ def build_web_router(bundle: ReceiptBundle, *, network: str = "Base mainnet") ->
                 "verification": bundle.verify(view),
                 "network": view.chain or network,
                 "active": "Receipts",
+            },
+        )
+
+    @router.get("/evaluations/{receipt_id}", response_class=HTMLResponse)
+    def evaluation(request: Request, receipt_id: str) -> Any:
+        view = bundle.get(receipt_id)
+        if view is None:
+            raise HTTPException(status_code=404, detail="no such evaluation")
+        return templates.TemplateResponse(
+            request,
+            "evaluation.html",
+            {
+                "e": evaluation_view(view),
+                "network": view.chain or network,
+                "active": "Receipts",
+            },
+        )
+
+    @router.get("/contracts/{contract_hash}", response_class=HTMLResponse)
+    def contract(request: Request, contract_hash: str) -> Any:
+        record = None
+        if contracts is not None:
+            try:
+                record = contracts.get(contract_hash)
+            except Exception:  # noqa: BLE001 - rendered as "not recorded"
+                record = None
+        related = [v for v in bundle.all() if v.binding.get("contract_hash") == contract_hash]
+        if record is None and not related:
+            raise HTTPException(status_code=404, detail="no such contract")
+        return templates.TemplateResponse(
+            request,
+            "contract.html",
+            {
+                "c": contract_view(record, related),
+                "network": (record or {}).get("chain") or network,
+                "active": "Contracts",
             },
         )
 

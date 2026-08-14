@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}MergeGate: Evaluation{% endblock %}
+{% block content %}
+
+<a href="/receipts/{{ e.id }}" class="text-xs text-on-faint hover:text-accent transition-colors">← Receipt</a>
+
+<header class="mt-4 mb-9">
+  <div class="flex flex-wrap items-center gap-3 mb-3">
+    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold
+      {% if e.verdict == 'PASS' %}bg-accent-container text-accent{% else %}bg-danger-container text-danger{% endif %}">
+      <span class="w-2 h-2 rounded-full {% if e.verdict == 'PASS' %}bg-accent{% else %}bg-danger{% endif %}"></span>
+      {{ e.verdict }}
+    </span>
+    <span class="mono text-xs chip">{{ e.submission_short }}</span>
+  </div>
+  <h1 class="font-display text-2xl md:text-3xl font-semibold tracking-tight">Sealed evaluation run</h1>
+  <p class="text-sm text-on-muted mt-3 max-w-2xl leading-relaxed">
+    The buyer's base tree, the buyer's grader bundle, and the provider's diff.
+    Assembled so the buyer's contribution always overwrites the provider's.
+  </p>
+</header>
+
+{# The stepper is the argument. Which stage stopped the run is the whole story
+   of a rejection, so the stage states come from the manifest rather than being
+   fixed decoration. #}
+<section class="card p-6 mb-4">
+  <h2 class="font-display text-lg font-semibold tracking-tight mb-4">Stages</h2>
+  <ol class="space-y-0">
+    {% for s in e.stages %}
+    <li class="flex gap-4 pb-5 last:pb-0 relative">
+      {% if not loop.last %}
+      <span class="absolute left-[11px] top-7 bottom-0 w-px
+        {% if s.state == 'done' %}bg-accent/40{% else %}bg-line{% endif %}"></span>
+      {% endif %}
+      <span class="shrink-0 w-6 h-6 rounded-full grid place-items-center text-[11px] mono z-10
+        {% if s.state == 'done' %}bg-accent-container text-accent border border-accent/40
+        {% elif s.state == 'failed' %}bg-danger-container text-danger border border-danger/40
+        {% else %}bg-surface-high text-on-faint border border-line{% endif %}">
+        {% if s.state == 'done' %}✓{% elif s.state == 'failed' %}✗{% else %}{{ loop.index }}{% endif %}
+      </span>
+      <div class="min-w-0">
+        <div class="text-sm {% if s.state == 'skipped' %}text-on-faint{% endif %}">
+          {{ s.title }}
+          {% if s.state == 'skipped' %}<span class="text-[10px] uppercase tracking-widest text-on-faint ml-2">not run</span>{% endif %}
+        </div>
+        <div class="text-xs text-on-faint mt-0.5">{{ s.detail }}</div>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+<section class="grid md:grid-cols-2 gap-4 mb-4">
+  <div class="card p-6">
+    <h2 class="text-[10px] uppercase tracking-widest text-on-faint mb-3">Path guard</h2>
+    {% if e.failed_terms %}
+    <p class="text-sm text-danger leading-relaxed">{{ e.rejection_reason }}</p>
+    <div class="mt-3 flex flex-wrap gap-1.5">
+      {% for t in e.failed_terms %}
+      <span class="px-2 py-1 rounded-md bg-danger-container text-danger text-[11px] mono border border-danger/30">{{ t }}</span>
+      {% endfor %}
+    </div>
+    <div class="rule my-4"></div>
+    <p class="text-xs text-on-faint leading-relaxed">
+      Decided before any command ran. Passing tests could not have rescued it:
+      a submission that disables the deploy gate has routed around the contract,
+      not satisfied it.
+    </p>
+    {% else %}
+    <p class="text-sm text-accent">No path violations.</p>
+    <p class="text-xs text-on-faint mt-3 leading-relaxed">
+      Every path the submission touched fell inside the allowed source paths.
+      Protected and grader paths were untouched.
+    </p>
+    {% endif %}
+  </div>
+
+  <div class="card p-6">
+    <h2 class="text-[10px] uppercase tracking-widest text-on-faint mb-3">Tamper signals</h2>
+    {% if e.tamper_signals %}
+    <ul class="space-y-2">
+      {% for t in e.tamper_signals %}
+      <li class="text-xs text-warn mono leading-relaxed">{{ t }}</li>
+      {% endfor %}
+    </ul>
+    <p class="text-xs text-on-faint mt-3 leading-relaxed">
+      Recorded rather than silently fixed up, so they reach the receipt.
+    </p>
+    {% else %}
+    <p class="text-sm text-on-muted">None recorded.</p>
+    <p class="text-xs text-on-faint mt-3 leading-relaxed">
+      Provider-supplied test hooks and files planted at grader paths would be
+      listed here. Their absence is itself part of the record.
+    </p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card p-6 mb-4">
+  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">Pinned commands</h2>
+  <p class="text-xs text-on-faint mb-4">
+    Only the commands the buyer pinned, in the order pinned, as argv with no shell.
+  </p>
+  {% if e.commands %}
+  <div class="space-y-3">
+    {% for c in e.commands %}
+    <div class="rounded-lg bg-surface border border-line overflow-hidden">
+      <div class="flex items-center justify-between gap-3 px-3 py-2 border-b border-line">
+        <span class="mono text-xs text-on-muted">$ {{ c.argv }}</span>
+        <span class="mono text-[11px] {% if c.exit_code == 0 %}text-accent{% else %}text-danger{% endif %}">
+          exit {{ c.exit_code }}{% if c.timed_out %} (timed out){% endif %}
+        </span>
+      </div>
+      <div class="px-3 py-2 space-y-1">
+        <div class="flex justify-between gap-3 text-[11px]">
+          <span class="text-on-faint">stdout digest</span>
+          <span class="mono text-on-faint hash">{{ c.stdout_digest }}</span>
+        </div>
+        <div class="flex justify-between gap-3 text-[11px]">
+          <span class="text-on-faint">stderr digest</span>
+          <span class="mono text-on-faint hash">{{ c.stderr_digest }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="text-xs text-on-faint mt-3 leading-relaxed">
+    Output is bound by digest, not content. Test output can be large and
+    contains whatever the provider's code printed, so the receipt commits to a
+    digest instead of carrying attacker-controlled text.
+  </p>
+  {% else %}
+  <div class="rounded-lg bg-surface border border-line px-4 py-6 text-center">
+    <p class="text-sm text-on-faint">No commands executed.</p>
+    <p class="text-xs text-on-faint mt-1">The contract-term violation decided the verdict first.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card p-6">
+  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">Verification identity</h2>
+  <p class="text-xs text-on-faint mb-4">
+    What was graded, by which tests, in which environment. These are the values
+    the receipt binds.
+  </p>
+  <div class="space-y-3">
+    {% for label, value in e.identity %}
+    <div class="grid md:grid-cols-[190px_1fr] gap-1 md:gap-4 items-baseline">
+      <div class="text-xs text-on-faint">{{ label }}</div>
+      <div class="mono text-xs hash text-on-muted">{{ value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="rule my-4"></div>
+  <div class="flex flex-wrap gap-1.5">
+    <span class="px-2 py-1 rounded-md bg-surface-high text-[11px] text-on-muted border border-line">egress: {{ e.egress }}</span>
+    <span class="px-2 py-1 rounded-md bg-surface-high text-[11px] text-on-muted border border-line">
+      .git {% if e.git_stripped %}stripped{% else %}present{% endif %}
+    </span>
+  </div>
+</section>
+
+{% endblock %}

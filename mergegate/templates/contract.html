@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}MergeGate: Contract{% endblock %}
+{% block content %}
+
+<a href="/" class="text-xs text-on-faint hover:text-accent transition-colors">← Contracts</a>
+
+<header class="mt-4 mb-9">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold bg-accent-container text-accent">
+      <span class="w-2 h-2 rounded-full bg-accent"></span> FUNDED
+    </span>
+    <span class="font-display text-xl font-semibold tracking-tight">{{ c.funded_amount }} USDC</span>
+    <span class="text-on-faint text-sm">in escrow</span>
+  </div>
+  <h1 class="font-display text-2xl md:text-3xl font-semibold tracking-tight">Task contract</h1>
+  <p class="text-sm text-on-muted mt-3 max-w-2xl leading-relaxed">
+    Every term below was fixed and hashed before the provider was allowed to
+    submit. Immutable since funding: the mandate authorised payment against this
+    exact hash, so changing a term would leave escrow committed to terms nobody
+    signed.
+  </p>
+</header>
+
+{% if not c.stored %}
+<div class="mb-6 rounded-xl border border-warn/40 bg-warn-container p-4">
+  <p class="text-warn text-sm font-medium">Terms not recorded for this contract</p>
+  <p class="text-xs text-on-muted mt-1 leading-relaxed">
+    This contract was funded before terms were persisted. The receipt binds its
+    hash, so the settlement is still fully verifiable, but the individual terms
+    cannot be shown without inventing them.
+  </p>
+</div>
+{% endif %}
+
+<section class="card p-6 mb-4">
+  <div class="flex items-baseline justify-between gap-4 mb-4">
+    <h2 class="font-display text-lg font-semibold tracking-tight">Pinned terms</h2>
+    <span class="text-[10px] uppercase tracking-widest text-on-faint">RFC 8785 canonical</span>
+  </div>
+
+  <div class="space-y-3">
+    {% for label, value in c.rows %}
+    <div class="grid md:grid-cols-[190px_1fr] gap-1 md:gap-4 items-baseline">
+      <div class="text-xs text-on-faint">{{ label }}</div>
+      <div class="mono text-xs hash text-on-muted">{{ value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if c.protected_paths or c.allowed_paths or c.grader_paths %}
+  <div class="rule my-5"></div>
+  <div class="grid md:grid-cols-3 gap-5">
+    <div>
+      <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Allowed source</div>
+      <div class="flex flex-wrap gap-1.5">
+        {% for p in c.allowed_paths %}
+        <span class="mono text-[11px] px-2 py-1 rounded-md bg-surface-high border border-line text-on-muted">{{ p }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Protected</div>
+      <div class="flex flex-wrap gap-1.5">
+        {% for p in c.protected_paths %}
+        <span class="mono text-[11px] px-2 py-1 rounded-md bg-danger-container border border-danger/30 text-danger">{{ p }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Grader</div>
+      <div class="flex flex-wrap gap-1.5">
+        {% for p in c.grader_paths %}
+        <span class="mono text-[11px] px-2 py-1 rounded-md bg-surface-high border border-line text-on-muted">{{ p }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <p class="text-xs text-on-faint mt-4 leading-relaxed">
+    A submission touching a protected or grader path is rejected regardless of
+    test results. The provider can write only to the allowed source paths.
+  </p>
+  {% endif %}
+
+  {% if c.commands %}
+  <div class="rule my-5"></div>
+  <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Required commands</div>
+  {% for cmd in c.commands %}
+  <div class="mono text-xs rounded-lg bg-surface px-3 py-2 border border-line text-on-muted">$ {{ cmd }}</div>
+  {% endfor %}
+  <p class="text-xs text-on-faint mt-2">
+    Argv vectors, run with no shell. Nothing to quote, nothing to inject into.
+  </p>
+  {% endif %}
+</section>
+
+<section class="grid md:grid-cols-2 gap-4">
+  <div class="card p-6">
+    <h2 class="text-[10px] uppercase tracking-widest text-on-faint mb-3">Conditional payment mandate</h2>
+    <p class="text-sm text-on-muted leading-relaxed">{{ c.mandate_statement }}</p>
+    <div class="rule my-4"></div>
+    <div class="space-y-2">
+      <div class="flex justify-between gap-3 text-xs">
+        <span class="text-on-faint">buyer agent</span>
+        <span class="mono text-on-muted">{{ c.buyer_short }}</span>
+      </div>
+      <div class="flex justify-between gap-3 text-xs">
+        <span class="text-on-faint">provider agent</span>
+        <span class="mono text-on-muted">{{ c.provider_short }}</span>
+      </div>
+      <div class="flex justify-between gap-3 text-xs">
+        <span class="text-on-faint">mandate hash</span>
+        <span class="mono text-on-muted">{{ c.mandate_hash_short }}</span>
+      </div>
+    </div>
+    <div class="rule my-4"></div>
+    <p class="text-xs text-on-faint leading-relaxed">
+      Signed by the buyer agent at funding time. No human approved the transfer
+      and there is no checkout step in the funding path.
+    </p>
+  </div>
+
+  <div class="card p-6">
+    <h2 class="text-[10px] uppercase tracking-widest text-on-faint mb-3">Escrow funding</h2>
+    {% if c.funding_tx %}
+    <div class="flex items-baseline justify-between gap-3">
+      <span class="text-sm">Buyer to escrow</span>
+      <span class="mono text-sm">{{ c.funded_amount }} USDC</span>
+    </div>
+    <a class="mono text-[11px] text-on-faint hover:text-accent transition-colors hash block mt-1"
+       target="_blank" rel="noopener" href="{{ c.funding_explorer }}">{{ c.funding_tx }} ↗</a>
+    <p class="text-xs text-on-faint mt-3 leading-relaxed">
+      Covers the reward and the verifier fee. Funding only the reward would
+      leave nothing for the fee once the provider is paid.
+    </p>
+    {% else %}
+    <p class="text-sm text-on-faint">No funding transaction recorded.</p>
+    {% endif %}
+    {% if c.receipts %}
+    <div class="rule my-4"></div>
+    <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Settled</div>
+    {% for r in c.receipts %}
+    <a href="/receipts/{{ r.id }}" class="flex items-center justify-between gap-3 py-1.5 group">
+      <span class="text-xs {% if r.decision == 'PASS' %}text-accent{% else %}text-danger{% endif %}">{{ r.decision }}</span>
+      <span class="mono text-[11px] text-on-faint group-hover:text-accent transition-colors">{{ r.id }} →</span>
+    </a>
+    {% endfor %}
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

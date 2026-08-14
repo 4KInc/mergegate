@@ -172,11 +172,13 @@ class DemoRunner:
         workdir: Path | None = None,
         signing: tuple[str, Ed25519PrivateKey] | None = None,
         receipts: Any = None,
+        contracts: Any = None,
     ) -> None:
         self.config = config
         self.rail = rail
         self.store = store or MemoryTaskStore()
         self.receipts = receipts
+        self.contracts = contracts
         self.workdir = workdir or Path(tempfile.mkdtemp(prefix="mergegate-demo-"))
         self.signing = signing
         self.repo_dir = self.workdir / "repo"
@@ -254,6 +256,25 @@ class DemoRunner:
             mandate=mandate,
         )
         self.store.put(machine)
+
+        # Persist the terms and the funding transaction. A receipt binds only
+        # contract_hash and carries no funding tx, so without this the contract
+        # page would have nothing real to render.
+        if self.contracts is not None:
+            self.contracts.put(
+                {
+                    "contract_hash": sealed.contract_hash,
+                    "task_id": contract.task_id,
+                    "repository": contract.repository,
+                    "funding_tx": funding.tx_hash,
+                    "funded_amount_usdc": funding_amount,
+                    "chain": self.config.chain,
+                    "mandate_hash": mandate.mandate_hash,
+                    "mandate_statement": mandate.statement(),
+                    "terms": contract.to_canonical_dict(),
+                }
+            )
+
         return sealed, mandate, funding.tx_hash
 
     # -- the provider agent --------------------------------------------------

@@ -28,6 +28,9 @@ from .mandate import PaymentMandate
 from .settlement import EventOutcome, TaskState, TaskStateMachine
 
 __all__ = [
+    "ContractStore",
+    "FirestoreContractStore",
+    "MemoryContractStore",
     "ReceiptStore",
     "FirestoreReceiptStore",
     "MemoryReceiptStore",
@@ -328,3 +331,89 @@ class FirestoreReceiptStore:
         if not snap.exists:
             return None
         return self._decode(snap.to_dict() or {})
+
+
+# -- funded contracts ---------------------------------------------------------
+
+CONTRACT_COLLECTION = "mergegate_contracts"
+
+
+class ContractStore(Protocol):
+    """Funded contracts, so the terms can be shown alongside the receipt.
+
+    A receipt binds ``contract_hash`` but not the terms themselves, and carries
+    no funding transaction at all. Without this the contract page would have to
+    describe terms it cannot produce, which is the kind of gap that turns into
+    invented data.
+    """
+
+    def put(self, record: dict[str, Any]) -> None: ...
+
+    def get(self, contract_hash: str) -> dict[str, Any] | None: ...
+
+    def all(self) -> list[dict[str, Any]]: ...
+
+
+@dataclass
+class MemoryContractStore:
+    contracts: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def put(self, record: dict[str, Any]) -> None:
+        self.contracts[str(record["contract_hash"])] = record
+
+    def get(self, contract_hash: str) -> dict[str, Any] | None:
+        return self.contracts.get(contract_hash)
+
+    def all(self) -> list[dict[str, Any]]:
+        return [self.contracts[k] for k in sorted(self.contracts)]
+
+
+class FirestoreContractStore:
+    """Funded contracts in Firestore, keyed by contract hash.
+
+    Terms are stored as one JSON string for the same reason receipts are: the
+    hash is over exact canonical bytes, and Firestore reshaping a nested map
+    would make the stored terms stop hashing to the value they are filed under.
+    """
+
+    def __init__(self, client: Any = None, *, collection: str = CONTRACT_COLLECTION) -> None:
+        if client is None:
+            from google.cloud import firestore
+
+            client = firestore.Client()
+        self._db = client
+        self._collection = collection
+
+    def _ref(self, contract_hash: str) -> Any:
+        return self._db.collection(self._collection).document(document_id(contract_hash))
+
+    def put(self, record: dict[str, Any]) -> None:
+        import json as _json
+
+        payload = dict(record)
+        payload["terms_json"] = _json.dumps(record.get("terms", {}))
+        payload.pop("terms", None)
+        payload["stored_at"] = datetime.now(UTC).isoformat()
+        self._ref(str(record["contract_hash"])).set(payload)
+
+    def _decode(self, doc: dict[str, Any]) -> dict[str, Any]:
+        import json as _json
+
+        out = dict(doc)
+        raw = out.pop("terms_json", "")
+        try:
+            out["terms"] = _json.loads(raw) if isinstance(raw, str) and raw else {}
+        except _json.JSONDecodeError:
+            out["terms"] = {}
+        return out
+
+    def get(self, contract_hash: str) -> dict[str, Any] | None:
+        snap = self._ref(contract_hash).get()
+        if not snap.exists:
+            return None
+        return self._decode(snap.to_dict() or {})
+
+    def all(self) -> list[dict[str, Any]]:
+        return [
+            self._decode(s.to_dict() or {}) for s in self._db.collection(self._collection).stream()
+        ]
