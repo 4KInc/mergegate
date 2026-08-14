@@ -45,7 +45,7 @@ def test_positives():
 HONEST = "def add(a, b):\n    return a + b\n"
 
 # Implements nothing. Reads the buyer's test file and answers from it.
-CHEAT = '''
+CHEAT = """
 import re
 from pathlib import Path
 
@@ -59,11 +59,11 @@ for _p in Path(__file__).resolve().parent.parent.rglob("test_*.py"):
 
 def add(a, b):
     return _TABLE.get((a, b), 0)
-'''
+"""
 
 # Reads the grader lazily, at call time rather than import time, in case the
 # guard only covered module import.
-CHEAT_LAZY = '''
+CHEAT_LAZY = """
 import re
 from pathlib import Path
 
@@ -76,7 +76,7 @@ def add(a, b):
             if (int(_a), int(_b)) == (a, b):
                 return int(_want)
     return 0
-'''
+"""
 
 
 @pytest.fixture
