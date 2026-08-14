@@ -111,3 +111,38 @@ def test_apply_on_unknown_task_returns_none() -> None:
         )
         is None
     )
+
+
+# -- Firestore document ids ---------------------------------------------------
+
+
+def test_repository_task_ids_become_legal_document_ids() -> None:
+    """The bug that produced a 500 on the first real push.
+
+    Task ids are repository full names, which always contain a slash. Firestore
+    reads a slash as a collection/document boundary, so
+    "mergegate_tasks/4KInc/demo-task" is a collection reference and .document()
+    rejects it — every real lookup failed.
+    """
+    from mergegate.store import document_id
+
+    assert "/" not in document_id("4KInc/mergegate-demo-task")
+    assert document_id("4KInc/mergegate-demo-task") == "4KInc~mergegate-demo-task"
+
+
+def test_document_ids_stay_distinct() -> None:
+    from mergegate.store import document_id
+
+    assert document_id("a/b") != document_id("a/c")
+    assert document_id("owner/repo") != document_id("other/repo")
+
+
+def test_reserved_document_ids_are_refused() -> None:
+    """Fail at the boundary rather than producing an id Firestore rejects later."""
+    import pytest
+
+    from mergegate.store import document_id
+
+    for bad in ("", ".", "..", "__reserved__"):
+        with pytest.raises(ValueError):
+            document_id(bad)

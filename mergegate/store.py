@@ -27,9 +27,44 @@ from typing import Any, Protocol
 from .mandate import PaymentMandate
 from .settlement import EventOutcome, TaskState, TaskStateMachine
 
-__all__ = ["TaskStore", "FirestoreTaskStore", "MemoryTaskStore", "to_document", "from_document"]
+__all__ = [
+    "TaskStore",
+    "FirestoreTaskStore",
+    "MemoryTaskStore",
+    "to_document",
+    "from_document",
+    "document_id",
+]
 
 COLLECTION = "mergegate_tasks"
+
+# Firestore document IDs may not contain "/" — a path with slashes is parsed as
+# alternating collection/document segments, so "mergegate_tasks/4KInc/demo-task"
+# is a *collection* reference and .document() rejects it. Task ids are repository
+# full names, which always contain a slash, so every real lookup hit this.
+#
+# "~" is not legal in a GitHub owner or repository name (those allow only
+# alphanumerics, "-", "_", and "."), so the mapping is unambiguous and stays
+# readable in the console rather than becoming an opaque hash.
+_ID_SEPARATOR = "~"
+
+
+def document_id(task_id: str) -> str:
+    """Map a task id onto a legal Firestore document id.
+
+    Raises on the forms Firestore reserves, rather than silently producing an id
+    that fails later at write time.
+    """
+    if not task_id:
+        raise ValueError("task_id must not be empty")
+    doc_id = task_id.replace("/", _ID_SEPARATOR)
+    if doc_id in (".", ".."):
+        raise ValueError(f"task_id {task_id!r} maps to a reserved Firestore id")
+    if doc_id.startswith("__") and doc_id.endswith("__"):
+        raise ValueError(f"task_id {task_id!r} maps to a reserved __*__ Firestore id")
+    if len(doc_id.encode()) > 1500:
+        raise ValueError(f"task_id {task_id!r} exceeds the Firestore document id limit")
+    return doc_id
 
 
 def to_document(machine: TaskStateMachine) -> dict[str, Any]:
@@ -159,7 +194,7 @@ class FirestoreTaskStore:
         self._collection = collection
 
     def _ref(self, task_id: str) -> Any:
-        return self._db.collection(self._collection).document(task_id)
+        return self._db.collection(self._collection).document(document_id(task_id))
 
     def get(self, task_id: str) -> TaskStateMachine | None:
         snap = self._ref(task_id).get()
