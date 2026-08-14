@@ -2,7 +2,7 @@
 
 These exist because of a bug the unit tests could not have caught.
 ``tests/test_webhook.py`` calls :class:`~mergegate.webhook.WebhookReceiver`
-directly, so it never crossed the FastAPI boundary — and the endpoint was
+directly, so it never crossed the FastAPI boundary, and the endpoint was
 entirely broken there: ``Request`` was imported inside ``build_router`` while
 the module uses postponed annotations, so FastAPI could not resolve the
 annotation, treated ``request`` as a query parameter, and returned 422 for
@@ -79,7 +79,7 @@ def test_status_states_scope_and_custody() -> None:
 
 
 def test_endpoint_actually_runs_the_handler() -> None:
-    """A 422 here means FastAPI never reached the handler — the original bug."""
+    """A 422 here means FastAPI never reached the handler: the original bug."""
     r = _client().post(
         "/webhooks/github",
         content=_push_body(),
@@ -125,7 +125,7 @@ def test_rejection_body_is_not_an_oracle() -> None:
 
 def test_signature_is_checked_against_raw_bytes() -> None:
     """Re-serializing before verifying would compare against bytes GitHub never
-    sent. Same JSON, different byte order — the signature must still hold."""
+    sent. Same JSON, different byte order: the signature must still hold."""
     body = (
         b'{"repository": {"full_name": "' + REPO.encode() + b'"}, '
         b'"after": "' + SHA.encode() + b'", "ref": "refs/heads/main"}'

@@ -1,21 +1,21 @@
-"""P0.7 — the bound, independently-verifiable settlement receipt.
+"""P0.7: the bound, independently-verifiable settlement receipt.
 
 A signed receipt saying "PASS" is not a moat. Anyone can sign a string. The
 value is in the **binding**: one object that ties together which code, judged by
-which tests, in which environment, under whose mandate, settling which payment —
+which tests, in which environment, under whose mandate, settling which payment -
 so that a third party holding only the receipt can re-derive the whole chain and
 detect any substitution.
 
 What is bound:
 
-* ``contract_hash`` — the terms, fixed at funding
-* ``grader_hash`` — the buyer's test bundle
-* ``base_sha`` / ``submission_sha`` / ``tree_hash`` — the exact artifact graded
-* ``verifier_image_digest`` — the environment it was graded in
-* ``command_output_digest`` / ``result_digest`` — what the run produced
-* ``mandate_hash`` — the payment authorization it executes
-* ``settlement_key`` — the idempotency key that made it terminal (P0.5)
-* ``decision``, ``settlement_tx``, ``verifier_fee_tx`` — the money that moved
+* ``contract_hash``: the terms, fixed at funding
+* ``grader_hash``: the buyer's test bundle
+* ``base_sha`` / ``submission_sha`` / ``tree_hash``: the exact artifact graded
+* ``verifier_image_digest``: the environment it was graded in
+* ``command_output_digest`` / ``result_digest``: what the run produced
+* ``mandate_hash``: the payment authorization it executes
+* ``settlement_key``: the idempotency key that made it terminal (P0.5)
+* ``decision``, ``settlement_tx``, ``verifier_fee_tx``: the money that moved
 
 The receipt carries the full verification manifest and the mandate alongside
 those digests, which is what makes it *self*-verifying: the offline verifier
@@ -24,12 +24,12 @@ was given and checks they match the bound values. A receipt whose digests were
 edited to describe a different run fails, and so does one whose manifest was
 swapped for a friendlier one.
 
-Signing and canonicalization come from the shared engine — MergeGate does not
+Signing and canonicalization come from the shared engine: MergeGate does not
 implement its own crypto.
 
 **What offline verification does and does not establish.** Thirteen of the bound
 fields are cross-checked against the embedded manifest and mandate, so editing
-any of them fails even for an attacker who holds the signing key —
+any of them fails even for an attacker who holds the signing key -
 ``tests/test_receipt.py`` proves this by re-signing each tampered variant. Five
 fields have nothing inside the receipt to check them against and rest on the
 signature alone: ``settlement_tx``, ``verifier_fee_tx``, ``reason``,
@@ -91,7 +91,7 @@ class ReceiptBinding:
     reason: str
     settlement_tx: str = ""
     verifier_fee_tx: str = ""
-    """P2.2 — the x402 micro-fee escrow paid the verifier for this run. Empty
+    """P2.2: the x402 micro-fee escrow paid the verifier for this run. Empty
     until that path is wired; the field exists so the shape does not change
     later and invalidate earlier receipts' schema."""
 
@@ -137,7 +137,7 @@ def build_receipt(
 
     The manifest and mandate are embedded whole, not summarized. A receipt that
     only carried digests could be verified for internal consistency but could
-    not be *re-derived* — the holder would have to trust that the digests
+    not be *re-derived*: the holder would have to trust that the digests
     described what someone said they described.
     """
     binding = ReceiptBinding(
@@ -176,7 +176,7 @@ def build_receipt(
         "mandate": mandate.to_canonical_dict(),
         "mandate_statement": mandate.statement(),
         "scope": (
-            "Attests verified contract acceptance only — not code quality, "
+            "Attests verified contract acceptance only, not code quality, "
             "security, or mergeworthiness."
         ),
         "custody": (
@@ -213,7 +213,7 @@ class ReceiptVerificationResult:
 
     def summary(self) -> str:
         if self.valid:
-            return f"receipt verified — {len(self.checks)} checks passed"
+            return f"receipt verified: {len(self.checks)} checks passed"
         return "receipt FAILED verification: " + "; ".join(self.failures)
 
 

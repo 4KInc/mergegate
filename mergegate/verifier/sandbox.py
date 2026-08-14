@@ -1,4 +1,4 @@
-"""P1.4 — the sandbox execution spec for Cloud Run Jobs.
+"""P1.4: the sandbox execution spec for Cloud Run Jobs.
 
 The isolation properties are expressed as a data structure rather than as
 scattered API arguments, for two reasons: they can be asserted in tests without
@@ -12,7 +12,7 @@ what the graded run can reach inside that boundary.
 
 **How the egress posture was established.** It was measured, not assumed. A
 probe executed inside a real Cloud Run Job showed that the default
-configuration reaches the open internet — Cloud Run grants egress by default —
+configuration reaches the open internet (Cloud Run grants egress by default),
 which meant an earlier version of this module asserted ``default-deny`` while
 the deployed job could reach Cloudflare and resolve DNS. Since the manifest
 writes this field into a *signed receipt*, that would have signed a false
@@ -21,7 +21,7 @@ statement.
 The fix was a custom VPC with no Cloud NAT plus an explicit deny-all egress
 firewall rule, attached with ``--vpc-egress=all-traffic``. Re-probing then
 showed all outbound TCP blocked and DNS still resolving, which is exactly what
-:data:`EGRESS_DENY_TCP` now claims — no more, no less.
+:data:`EGRESS_DENY_TCP` now claims: no more, no less.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ EGRESS_DENY_TCP = "deny-tcp-egress; dns-resolution-available"
 Verified by executing a probe inside a real Cloud Run Job on the sealed VPC:
 outbound TCP to three separate public addresses all failed while loopback
 succeeded, so a graded run cannot fetch anything. DNS resolution still
-succeeds — Cloud Run resolves through the platform rather than through the VPC,
+succeeds: Cloud Run resolves through the platform rather than through the VPC,
 so the deny-all egress firewall does not reach it.
 
 DNS is therefore a residual side channel: a submission cannot retrieve data over
@@ -75,8 +75,8 @@ EGRESS_PROBE = {
 """What the egress probe actually returned, before and after the sealed VPC.
 
 Recorded here rather than retyped into a template so the page cannot drift from
-what was measured. The first configuration reached the public internet — Cloud
-Run grants egress by default — which is why an earlier version of this module
+what was measured. The first configuration reached the public internet: Cloud
+Run grants egress by default, which is why an earlier version of this module
 asserting "default-deny" would have signed a false claim.
 """
 
@@ -109,7 +109,7 @@ class SandboxSpec:
     subnet: str = "mergegate-sealed-uc1"
     """Direct VPC egress into a network with no Cloud NAT and an explicit
     deny-all egress firewall rule. Without these the job reaches the open
-    internet — Cloud Run's default — and the egress claim would be false."""
+    internet, which is Cloud Run's default, and the egress claim would be false."""
 
     execution_environment: str = "gen2"
     """gen2 is the gVisor-sandboxed environment. gen1 is not accepted."""
@@ -124,7 +124,7 @@ class SandboxSpec:
     def __post_init__(self) -> None:
         if "@sha256:" not in self.image_digest:
             raise SandboxPolicyError(
-                f"verifier image must be pinned by digest, got {self.image_digest!r} — "
+                f"verifier image must be pinned by digest, got {self.image_digest!r}: "
                 "a tag would let the graded environment drift after funding"
             )
         if not self.argv:
@@ -144,7 +144,7 @@ class SandboxSpec:
         if self.execution_environment != "gen2":
             raise SandboxPolicyError(
                 f"execution environment {self.execution_environment!r} is not "
-                "permitted — gen2 is the gVisor-sandboxed environment"
+                "permitted: gen2 is the gVisor-sandboxed environment"
             )
         if self.service_account:
             raise SandboxPolicyError(
@@ -158,7 +158,7 @@ class SandboxSpec:
         for key, _value in self.env:
             if _looks_like_a_secret(key):
                 raise SandboxPolicyError(
-                    f"refusing to pass {key!r} into the sandbox — no secrets in the "
+                    f"refusing to pass {key!r} into the sandbox: no secrets in the "
                     "graded environment"
                 )
 

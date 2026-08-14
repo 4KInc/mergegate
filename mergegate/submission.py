@@ -2,8 +2,8 @@
 
 MergeGate deliberately does **not** shell out to ``patch`` or ``git apply`` with
 attacker-controlled input. A submission is reduced to a list of
-:class:`FileChange` records — path plus new content, or path plus a deletion
-marker — before anything touches the workspace. Every path then flows through
+:class:`FileChange` records (path plus new content, or path plus a deletion
+marker) before anything touches the workspace. Every path then flows through
 the same :class:`~mergegate.paths.PathGuard` as everything else.
 
 In production these records come from ``git diff --name-status`` between the
@@ -72,7 +72,7 @@ class Submission:
     def touched_paths(self) -> tuple[str, ...]:
         """Every path this submission writes to, in submission order.
 
-        Returned raw — *not* normalized — because the path guard has to see and
+        Returned raw and *not* normalized, because the path guard has to see and
         reject the provider's original form. Normalizing here would launder
         traversal attempts into innocuous-looking paths before the check.
         """

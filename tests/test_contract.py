@@ -1,4 +1,4 @@
-"""P0.2 — contract immutability and grader pinning."""
+"""P0.2: contract immutability and grader pinning."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def test_contract_hash_is_stable_across_equal_contracts(contract: TaskContract) 
 
 
 def test_contract_hash_is_order_independent(contract: TaskContract) -> None:
-    """Reordering set-like terms must not change the hash — otherwise two buyers
+    """Reordering set-like terms must not change the hash: otherwise two buyers
     expressing identical terms would fund different-looking contracts."""
     reordered = dataclasses.replace(
         contract,

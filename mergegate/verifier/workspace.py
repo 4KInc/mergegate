@@ -1,8 +1,8 @@
-"""P0.3 — deterministic workspace assembly under the verification identity.
+"""P0.3: deterministic workspace assembly under the verification identity.
 
     buyer base tree + buyer grader bundle + provider diff
 
-The advantage MergeGate claims is not "it runs in a sandbox" — plenty of things
+The advantage MergeGate claims is not "it runs in a sandbox": plenty of things
 run in sandboxes. It is that **the provider cannot influence the grader**, and
 that this is demonstrable rather than asserted. Assembly is therefore ordered so
 that the provider's contribution is always overwritten by the buyer's:
@@ -12,14 +12,14 @@ that the provider's contribution is always overwritten by the buyer's:
    violation is a hard reject; the commands never run (P1.3).
 3. Apply the provider's changes to allowed source paths only.
 4. Quarantine test-hook files the provider introduced or modified anywhere in
-   the tree — not just under the declared grader paths (P1.1).
+   the tree, not just under the declared grader paths (P1.1).
 5. Purge the grader paths outright, then inject the buyer's grader bundle, so
    the graded tests are always the buyer's bytes (P0.3 step 3).
 6. Strip ``.git`` so no reference solution can be read out of history (P1.2).
 7. Hash the resulting tree.
 
 Steps 2 and 5 are deliberately redundant. Step 2 already rejects a submission
-that edits a grader path, so step 5 should never have anything to purge — but
+that edits a grader path, so step 5 should never have anything to purge: but
 it runs anyway, because a defense that depends on a single check being correct
 is a defense that fails when that check is wrong.
 
@@ -95,7 +95,7 @@ class AssembledWorkspace:
     injected_grader_files: tuple[str, ...]
     quarantined_hooks: tuple[str, ...] = field(default_factory=tuple)
     """Provider-introduced test hooks removed before grading. Non-empty is a
-    tamper signal and is recorded in the receipt (P1.5) — not a silent fixup."""
+    tamper signal and is recorded in the receipt (P1.5), not a silent fixup."""
 
     purged_grader_paths: tuple[str, ...] = field(default_factory=tuple)
     """Grader-path files present after diff apply. Should always be empty given
@@ -125,7 +125,7 @@ def assemble_workspace(
 
     ``base_tree`` is the buyer's repository at the contract's pinned base SHA.
     ``grader_bundle`` is the buyer's bundle, whose hash must already match the
-    contract's ``grader_hash`` — the caller verifies that before calling, so a
+    contract's ``grader_hash``: the caller verifies that before calling, so a
     swapped bundle cannot reach assembly.
     """
     guard = PathGuard.from_contract(contract)
@@ -220,7 +220,7 @@ def _quarantine_provider_hooks(
     """Remove test hooks the provider introduced or changed.
 
     Hooks that were already in the buyer's base tree and were not touched by the
-    submission are the *buyer's* and stay — a repo legitimately has a root
+    submission are the *buyer's* and stay: a repo legitimately has a root
     ``conftest.py`` or pytest config. What gets removed is any hook the provider
     added, or one it modified, anywhere in the tree.
 
@@ -250,7 +250,7 @@ def _purge_grader_paths(
     alongside the real tests.
 
     Everything at a grader path is deleted, but only *provider-written* files
-    are returned — those are the tamper signal. The buyer's own base tree
+    are returned: those are the tamper signal. The buyer's own base tree
     routinely has files at grader paths (that is where the bundle goes), and
     reporting those would cry wolf on every honest run.
     """
@@ -294,14 +294,14 @@ def _inject_grader_bundle(
 
     if not injected:
         raise ValueError(
-            f"grader bundle {grader_bundle} contributed no files — "
+            f"grader bundle {grader_bundle} contributed no files: "
             f"nothing would be graded for contract {contract.task_id}"
         )
     return tuple(injected)
 
 
 def _strip_git(root: Path) -> bool:
-    """P1.2 — remove ``.git`` so history cannot leak the reference solution.
+    """P1.2: remove ``.git`` so history cannot leak the reference solution.
 
     Coding agents are documented as recovering gold patches and expected outputs
     from git history when it is reachable. Nothing in a pinned-command run needs
@@ -321,7 +321,7 @@ def _resolve_within(root: Path, rel: str) -> Path:
     """Join ``rel`` onto ``root``, refusing anything that escapes the workspace.
 
     ``normalize_path`` already rejects traversal, so this is the second line of
-    defense — it also catches escapes via symlinked parent directories, which a
+    defense; it also catches escapes via symlinked parent directories, which a
     purely lexical check cannot see.
     """
     try:

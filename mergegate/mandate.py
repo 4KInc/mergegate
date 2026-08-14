@@ -1,4 +1,4 @@
-"""P0.1 / P0.6 — the buyer's conditional payment mandate, and its execution.
+"""P0.1 / P0.6: the buyer's conditional payment mandate, and its execution.
 
 The mandate is the payment decision, and the buyer agent makes it **at funding
 time**:
@@ -7,7 +7,7 @@ time**:
     before deadline T
 
 Everything afterwards is execution, not judgement. :func:`execute_mandate` is a
-total function of the mandate and the verification manifest — same inputs, same
+total function of the mandate and the verification manifest: same inputs, same
 directive, every time. It consults no model, no operator, and no clock beyond
 the deadline comparison it is handed. That is what "no LLM in the
 payment-authority path" means concretely: there is no point in this module where
@@ -135,7 +135,7 @@ def execute_mandate(
     verifier package.
 
     Raises :class:`MandateError` when the mandate does not apply to this
-    manifest at all — a hash mismatch is an integrity failure of the caller's
+    manifest at all: a hash mismatch is an integrity failure of the caller's
     own inputs, and must not be silently downgraded to a refund.
     """
     contract_hash = getattr(manifest, "contract_hash", "")

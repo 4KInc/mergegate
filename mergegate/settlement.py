@@ -1,4 +1,4 @@
-"""P0.4 / P0.5 — artifact binding and the idempotent settlement state machine.
+"""P0.4 / P0.5: artifact binding and the idempotent settlement state machine.
 
 GitHub redelivers webhooks and delivers events out of order. Without
 idempotency that means double-releasing real money, so the invariant is stated
@@ -12,7 +12,7 @@ Three independent defenses, because any one of them can be wrong:
 1. **Delivery dedup.** A repeated webhook delivery ID is ignored outright.
 2. **Artifact binding (P0.4).** Every event names the ``submission_sha`` it
    concerns. An event about a SHA that is not the currently eligible one is
-   stale and rejected — this is what stops a force-push from inheriting a
+   stale and rejected: this is what stops a force-push from inheriting a
    previous SHA's PASS.
 3. **Settlement key.** ``sha256(task_id || submission_sha || contract_hash ||
    terminal_verdict)`` is recorded when settlement executes. A second attempt
@@ -20,7 +20,7 @@ Three independent defenses, because any one of them can be wrong:
    event with a different delivery ID.
 
 Terminal means terminal. Once ``SETTLED`` or ``REFUNDED``, every later event is
-rejected — including a new submission. Re-running a task after a terminal
+rejected: including a new submission. Re-running a task after a terminal
 verdict requires a new contract and new funding, because the buyer's mandate
 authorized exactly one payment decision.
 """
@@ -63,7 +63,7 @@ class Outcome(StrEnum):
     """The event advanced the state machine."""
 
     DUPLICATE = "duplicate"
-    """Already seen. Ignored, not an error — redelivery is normal."""
+    """Already seen. Ignored, not an error: redelivery is normal."""
 
     STALE = "stale"
     """Concerns a submission SHA that is no longer eligible."""
@@ -214,7 +214,7 @@ class TaskStateMachine:
                 "refusing a second settlement"
             )
         if self.state not in (TaskState.VERIFIED_PASS, TaskState.VERIFIED_FAIL):
-            return self._rejected(f"cannot settle from {self.state.value} — no verified result")
+            return self._rejected(f"cannot settle from {self.state.value}: no verified result")
 
         submission_sha = str(getattr(manifest, "submission_sha", ""))
         if (stale := self._check_stale(submission_sha)) is not None:
@@ -248,7 +248,7 @@ class TaskStateMachine:
         """Attach the on-chain transaction to the terminal state."""
         if not self.state.is_terminal:
             raise SettlementError(
-                f"cannot record a settlement tx from {self.state.value} — "
+                f"cannot record a settlement tx from {self.state.value}: "
                 "no settlement has been executed"
             )
         if self.settlement_tx and self.settlement_tx != tx_hash:

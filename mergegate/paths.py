@@ -1,8 +1,8 @@
-"""P1.3 — protected / graded path enforcement.
+"""P1.3: protected / graded path enforcement.
 
 This is a security boundary, not a convenience filter. A provider diff that
 touches a protected path (CI config, deploy manifests, infrastructure) or any
-grader path is a **hard reject regardless of test results** — a submission that
+grader path is a **hard reject regardless of test results**: a submission that
 disables the deploy gate and then passes the unit tests has not satisfied the
 contract, it has routed around it.
 
@@ -179,7 +179,7 @@ def match_any(path: str, compiled: list[tuple[str, re.Pattern[str]]]) -> str | N
     """Return the first pattern matching ``path``, or ``None``.
 
     For callers that need a plain "is this path in this set?" question without
-    the guard's allow/deny precedence — asking a deny-biased classifier and then
+    the guard's allow/deny precedence: asking a deny-biased classifier and then
     reinterpreting its answer is how a check ends up meaning something other
     than what its caller assumed.
     """

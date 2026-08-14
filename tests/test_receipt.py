@@ -1,8 +1,8 @@
-"""P0.7 — the bound receipt verifies offline, and tampering breaks it.
+"""P0.7: the bound receipt verifies offline, and tampering breaks it.
 
 The point of these tests is not that a signature checks out. It is that the
 receipt cannot be edited into describing a different run, a different artifact,
-a different mandate, or a different payment while still verifying — including
+a different mandate, or a different payment while still verifying: including
 edits that keep the object internally plausible.
 """
 
@@ -137,7 +137,7 @@ def test_receipt_binds_every_required_field(signing_key: Ed25519PrivateKey) -> N
 
 
 def test_receipt_states_its_scope_and_custody(signing_key: Ed25519PrivateKey) -> None:
-    """P2.3 / P2.4 — the claim limits travel with the artifact."""
+    """P2.3 / P2.4: the claim limits travel with the artifact."""
     body = _receipt(signing_key)["body"]
     assert "not code quality, security, or mergeworthiness" in body["scope"]
     assert "escrow authority" in body["custody"]
@@ -205,15 +205,15 @@ def test_bound_fields_are_caught_even_by_an_attacker_holding_the_key(
 ) -> None:
     """The signature is not what makes these fields safe.
 
-    Each field below is cross-checked against the embedded manifest or mandate,
-    so editing it and re-signing still fails. Without this test, the tampering
-    cases above would only be proving that Ed25519 works.
+     Each field below is cross-checked against the embedded manifest or mandate,
+     so editing it and re-signing still fails. Without this test, the tampering
+     cases above would only be proving that Ed25519 works.
 
-    Fields deliberately *not* covered here — ``settlement_tx``,
-    ``verifier_fee_tx``, ``reason``, ``settlement_asset``, ``settlement_chain``
-    — have nothing inside the receipt to check them against and rest on the
-    signature alone. Confirming those means comparing the receipt to the chain,
-    which is outside what an offline verifier can do.
+     Fields deliberately *not* covered here: ``settlement_tx``,
+     ``verifier_fee_tx``, ``reason``, ``settlement_asset``, ``settlement_chain``
+    : have nothing inside the receipt to check them against and rest on the
+     signature alone. Confirming those means comparing the receipt to the chain,
+     which is outside what an offline verifier can do.
     """
     key = Ed25519PrivateKey.generate()
     envelope = _receipt(key, passing=False)
@@ -224,7 +224,7 @@ def test_bound_fields_are_caught_even_by_an_attacker_holding_the_key(
 
     result = verify_receipt(resigned, public_key=key.public_key())
     assert any(name == "signature" and ok for name, ok in result.checks)
-    assert not result.valid, f"{field} is not independently bound — signature is its only guard"
+    assert not result.valid, f"{field} is not independently bound: signature is its only guard"
 
 
 def test_swapping_the_manifest_is_detected(signing_key: Ed25519PrivateKey) -> None:

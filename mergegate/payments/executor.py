@@ -3,7 +3,7 @@
 The executor is deliberately dumb. It receives a
 :class:`~mergegate.mandate.SettlementDirective` that already says who gets paid
 and why, and its only job is to move the funds and report what happened. There
-is no branch in here that could decide differently — that decision was made by
+is no branch in here that could decide differently, that decision was made by
 the buyer at funding time and evaluated by :func:`mergegate.mandate.execute_mandate`.
 
 The settlement key becomes the rail's idempotency key, which is what gives
@@ -52,7 +52,7 @@ class SettlementExecutor:
         Ordering matters. The settlement is what the buyer authorized and what
         the provider is owed; the verifier fee is MergeGate's own charge. If the
         fee transfer fails, the settlement has still happened correctly and the
-        receipt records an empty fee tx — the reverse ordering would risk taking
+        receipt records an empty fee tx: the reverse ordering would risk taking
         our fee out of an escrow that then failed to pay the counterparty.
         """
         if not settlement_key:

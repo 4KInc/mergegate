@@ -1,10 +1,10 @@
-"""P0.3 / P1.1 / P1.2 / P1.3 — the provider cannot influence the grader.
+"""P0.3 / P1.1 / P1.2 / P1.3: the provider cannot influence the grader.
 
 These are end-to-end: a real base repo on disk, a real buyer grader bundle, real
 provider submissions, and a real ``pytest`` process run inside the assembled
 workspace. The attacks are the ones documented in the SWE-bench and coding-agent
-literature — editing the tests, dropping a ``conftest.py`` that forces a pass,
-reading the answer out of ``.git`` history, disabling CI on the way past — and
+literature: editing the tests, dropping a ``conftest.py`` that forces a pass,
+reading the answer out of ``.git`` history, disabling CI on the way past: and
 each one is asserted to fail.
 
 Asserting on a mocked runner would prove nothing here. The claim is that the
@@ -213,7 +213,7 @@ def test_buyer_grader_overwrites_whatever_is_at_the_test_path(
 def test_provider_conftest_cannot_force_a_pass(
     sealed: SealedContract, base_tree: Path, buyer_grader: Path, tmp_path: Path
 ) -> None:
-    """P1.1 — the documented attack: a conftest hook that rewrites outcomes.
+    """P1.1: the documented attack: a conftest hook that rewrites outcomes.
 
     ``src/conftest.py`` is inside an allowed source path, so the path guard
     permits writing it. pytest would still collect and execute it. Allowed to
@@ -231,7 +231,7 @@ def test_provider_conftest_cannot_force_a_pass(
     submission = Submission(
         submission_sha="5" * 40,
         changes=(
-            # Code still broken — only the hook is doing the work.
+            # Code still broken: only the hook is doing the work.
             FileChange("src/calc.py", ChangeKind.MODIFY, BROKEN_CALC.encode()),
             FileChange("src/conftest.py", ChangeKind.ADD, hostile_conftest.encode()),
         ),
@@ -264,7 +264,7 @@ def test_buyers_own_untouched_hooks_survive(
     """The quarantine must not eat the buyer's own repo configuration.
 
     A repo legitimately ships a root conftest.py. If the provider did not touch
-    it, it is the buyer's and it stays — otherwise the defense would break
+    it, it is the buyer's and it stays: otherwise the defense would break
     ordinary projects.
     """
     (base_tree / "conftest.py").write_text("# buyer's own\ncollect_ignore = []\n")
@@ -309,7 +309,7 @@ def test_modifying_the_buyers_hook_is_quarantined(
 def test_git_history_is_stripped(
     sealed: SealedContract, base_tree: Path, buyer_grader: Path, tmp_path: Path
 ) -> None:
-    """P1.2 — the reference solution must not be readable from the sandbox."""
+    """P1.2: the reference solution must not be readable from the sandbox."""
     submission = Submission(
         submission_sha="9" * 40,
         changes=(FileChange("src/calc.py", ChangeKind.MODIFY, FIXED_CALC.encode()),),

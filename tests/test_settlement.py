@@ -1,4 +1,4 @@
-"""P0.4 / P0.5 — artifact binding and idempotent settlement.
+"""P0.4 / P0.5: artifact binding and idempotent settlement.
 
 The failure these guard against costs real money: GitHub redelivers webhooks and
 delivers them out of order, and a state machine that treats each delivery as new

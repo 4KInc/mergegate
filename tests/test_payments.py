@@ -1,7 +1,7 @@
 """Settlement rails and the executor.
 
-The double-payment guard has two independent layers — the state machine and the
-rail's idempotency key — and these tests exercise the rail layer on its own, so
+The double-payment guard has two independent layers: the state machine and the
+rail's idempotency key, and these tests exercise the rail layer on its own, so
 a regression in one is not masked by the other still working.
 """
 

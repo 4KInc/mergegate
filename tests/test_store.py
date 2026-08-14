@@ -122,7 +122,7 @@ def test_repository_task_ids_become_legal_document_ids() -> None:
     Task ids are repository full names, which always contain a slash. Firestore
     reads a slash as a collection/document boundary, so
     "mergegate_tasks/4KInc/demo-task" is a collection reference and .document()
-    rejects it — every real lookup failed.
+    rejects it: every real lookup failed.
     """
     from mergegate.store import document_id
 

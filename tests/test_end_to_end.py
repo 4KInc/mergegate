@@ -7,7 +7,7 @@ offline by a party holding nothing but the receipt and a public key.
 
 The only thing stubbed is the on-chain transfer, because there are no
 credentials yet. Where a transaction hash would go, these tests put a marker and
-assert the receipt carries it — so when the Circle wiring lands, the change is
+assert the receipt carries it, so when the Circle wiring lands, the change is
 substituting a real hash, not restructuring the flow.
 
 P0.6's done-when is what this file exists to show: the settlement is the
@@ -208,7 +208,7 @@ def test_protected_path_flow_refunds_the_buyer(
 ) -> None:
     """FAIL → refund. The demo's control-layer proof.
 
-    The code is functionally correct — it would pass the buyer's tests — but the
+    The code is functionally correct; it would pass the buyer's tests, but the
     submission also disabled the deploy workflow. That is a contract violation,
     so the pinned commands never run and escrow returns to the buyer.
     """
@@ -257,7 +257,7 @@ def test_the_receipt_verifies_for_someone_who_holds_only_the_receipt(
     """The whole point: a third party can re-check the chain independently.
 
     They have no repo, no grader bundle, no database, and no access to
-    MergeGate — just the receipt and a public key.
+    MergeGate: just the receipt and a public key.
     """
     key = Ed25519PrivateKey.generate()
     submission = Submission(

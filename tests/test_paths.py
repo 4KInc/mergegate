@@ -1,4 +1,4 @@
-"""P1.3 — protected / graded path enforcement.
+"""P1.3: protected / graded path enforcement.
 
 These tests encode the rule that makes the whole trust model hold: a submission
 that touches a protected or graded path is rejected *regardless of test
@@ -57,7 +57,7 @@ def test_unlisted_path_is_rejected(guard: PathGuard) -> None:
 
 
 def test_deny_wins_over_allow() -> None:
-    """A path on both lists is a violation — there is no most-specific-wins rule
+    """A path on both lists is a violation: there is no most-specific-wins rule
     for an attacker to engineer against."""
     guard = PathGuard(
         allowed_source_paths=("src/**",),

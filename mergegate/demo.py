@@ -10,8 +10,8 @@ actually watches:
         → one receipt binds the whole chain, verifiable offline
 
 Two flows, and the second is the point. **PASS** releases to the provider.
-**FAIL** is a submission whose code is functionally correct — it would pass the
-buyer's tests — but which also edits a protected path. It is rejected before
+**FAIL** is a submission whose code is functionally correct (it would pass the
+buyer's tests) but which also edits a protected path. It is rejected before
 the tests ever run, and escrow returns to the buyer. That is the difference
 between a control layer and "CI plus a transfer".
 
@@ -61,7 +61,7 @@ FAIL flow: the code works, the submission still does not satisfy the contract.""
 
 
 def _add_usdc(*amounts: str) -> str:
-    """Sum USDC amounts exactly. Decimal, never float — USDC has 6 decimals
+    """Sum USDC amounts exactly. Decimal, never float: USDC has 6 decimals
     and float arithmetic would produce an amount nobody authorized."""
     total = sum((Decimal(a) for a in amounts if a), Decimal(0))
     return f"{total:f}"
@@ -236,7 +236,7 @@ class DemoRunner:
         )
         # Escrow must hold the reward *and* the verifier fee. Funding only the
         # reward leaves nothing for the fee once the provider is paid, and the
-        # executor treats a failed fee as non-fatal — so the shortfall would not
+        # executor treats a failed fee as non-fatal, so the shortfall would not
         # break settlement, it would just silently produce an empty
         # verifier_fee_tx and quietly drop P2.2.
         funding_amount = _add_usdc(self.config.reward_usdc, self.config.verifier_fee_usdc)

@@ -1,7 +1,7 @@
-"""P0.2 — the signed, immutable task contract with a buyer-pinned grader.
+"""P0.2: the signed, immutable task contract with a buyer-pinned grader.
 
 The contract is the whole trust anchor. If a provider can move the acceptance
-criteria after seeing them, "the tests passed" means nothing — the provider is
+criteria after seeing them, "the tests passed" means nothing: the provider is
 grading its own homework. So every term the evaluator will consult is fixed,
 canonicalized, and hashed *before* the provider is allowed to submit, and the
 resulting ``contract_hash`` is what the buyer's payment mandate commits to.
@@ -55,13 +55,13 @@ class TaskContract:
     """Fully-qualified image digest. A tag would let the runtime image drift."""
 
     required_commands: tuple[tuple[str, ...], ...]
-    """Argv vectors, not shell strings — nothing to quote, nothing to inject."""
+    """Argv vectors, not shell strings: nothing to quote, nothing to inject."""
 
     allowed_source_paths: tuple[str, ...]
     protected_paths: tuple[str, ...]
     grader_paths: tuple[str, ...]
     """Paths the buyer's grader bundle occupies. Provider edits here are rejected
-    *and* overwritten at inject time — belt and braces (P0.3 step 3, P1.1)."""
+    *and* overwritten at inject time: belt and braces (P0.3 step 3, P1.1)."""
 
     reward_usdc: str
     """Decimal string, e.g. "250.00". Never a float: floats do not canonicalize."""
@@ -102,7 +102,7 @@ class TaskContract:
                 raise ContractError(f"required command must be a non-empty argv vector: {cmd!r}")
         if not self.allowed_source_paths:
             raise ContractError(
-                "allowed_source_paths must be explicit — an empty allow-list would "
+                "allowed_source_paths must be explicit: an empty allow-list would "
                 "let a provider write anywhere outside the protected set"
             )
         if not self.grader_paths:
@@ -122,7 +122,7 @@ class TaskContract:
         grader_overlap = set(self.grader_paths) & set(self.allowed_source_paths)
         if grader_overlap:
             raise ContractError(
-                "grader paths cannot be in allowed_source_paths — that would let the "
+                "grader paths cannot be in allowed_source_paths: that would let the "
                 f"provider supply its own graded tests: {sorted(grader_overlap)}"
             )
 
@@ -154,7 +154,7 @@ class TaskContract:
 
     @property
     def contract_hash(self) -> str:
-        """Recomputed on every access — never cached, so it cannot go stale."""
+        """Recomputed on every access: never cached, so it cannot go stale."""
         return hash_object(CONTRACT_DOMAIN, self.to_canonical_dict())
 
     def seal(self, *, funding_tx: str, mandate_hash: str) -> SealedContract:
@@ -207,7 +207,7 @@ class SealedContract:
         re-fund instead.
         """
         raise ContractError(
-            "a funded task contract is immutable — no post-funding amendments. "
+            "a funded task contract is immutable: no post-funding amendments. "
             "Cancel the contract and fund a new one to change terms."
         )
 

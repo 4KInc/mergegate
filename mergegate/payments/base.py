@@ -1,8 +1,8 @@
 """The settlement rail interface.
 
 MergeGate moves USDC through exactly one narrow surface, so that the choice of
-rail — Circle CLI agent wallets today, the REST API or a deployed contract
-later — is a swap of one class rather than a change to the settlement logic.
+rail (Circle CLI agent wallets today, the REST API or a deployed contract
+later) is a swap of one class rather than a change to the settlement logic.
 
 The interface is deliberately smaller than what any rail offers. It can move
 funds between two addresses with an idempotency key, and it can read a balance.
@@ -11,7 +11,7 @@ needs more surface than this is doing something the settlement path should not
 be able to do.
 
 **Idempotency is the load-bearing parameter.** Every transfer carries the
-settlement key from :mod:`mergegate.settlement` — ``sha256(task_id ||
+settlement key from :mod:`mergegate.settlement`: ``sha256(task_id ||
 submission_sha || contract_hash || terminal_verdict)``. That makes the rail a
 second, independent guard against double-payment: even if the state machine were
 somehow driven twice, the rail sees a repeated key and returns the original
@@ -44,7 +44,7 @@ class TransferReceipt:
     idempotency_key: str
     deduplicated: bool = False
     """True when the rail returned an existing transfer for this key rather than
-    sending a new one. Surfaced rather than hidden — a deduplicated settlement
+    sending a new one. Surfaced rather than hidden: a deduplicated settlement
     means something upstream tried to pay twice, which is worth knowing."""
 
     block_height: int | None = None

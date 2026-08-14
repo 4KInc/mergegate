@@ -4,7 +4,7 @@
 settlement", but it holds that state in memory. On Cloud Run that is not enough:
 instances cold-start and scale out, so a redelivered webhook arriving at a fresh
 instance would meet an empty ``_seen_deliveries`` and be treated as new. The
-guarantee would hold in tests and fail in production — the worst shape for a
+guarantee would hold in tests and fail in production: the worst shape for a
 guarantee about money.
 
 So state is persisted per task, and every event is applied inside a **Firestore
@@ -44,7 +44,7 @@ __all__ = [
 
 COLLECTION = "mergegate_tasks"
 
-# Firestore document IDs may not contain "/" — a path with slashes is parsed as
+# Firestore document IDs may not contain "/": a path with slashes is parsed as
 # alternating collection/document segments, so "mergegate_tasks/4KInc/demo-task"
 # is a *collection* reference and .document() rejects it. Task ids are repository
 # full names, which always contain a slash, so every real lookup hit this.
@@ -272,8 +272,8 @@ class FirestoreReceiptStore:
     """Receipts in Firestore, one document each.
 
     The envelope is stored under a single ``envelope`` field rather than spread
-    across top-level fields. Firestore would happily reshape nested data —
-    reordering maps, coercing numbers — and the receipt's signature is over
+    across top-level fields. Firestore would happily reshape nested data -
+    reordering maps, coercing numbers, and the receipt's signature is over
     exact canonical bytes. Storing it as one opaque JSON string means what comes
     back out is byte-identical to what was signed, so it still verifies.
     """

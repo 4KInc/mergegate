@@ -1,6 +1,6 @@
 """The MergeGate API service.
 
-Deployed to Cloud Run. This is the only component with outbound network access —
+Deployed to Cloud Run. This is the only component with outbound network access -
 it has to reach Circle to settle and GitHub to read submissions. The verifier
 job runs sealed on a separate VPC with no TCP egress; conflating the two would
 either break settlement or unseal the sandbox.
@@ -74,11 +74,11 @@ def _contract_store() -> Any:
 def _receipt_source() -> Any:
     """Where the dashboard reads receipts from.
 
-    Firestore in deployment, so a settlement appears without a redeploy. Falls
-    back to the bundle shipped in the image only when no project is configured
-    — a local run. It does **not** fall back when Firestore is configured but
-    unreachable: stale shipped receipts presented as live state would be a
-    quiet lie, so the page reports the failure instead.
+     Firestore in deployment, so a settlement appears without a redeploy. Falls
+     back to the bundle shipped in the image only when no project is configured
+    : a local run. It does **not** fall back when Firestore is configured but
+     unreachable: stale shipped receipts presented as live state would be a
+     quiet lie, so the page reports the failure instead.
     """
     if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
         return None
@@ -100,7 +100,7 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
         description=(
             "Deterministic evaluator and conditional USDC settlement for "
             "autonomous coding agents. Attests verified contract acceptance "
-            "only — not code quality, security, or mergeworthiness."
+            "only, not code quality, security, or mergeworthiness."
         ),
     )
 
@@ -143,7 +143,7 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
 
     # Deliberately /health, not /healthz. The deployed service showed /healthz
     # returning a generic HTML 404 with no "Server: Google Frontend" header
-    # while every other path carried one — something upstream intercepts that
+    # while every other path carried one: something upstream intercepts that
     # exact path and the request never reached the container. The route was
     # registered (it appeared in the served OpenAPI spec) and worked locally,
     # so this is infrastructure, not the app. Renaming is cheaper than
@@ -158,7 +158,7 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
         return {
             "service": "mergegate",
             "scope": (
-                "Verified contract acceptance — not code quality, security, or mergeworthiness."
+                "Verified contract acceptance, not code quality, security, or mergeworthiness."
             ),
             "custody": (
                 "Programmable USDC escrow with policy-bound conditional "

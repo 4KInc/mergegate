@@ -74,7 +74,7 @@ def test_materialize_base_tree_has_no_git_directory(repo: Path, tmp_path: Path) 
 
 
 def test_materialize_rejects_a_branch_name(repo: Path, tmp_path: Path) -> None:
-    """A ref is not an artifact identity — it can move underneath you."""
+    """A ref is not an artifact identity; it can move underneath you."""
     with pytest.raises(GitError, match="full 40-hex SHA"):
         materialize_base_tree(repo=repo, base_sha="main", destination=tmp_path / "base")
 

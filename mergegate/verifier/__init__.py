@@ -1,9 +1,9 @@
-"""P0.3 — the neutral, provable sandbox verifier.
+"""P0.3: the neutral, provable sandbox verifier.
 
 Split deliberately in two:
 
 * :mod:`~mergegate.verifier.workspace` and :mod:`~mergegate.verifier.runner`
-  hold the logic whose correctness the trust model depends on — grader
+  hold the logic whose correctness the trust model depends on: grader
   injection, path enforcement, hook quarantine, ``.git`` stripping, command
   execution, result digests. Pure local work, fully exercised in CI.
 * :mod:`~mergegate.verifier.sandbox` holds the GCP substrate that executes that

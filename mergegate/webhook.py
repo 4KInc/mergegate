@@ -1,4 +1,4 @@
-"""P2.1 — the GitHub webhook receiver that feeds the settlement state machine.
+"""P2.1: the GitHub webhook receiver that feeds the settlement state machine.
 
 This is the only untrusted entry point into a system that moves money, so the
 ordering here is load-bearing:
@@ -7,7 +7,7 @@ ordering here is load-bearing:
 
 Signature verification happens on the **raw request body**, before the payload
 is parsed. Parsing first and re-serializing to check the HMAC would compare a
-signature against bytes GitHub never sent — different key order, different
+signature against bytes GitHub never sent: different key order, different
 separators, different unicode escaping all produce a different digest, and the
 usual fix for that ("just re-encode it the same way") is a guess about someone
 else's serializer. Rejecting on raw bytes has no such ambiguity.
@@ -78,7 +78,7 @@ class SignatureError(WebhookError):
 
     401, not 400: this is an authentication failure, and it is the one failure
     mode that must never be distinguishable by response body from a merely
-    malformed payload — see :meth:`WebhookReceiver.handle`.
+    malformed payload: see :meth:`WebhookReceiver.handle`.
     """
 
     status = 401
@@ -119,7 +119,7 @@ class GitHubPush:
 def verify_signature(*, secret: str, body: bytes, header: str | None) -> None:
     """Verify GitHub's ``X-Hub-Signature-256`` over the raw body.
 
-    Raises :class:`SignatureError` on any failure. Returns ``None`` on success —
+    Raises :class:`SignatureError` on any failure. Returns ``None`` on success -
     there is no boolean to accidentally ignore at a call site.
     """
     if not secret:
@@ -175,7 +175,7 @@ class WebhookReceiver:
     and hoping the test client reproduces GitHub's framing.
 
     ``resolve`` maps a push to the task state machine it concerns, or ``None``
-    if no funded task tracks this repo/ref — an untracked push is ignored, not
+    if no funded task tracks this repo/ref: an untracked push is ignored, not
     an error, because the demo repo will see plenty of unrelated commits.
     """
 
@@ -254,7 +254,7 @@ def build_router(receiver: WebhookReceiver, *, path: str = "/webhooks/github") -
     FastAPI fell back to treating ``request`` as a query parameter and every
     delivery got 422 without the handler ever running.
 
-    It failed closed, so nothing was mis-authenticated — but signature
+    It failed closed, so nothing was mis-authenticated, but signature
     verification never executed either. Caught by calling the deployed service,
     not by the unit tests, which exercise :class:`WebhookReceiver` directly.
     """

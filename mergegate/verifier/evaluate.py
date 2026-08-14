@@ -1,7 +1,7 @@
 """The evaluation entry point: sealed contract + submission → manifest.
 
 This is the only function that produces a verdict, and it produces it by
-computing one — no caller can hand it a decision. It also enforces the one
+computing one: no caller can hand it a decision. It also enforces the one
 precondition the workspace assembler takes on trust: that the grader bundle
 about to be injected is the bundle the contract pinned.
 """
@@ -34,7 +34,7 @@ def evaluate(
     Raises :class:`~mergegate.contract.ContractError` if the contract drifted
     from what was funded, or if the grader bundle on disk is not the one the
     contract pinned. Both are integrity failures of the evaluator's own inputs
-    and must not be reported as an ordinary FAIL — a FAIL refunds the buyer and
+    and must not be reported as an ordinary FAIL: a FAIL refunds the buyer and
     closes the task, which would quietly paper over a compromised verifier.
     """
     sealed.assert_intact()

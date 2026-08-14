@@ -106,7 +106,7 @@ def test_dashboard_lists_only_real_receipts(bundle_dir: Path, key: Ed25519Privat
     html = _client(bundle_dir, key).get("/").text
     assert "SETTLED" in html
     assert "REFUNDED" in html
-    # Two receipts on disk, two rows — no padding.
+    # Two receipts on disk, two rows: no padding.
     assert html.count("USDC</td>") == 2 or html.count("0.25 USDC") >= 2
 
 
@@ -139,7 +139,7 @@ def test_sandbox_badges_do_not_overstate(bundle_dir: Path, key: Ed25519PrivateKe
     """The measured posture, not the one that sounds better.
 
     The phrase "default-deny" may appear on the page, but only in the sentence
-    explaining that the posture is *not* claimed as such — never as a badge.
+    explaining that the posture is *not* claimed as such: never as a badge.
     """
     html = _client(bundle_dir, key).get("/").text
     assert "No outbound TCP" in html
@@ -177,7 +177,7 @@ def test_a_tampered_receipt_is_shown_as_failing(bundle_dir: Path, key: Ed25519Pr
 
 
 def test_without_a_key_the_page_declines_to_claim_verification(bundle_dir: Path) -> None:
-    """No key means no green check — it says so instead of implying validity."""
+    """No key means no green check; it says so instead of implying validity."""
     html = _client(bundle_dir, None).get("/receipts/receipt-pass").text
     assert "Verification failed" in html
     assert "cannot be verified here" in html
@@ -219,7 +219,7 @@ def test_short_leaves_already_short_values_alone() -> None:
 def test_network_is_shown_per_row(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
     """The bundle holds mainnet and testnet runs.
 
-    Totals span both, so the table has to say which is which — otherwise the
+    Totals span both, so the table has to say which is which: otherwise the
     page reads as mainnet-only figures over mixed data, which is exactly the
     kind of quiet overstatement the receipts exist to prevent.
     """
@@ -273,7 +273,7 @@ def test_firestore_round_trip_preserves_signature_bytes(key: Ed25519PrivateKey) 
     """Receipts are stored as one opaque JSON string on purpose.
 
     Spread across native fields, Firestore could reorder maps or coerce
-    numbers, and the signature is over exact canonical bytes — the receipt
+    numbers, and the signature is over exact canonical bytes: the receipt
     would come back subtly different and stop verifying.
     """
     from mergegate.receipt import verify_receipt as _verify

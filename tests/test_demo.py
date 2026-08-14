@@ -6,8 +6,8 @@ workspace, the real state machine, the real mandate executor, and a receipt
 verified offline. Only :class:`~mergegate.payments.FakeRail` stands in, so the
 flows can be exercised without spending USDC.
 
-The FAIL flow is the one that matters. Its code is *correct* — it would pass the
-buyer's tests — but it also edits a protected path, so it is rejected before the
+The FAIL flow is the one that matters. Its code is *correct*; it would pass the
+buyer's tests, but it also edits a protected path, so it is rejected before the
 tests run and escrow returns to the buyer.
 """
 
@@ -127,7 +127,7 @@ def test_escrow_is_funded_with_the_reward_and_the_verifier_fee(runner: DemoRunne
     """P0.1: the money is committed against fixed terms up front, not after.
 
     Escrow holds reward + fee. Funding only the reward leaves nothing for the
-    verifier fee once the provider is paid — and because the executor treats a
+    verifier fee once the provider is paid, and because the executor treats a
     failed fee as non-fatal, that shortfall does not break settlement. It just
     silently emits an empty verifier_fee_tx and drops P2.2 without complaint.
     """
@@ -172,7 +172,7 @@ def test_protected_path_flow_refunds_the_buyer(runner: DemoRunner) -> None:
 
 
 def test_the_failing_submission_would_otherwise_have_passed(runner: DemoRunner) -> None:
-    """Without this, the FAIL flow proves nothing — it could just be broken code.
+    """Without this, the FAIL flow proves nothing; it could just be broken code.
 
     The same source fix, submitted without touching the protected path, passes.
     """

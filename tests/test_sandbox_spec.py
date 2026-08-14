@@ -1,4 +1,4 @@
-"""P1.4 — the sandbox spec refuses to describe a weakened sandbox."""
+"""P1.4: the sandbox spec refuses to describe a weakened sandbox."""
 
 from __future__ import annotations
 
@@ -105,7 +105,7 @@ def test_job_request_carries_the_strict_posture() -> None:
 
 
 def test_retries_are_zero() -> None:
-    """A retried evaluation is a second evaluation, not the same one again —
+    """A retried evaluation is a second evaluation, not the same one again -
     it would produce a second result for one submission (P0.5)."""
     spec = SandboxSpec(image_digest=IMAGE, argv=ARGV)
     body = build_job_request(spec, project="demo", region="us-central1", job_name="eval-1")

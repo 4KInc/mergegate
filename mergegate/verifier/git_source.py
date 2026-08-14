@@ -64,7 +64,7 @@ def resolve_sha(repo: Path, rev: str) -> str:
     """Resolve a revision to a full 40-hex SHA, or raise.
 
     Callers should resolve once and pass the SHA onward. A branch name is not
-    an artifact identity — it can point somewhere else a second later.
+    an artifact identity; it can point somewhere else a second later.
     """
     out = _git(repo, "rev-parse", "--verify", f"{rev}^{{commit}}").strip()
     if not _SHA_RE.match(out):
@@ -75,7 +75,7 @@ def resolve_sha(repo: Path, rev: str) -> str:
 def materialize_base_tree(*, repo: Path, base_sha: str, destination: Path) -> Path:
     """Write the tree at ``base_sha`` into ``destination``.
 
-    Uses ``git archive``, which emits the tree contents and nothing else — no
+    Uses ``git archive``, which emits the tree contents and nothing else: no
     ``.git`` directory is created, so the reference solution is never present to
     be stripped later (P1.2 by construction rather than by cleanup).
     """

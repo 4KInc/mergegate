@@ -43,7 +43,7 @@ def hash_directory(root: Path, domain: bytes = GRADER_DOMAIN) -> str:
 
     The digest covers, for every regular file, its repo-relative POSIX path, its
     executable bit, and its contents. It deliberately ignores mtimes, owners, and
-    directory entries so the same bundle hashes identically on any machine —
+    directory entries so the same bundle hashes identically on any machine -
     that is what makes ``grader_hash`` reproducible for the buyer and for any
     third party re-checking a receipt.
 

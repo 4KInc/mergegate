@@ -3,7 +3,7 @@
 Circle ships two distinct wallet products. **Agent Wallets** authenticate by
 email OTP into a local session and are driven through the ``circle`` CLI;
 **Developer-Controlled Wallets** authenticate with an API key plus an entity
-secret and are driven through the REST API. They hold different wallets — an
+secret and are driven through the REST API. They hold different wallets: an
 address that exists in one is invisible to the other.
 
 MergeGate uses Agent Wallets because that is where the funded Base mainnet
@@ -12,7 +12,7 @@ real USDC through this path.
 
 **On the eligibility rule.** The OTP login provisions a credential once, the way
 a service account is provisioned. Each transfer after that is initiated by the
-buyer agent with no human action — nobody clicks approve, and there is no
+buyer agent with no human action: nobody clicks approve, and there is no
 checkout step. That is what the prize rule is about. The credential's *origin*
 being interactive does not put a human in the funding path, but it does mean the
 session can expire, which is an operational risk rather than a design one.
@@ -110,7 +110,7 @@ class CircleCliRail:
         except subprocess.TimeoutExpired as exc:
             raise RailError(
                 f"circle {' '.join(args)} timed out after {timeout or self._timeout}s. "
-                "A transfer may still have been submitted — check the wallet before retrying."
+                "A transfer may still have been submitted: check the wallet before retrying."
             ) from exc
         except OSError as exc:
             raise RailError(f"could not execute the Circle CLI: {exc}") from exc
@@ -119,7 +119,7 @@ class CircleCliRail:
             stderr = proc.stderr.strip()
             if _looks_like_auth_failure(stderr):
                 raise RailError(
-                    "the Circle CLI session is not valid — it has expired or was never "
+                    "the Circle CLI session is not valid: it has expired or was never "
                     f"established. Run `circle login`. Underlying error: {stderr}"
                 )
             raise RailError(f"circle {' '.join(args)} failed: {stderr}")
@@ -160,7 +160,7 @@ class CircleCliRail:
         """
         if not idempotency_key:
             raise RailError(
-                "refusing to transfer without an idempotency key — it is the rail-level "
+                "refusing to transfer without an idempotency key: it is the rail-level "
                 "guard against double-payment"
             )
 
@@ -219,11 +219,11 @@ def _cli_idempotency_key(settlement_key: str) -> str:
     """Adapt a MergeGate settlement key to the UUID that Circle requires.
 
     Circle's API rejects a bare ``sha256:<hex>`` (and the stripped 64-hex form)
-    with ``400 Invalid request body`` — it accepts only UUIDs. Verified against
+    with ``400 Invalid request body``; it accepts only UUIDs. Verified against
     the live CLI, not inferred.
 
     The mapping is UUIDv5 over a fixed namespace, so it is **deterministic**:
-    the same settlement always derives the same UUID. That is the whole point —
+    the same settlement always derives the same UUID. That is the whole point -
     a random UUID would satisfy the format and silently destroy the guard,
     because a retry would present a fresh key and Circle would send again.
     """

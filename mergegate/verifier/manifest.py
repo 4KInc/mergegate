@@ -1,4 +1,4 @@
-"""The verification manifest — what was run, on what, and what came out.
+"""The verification manifest: what was run, on what, and what came out.
 
 The manifest is the evidence object the receipt binds to (P0.7). It records the
 full verification identity (base SHA + grader hash + submission SHA + tree hash
@@ -82,13 +82,13 @@ class VerificationManifest:
     commands: tuple[CommandResult, ...] = field(default_factory=tuple)
     failed_terms: tuple[str, ...] = field(default_factory=tuple)
     """Contract terms the submission violated. Non-empty forces FAIL regardless
-    of exit codes — a path violation is not rescued by passing tests."""
+    of exit codes: a path violation is not rescued by passing tests."""
 
     rejection_reason: str = ""
     """Human-readable, names the exact failed term. Quoted by the refund receipt."""
 
     tamper_signals: tuple[str, ...] = field(default_factory=tuple)
-    """P1.5 — quarantined provider hooks, purged grader files, env-sniffing.
+    """P1.5: quarantined provider hooks, purged grader files, env-sniffing.
     Recorded rather than silently fixed up."""
 
     git_stripped: bool = True
@@ -103,7 +103,7 @@ class VerificationManifest:
 
         FAIL if the submission violated a contract term, or if any pinned
         command exited non-zero or timed out. PASS only when nothing failed and
-        at least one command actually ran — an empty command list is not a pass.
+        at least one command actually ran: an empty command list is not a pass.
         """
         if self.failed_terms:
             return Verdict.FAIL

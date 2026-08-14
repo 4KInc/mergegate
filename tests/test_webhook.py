@@ -1,4 +1,4 @@
-"""P2.1 — the webhook receiver, which is the only untrusted way into settlement.
+"""P2.1: the webhook receiver, which is the only untrusted way into settlement.
 
 The tests that matter here are the rejections. A receiver that accepts a forged
 delivery hands an attacker the ability to announce a submission SHA, and every

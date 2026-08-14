@@ -5,8 +5,8 @@ not the REST Developer-Controlled Wallets API. The two are separate products
 holding separate wallets; the funded Base mainnet addresses live in the former.
 
 Everything reaches the chain through :class:`~mergegate.payments.base.SettlementRail`,
-so swapping rails — REST, or a deployed escrow contract that would let MergeGate
-drop the custody disclosure — is a change of one class.
+so swapping rails (REST, or a deployed escrow contract that would let MergeGate
+drop the custody disclosure) is a change of one class.
 """
 
 from __future__ import annotations
