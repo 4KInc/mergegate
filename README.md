@@ -32,6 +32,7 @@ GitHub code, running on Base mainnet.
 | **Dashboard** | [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app) |
 | **PASS flow** (0.25 USDC released to the provider) | [settlement tx](https://basescan.org/tx/0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6) · block 49972831 |
 | **FAIL flow** (0.25 USDC refunded to the buyer) | [refund tx](https://basescan.org/tx/0x8362ac904dad8ce8f740b29d3183d8a1659ba01b2a71a1b09fe35e5c97245354) · block 49972989 |
+| **x402 payment** (0.05 USDC verifier fee, paid by `circle services pay`) | [settlement tx](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) · block 50018597 |
 
 The FAIL flow is the one worth opening. That submission's code was **correct**
 and would have passed the buyer's tests. It was refused anyway, before the tests
@@ -220,7 +221,7 @@ rows below now do.
 | P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)**: probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial**: quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet**: both run live with real USDC, txs confirmed on-chain (see below) |
-| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: the fee settles live on mainnet as a plain USDC transfer bound into the receipt. The x402 endpoint at `/x402/verify` now **verifies a real Circle Agent Wallet payment end to end**: a live `circle services pay` passes all six checks, including the ERC-1271 signature of a smart contract account. Submission still needs a relayer holding ETH, so a verified payment answers 402 with `verified: true` rather than claiming a fee that never moved |
+| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Done on mainnet**: the fee settles as a plain USDC transfer bound into the receipt, **and** `/x402/verify` now completes a full x402 payment. A live `circle services pay` from a Circle Agent Wallet verifies (including the ERC-1271 signature of a smart contract account) and settles on Base: [`0xb40552f2`](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) block 50018597 |
 | P2.3 third-party verification | Anyone can check a receipt without trusting MergeGate | **Done**: `mergegate verify` re-derives the chain offline, and an MCP server exposes the read side to agents. Verified against a live mainnet receipt: 17 of 17 checks, exit 0; redirecting `settlement_recipient` drops it to exit 1 |
 
 ---
@@ -539,21 +540,23 @@ export GEMINI_API_KEY=...
 
 Without the key or the extra, the deterministic core runs exactly as before.
 
-## x402, verified against Circle's own client
+## x402, settled with Circle's own client
 
 `/x402/verify` serves a v2 challenge that `circle services inspect` reports as
 **payable at $0.05 USDC on Base**. A real `circle services pay` from the buyer's
 Circle Agent Wallet now verifies completely:
 
-```
-checks: {"scheme": true, "network": true, "recipient": true,
-         "amount": true, "validity_window": true, "signature": true}
-error : payment verified but not settled
-detail: no relayer configured: set X402_RELAYER_PRIVATE_KEY to a key holding
-        ETH on Base. EIP-3009 requires the recipient side to pay gas.
+```json
+{"verified": true, "settled": true,
+ "payer": "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2",
+ "transaction": "0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7",
+ "amount_usdc": "0.05", "network": "eip155:8453"}
 ```
 
-Two corrections were needed to get there, and neither was findable without
+Confirmed on-chain in block 50018597: 0.05 USDC from the buyer's Circle Agent
+Wallet to the verifier fee wallet, relayed by MergeGate.
+
+Three corrections were needed to get there, and none was findable without
 pointing Circle's client at the running service.
 
 **Circle nests the terms.** Its CLI echoes the quote it is paying under
@@ -573,12 +576,25 @@ and stays offline, while ERC-1271 needs a read-only node call. A node that
 cannot be reached is reported as an *inability to verify*, never as an invalid
 signature, because those are different claims about the payer.
 
-**What is still missing is gas, not code.** EIP-3009 exists so the payer never
-needs it, which means the recipient side must relay. Every wallet here holds 0
-ETH on Base, and neither public x402 facilitator supports Base mainnet, only
-Sepolia. The relayer is generated and its key is in Secret Manager; funding
-`0x349eF760fBc613e8B01947d6B8662Ec6E076e515` with a dollar of ETH completes the
-loop.
+**A third correction, and the one nothing internal could have found.** Even
+verifying correctly, every real `circle services pay` still failed. x402
+specifies the payment header as `X-PAYMENT`; **Circle's CLI sends
+`payment-signature`**. Reading only the spec name meant a genuine payment
+arrived indistinguishable from an unpaid request, so the server returned the
+bare challenge and the CLI reported "payment required" as a rejection. Nothing
+had been rejected; the payment was never seen.
+
+Three plausible theories came first and were all wrong: a transient settlement
+failure, an expired validity window, and the `http://` resource above sending
+the retry through a header-stripping redirect. Access logs could not
+distinguish any of them, because the request genuinely looked unpaid. Pointing
+`circle services pay` at a local server that printed its own request headers
+answered it in one run. Both header names are now accepted and pinned by tests.
+
+**Settlement itself needs gas**, since EIP-3009 exists so the payer never needs
+it and the recipient side must relay. MergeGate runs a relayer whose key lives
+in Secret Manager and which holds only ETH, never USDC, so the blast radius of
+that hot key is a few dollars of gas.
 
 ## Integrating
 

@@ -89,8 +89,9 @@ If you have a spare beat, add the line that lands hardest with engineers:
 
 ## 1:40 to 2:00: the stack
 
-> "Escrow and settlement run on Circle agent wallets. The verifier is priced as
-> an x402 service: Circle's own client reports it payable at five cents on Base.
+> "Escrow and settlement run on Circle agent wallets. The verifier is sold as
+> an x402 service, and Circle's own command line pays it: five cents of USDC,
+> settled on Base, agent to agent.
 > The sandbox is a Cloud Run job on a sealed VPC with no outbound TCP, measured
 > rather than assumed. All of it on Google Cloud. No LLM is called anywhere in
 > contract creation, evaluation, settlement, or receipt issuance, because the
@@ -99,6 +100,25 @@ If you have a spare beat, add the line that lands hardest with engineers:
 *Final frame:* the dashboard, or the repository URL.
 
 ---
+
+## The strongest optional shot
+
+If you have ten spare seconds of runtime, this is the single most persuasive
+thing on camera: one agent paying another, live, with nothing hidden.
+
+```bash
+circle services pay https://mergegate-api-1031148889398.us-central1.run.app/x402/verify \
+  --address 0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2 --chain BASE
+```
+
+It prints, in about five seconds:
+
+```json
+{"verified":true,"settled":true,"transaction":"0xb40552f2...","amount_usdc":"0.05"}
+```
+
+Open that hash on Basescan and the USDC transfer is there. Costs 0.05 USDC of
+real money per take, so decide how many takes you want before you start.
 
 ## If you want a live terminal moment
 
@@ -120,9 +140,10 @@ transaction as it goes.
 
 These are all in the written record and a judge may have read it before watching.
 
-- x402 settlement is **not** implemented. The challenge is served and Circle's
-  client reports it payable; the fee that actually moves is a plain USDC
-  transfer. Say "priced as an x402 service", never "paid over x402".
+- x402 **does** settle now, so you may say "paid over x402". What it does not
+  do is carry the *task reward*: the 0.25 USDC release and refund are plain
+  USDC transfers through Circle agent wallets. x402 carries the 0.05 verifier
+  fee. Do not blur the two.
 - The sandbox blocks outbound **TCP**. DNS still resolves.
 - The guarantee is verified contract acceptance, not code quality or security.
 - MergeGate holds escrow authority. It is not non-custodial.
