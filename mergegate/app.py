@@ -21,7 +21,11 @@ from fastapi import Request
 from .settlement import TaskStateMachine
 from .webhook import GitHubPush, WebhookReceiver
 
-__all__ = ["create_app", "config_from_env"]
+__all__ = ["create_app", "config_from_env", "X402_PAYMENT_HEADERS"]
+
+#: Header names a client may carry an x402 payment in. "X-PAYMENT" is the
+#: spec; "payment-signature" is what Circle's CLI actually sends.
+X402_PAYMENT_HEADERS = ("X-PAYMENT", "payment-signature", "X-Payment-Signature")
 
 
 def config_from_env() -> dict[str, str]:
@@ -185,7 +189,17 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
         from .web import public_request_url
 
         body = payment_requirements(price, resource=public_request_url(request))
-        header = request.headers.get("X-PAYMENT")
+
+        # x402 specifies X-PAYMENT, and Circle's CLI sends "payment-signature".
+        # Reading only the spec name meant a genuine Circle payment arrived
+        # looking like an unpaid request, so the server returned the bare
+        # challenge and the CLI reported a rejected payment. Captured by
+        # pointing `circle services pay` at a local server that logged its
+        # headers; nothing in our own logs could have shown it.
+        header = next(
+            (v for k in X402_PAYMENT_HEADERS if (v := request.headers.get(k))),
+            "",
+        )
         if not header:
             return JSONResponse(body, status_code=402)
 

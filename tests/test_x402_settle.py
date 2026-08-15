@@ -344,3 +344,32 @@ def test_the_challenge_advertises_https_behind_a_proxy(
 
     resource = body["accepts"][0]["resource"]
     assert resource.startswith("https://"), resource
+
+
+@pytest.mark.parametrize("header_name", ["X-PAYMENT", "payment-signature"])
+def test_both_payment_header_names_are_accepted(
+    header_name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """x402 specifies X-PAYMENT. Circle's CLI sends "payment-signature".
+
+    Reading only the spec name meant a real Circle payment arrived looking like
+    an unpaid request, so the server returned the bare challenge and the CLI
+    reported a rejected payment. Three deploys chased that before a local
+    server logging its own headers showed what was actually being sent.
+    """
+    from fastapi.testclient import TestClient
+
+    from mergegate.app import create_app
+    from mergegate.webhook import WebhookReceiver
+
+    monkeypatch.setenv("VERIFIER_FEE_WALLET_ADDRESS", PAY_TO)
+    monkeypatch.setenv("USDC_CONTRACT_ADDRESS", USDC)
+    app = create_app(receiver=WebhookReceiver(secret="s", repository="r", resolve=lambda p: None))
+    header = _sign(X402Price(pay_to=PAY_TO, asset=USDC, amount_usdc="0.05"))
+
+    body = TestClient(app).get("/x402/verify", headers={header_name: header}).json()
+
+    # Verification ran, so the payment was seen. Whether it settles depends on a
+    # relayer, which is a separate concern and not what this pins.
+    assert body.get("verified") is True or "verification failed" in body.get("error", ""), body
+    assert body.get("error") != "payment required", f"{header_name} was ignored"
