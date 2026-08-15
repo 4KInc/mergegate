@@ -352,3 +352,37 @@ def test_reports_carry_the_advisory_flag() -> None:
     assert screening.CodeRiskReport.unavailable("x").advisory is True
     assert forensics.FailureForensics.unavailable("x").advisory is True
     assert replace(screening.CodeRiskReport.unavailable("x"), advisory=False).advisory is False
+
+
+# -- ordering in the live flow -------------------------------------------------
+
+
+def test_the_demo_runs_advice_after_settlement() -> None:
+    """Ordering is the guarantee, so it is asserted on the source.
+
+    Screening logically belongs before the sandbox. Running it there would put a
+    model call on the path a provider waits on, and would leave a computed risk
+    score sitting next to the decision to run the grader, which is an invitation
+    to gate on it. Calling it after settle() makes that impossible rather than
+    discouraged.
+    """
+    source = (Path(__file__).parent.parent / "mergegate" / "demo.py").read_text()
+    settle_at = source.index("result = runner.settle(")
+    advise_at = source.index("runner.advise(")
+    assert settle_at < advise_at, "advisory runs before settlement"
+
+
+def test_advice_failure_cannot_fail_a_settled_run() -> None:
+    """A run whose money moved correctly must not report failure because an API
+    was slow."""
+    from mergegate.demo import DemoRunner
+
+    source = inspect_source(DemoRunner.advise)
+    assert "except Exception" in source
+    assert "never fail a settled run" in source
+
+
+def inspect_source(func: Any) -> str:
+    import inspect
+
+    return inspect.getsource(func)

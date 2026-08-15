@@ -154,3 +154,40 @@ def test_padded_and_unpadded_keys_both_load(
     assert cli._load_public_key(unpadded).public_bytes_raw() == (
         cli._load_public_key(padded).public_bytes_raw()
     )
+
+
+def test_a_key_starting_with_a_dash_is_usable(
+    tmp_path: Path, signed_receipt: tuple[dict[str, Any], Ed25519PrivateKey]
+) -> None:
+    """base64url includes '-', so roughly one key in sixty starts with one.
+    argparse read it as the next flag and exited 2 with "expected one
+    argument", which tells the user their key is broken when it is not.
+
+    This surfaced as a test failing about one run in three, because the key was
+    generated fresh each time. Deterministic here: the key is forced to start
+    with a dash rather than waited for.
+    """
+    envelope, private = signed_receipt
+    path = tmp_path / "receipt.json"
+    path.write_text(json.dumps(envelope))
+    dashed = "-" + _public_b64(private)[1:]
+
+    # Wrong key, so the answer is "invalid" (1), never "unusable" (2). Exit 2
+    # here would mean argparse rejected the arguments before verifying at all.
+    assert main(["verify", str(path), "--public-key", dashed]) == EXIT_INVALID
+
+
+def test_option_values_starting_with_a_dash_are_rejoined() -> None:
+    from mergegate.cli import _rejoin_leading_dash_values
+
+    assert _rejoin_leading_dash_values(["verify", "r.json", "--public-key", "-abc"]) == [
+        "verify",
+        "r.json",
+        "--public-key=-abc",
+    ]
+    # A real flag following an option must not be swallowed into it.
+    assert _rejoin_leading_dash_values(["verify", "r.json", "--json"]) == [
+        "verify",
+        "r.json",
+        "--json",
+    ]

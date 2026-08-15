@@ -230,8 +230,37 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+#: Options whose value can legitimately begin with "-".
+_VALUE_OPTIONS = ("--public-key", "--service", "--output", "-o")
+
+
+def _rejoin_leading_dash_values(argv: list[str]) -> list[str]:
+    """Let option values start with ``-``.
+
+    base64url keys are drawn from an alphabet including ``-``, so about one key
+    in sixty begins with one. argparse reads that as the next flag and exits 2
+    with "expected one argument", which is a baffling way to tell someone their
+    key is fine but their shell parsing is not. Rewriting to ``--opt=value``
+    ahead of parsing is the only thing argparse honours.
+
+    Found by a test that failed roughly one run in three, because the key it
+    generated was random each time.
+    """
+    out: list[str] = []
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token in _VALUE_OPTIONS and index + 1 < len(argv) and argv[index + 1].startswith("-"):
+            out.append(f"{token}={argv[index + 1]}")
+            index += 2
+            continue
+        out.append(token)
+        index += 1
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    args = build_parser().parse_args(_rejoin_leading_dash_values(list(argv or sys.argv[1:])))
     try:
         return int(args.func(args))
     except CliError as exc:

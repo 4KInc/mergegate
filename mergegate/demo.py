@@ -173,12 +173,14 @@ class DemoRunner:
         signing: tuple[str, Ed25519PrivateKey] | None = None,
         receipts: Any = None,
         contracts: Any = None,
+        advisory: Any = None,
     ) -> None:
         self.config = config
         self.rail = rail
         self.store = store or MemoryTaskStore()
         self.receipts = receipts
         self.contracts = contracts
+        self.advisory = advisory
         self.workdir = workdir or Path(tempfile.mkdtemp(prefix="mergegate-demo-"))
         self.signing = signing
         self.repo_dir = self.workdir / "repo"
@@ -401,6 +403,64 @@ class DemoRunner:
 
         return {"receipt": envelope, "state": machine.state.value, "executed": executed}
 
+    # -- advisory: Gemini, strictly after the money has moved ------------------
+
+    def advise(
+        self, contract: TaskContract, manifest: VerificationManifest, submission_sha: str
+    ) -> None:
+        """Screen the diff and explain a failure, then store both.
+
+        Called after ``settle``. Screening logically belongs before the sandbox,
+        but running it there would put a model call on the path a provider waits
+        on, and would invite exactly the change this project refuses: someone
+        noticing the score is already computed and gating the run on it. Ordering
+        it last makes that impossible rather than merely discouraged.
+
+        Everything here is best-effort. A run that settled correctly must not be
+        reported as failed because an API was slow.
+        """
+        from .gemini import available
+
+        if not available():
+            print("  advisory          skipped, no GEMINI_API_KEY")
+            return
+        if self.advisory is None:
+            print("  advisory          skipped, no store configured")
+            return
+
+        try:
+            from dataclasses import asdict
+
+            from .forensics import explain_failure
+            from .screening import screen_diff
+
+            diff = subprocess.run(  # noqa: S603 - argv vector, shell=False
+                ["git", "-C", str(self.repo_dir), "show", "--format=", submission_sha],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+
+            def flatten(d: dict[str, Any]) -> dict[str, Any]:
+                return {k: (list(v) if isinstance(v, tuple) else v) for k, v in d.items()}
+
+            screening = screen_diff(diff, contract)
+            record: dict[str, Any] = {
+                "model": screening.model,
+                "screening": flatten(asdict(screening)),
+            }
+            print(f"  advisory screen   {screening.score}/100 {screening.band}")
+
+            if manifest.verdict is Verdict.FAIL:
+                forensics = explain_failure(manifest, diff=diff)
+                record["forensics"] = flatten(asdict(forensics))
+                print(f"  advisory forensic retry likelihood {forensics.retry_likelihood or 'n/a'}")
+
+            receipt_id = f"{manifest.task_id}-{manifest.submission_sha[:12]}".replace("/", "-")
+            self.advisory.put(receipt_id, record)
+        except Exception as exc:  # noqa: BLE001 - never fail a settled run
+            print(f"  advisory          unavailable: {type(exc).__name__}: {exc}")
+
 
 def _firestore_client() -> Any:
     """A Firestore client, preferring Application Default Credentials.
@@ -434,14 +494,18 @@ def _firestore_client() -> Any:
         return firestore.Client(project=os.environ.get("GOOGLE_CLOUD_PROJECT"), credentials=creds)
 
 
-def _stores() -> tuple[Any, Any]:
-    """Receipt and contract stores, when a project is configured."""
+def _stores() -> tuple[Any, Any, Any]:
+    """Receipt, contract and advisory stores, when a project is configured."""
     if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
-        return None, None
-    from .store import FirestoreContractStore, FirestoreReceiptStore
+        return None, None, None
+    from .store import FirestoreAdvisoryStore, FirestoreContractStore, FirestoreReceiptStore
 
     client = _firestore_client()
-    return FirestoreReceiptStore(client), FirestoreContractStore(client)
+    return (
+        FirestoreReceiptStore(client),
+        FirestoreContractStore(client),
+        FirestoreAdvisoryStore(client),
+    )
 
 
 def _print_flow(title: str, config: DemoConfig, result: dict[str, Any]) -> None:
@@ -473,8 +537,10 @@ def main(argv: list[str] | None = None) -> int:
         usdc_address=config.usdc_address,
         binary=config.circle_cli or None,
     )
-    receipts, contracts = _stores()
-    runner = DemoRunner(config, rail=rail, receipts=receipts, contracts=contracts)
+    receipts, contracts, advisory = _stores()
+    runner = DemoRunner(
+        config, rail=rail, receipts=receipts, contracts=contracts, advisory=advisory
+    )
     if receipts is None:
         print("  note: no GOOGLE_CLOUD_PROJECT, this run will not reach the dashboard")
 
@@ -503,6 +569,12 @@ def main(argv: list[str] | None = None) -> int:
         config,
         result,
     )
+
+    # Advisory only, and last on purpose. Settlement has already executed by the
+    # time any of this runs, so there is no ordering in which a model could have
+    # influenced it. Failures here are printed and ignored: an advisory layer
+    # that can fail a settled run is worse than no advisory layer.
+    runner.advise(contract, manifest, submission_sha)
 
     out = Path(f"receipt-{args.flow}.json")
     out.write_text(json.dumps(result["receipt"], indent=2))
