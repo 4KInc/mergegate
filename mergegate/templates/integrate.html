@@ -19,7 +19,9 @@
     MergeGate cannot change the answer.
   </p>
   <div class="rounded-lg bg-surface border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
-<pre>pip install mergegate
+<pre><span class="text-on-faint"># --recurse-submodules is required: the proof layer is a shared submodule</span>
+git clone --recurse-submodules https://github.com/4KInc/mergegate.git
+cd mergegate &amp;&amp; pip install -e .
 
 <span class="text-on-faint"># the receipt, and the key it should have been signed with</span>
 curl -O {{ base_url }}/receipts/{{ sample_receipt }}.json

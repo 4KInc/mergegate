@@ -152,6 +152,36 @@ def test_integrate_page_has_no_em_dashes(client: Any) -> None:
     assert "—" not in client.get("/integrate").text
 
 
+def test_install_instructions_do_not_promise_pypi(client: Any) -> None:
+    """MergeGate is not on PyPI, and `pip install mergegate` fails.
+
+    It would also be wrong if it succeeded: the wheel packages only
+    ``mergegate``, while canonical JSON, Merkle hashing and signature
+    verification live in the ``engine`` submodule, so an install without it
+    raises at import. Both the page and /api/verification-key told readers to
+    run exactly that.
+    """
+    for text in (
+        client.get("/integrate").text,
+        client.get("/api/verification-key").json()["verify_with"],
+    ):
+        assert "pip install mergegate" not in text
+        assert "recurse-submodules" in text
+
+
+def test_the_engine_submodule_is_genuinely_required() -> None:
+    """Pins the reason the instruction has to mention submodules.
+
+    If the proof layer ever gets vendored into the package, this fails and the
+    install instructions can be simplified. Until then they cannot.
+    """
+    from pathlib import Path
+
+    import mergegate.engine as engine
+
+    assert Path(engine.__file__).parent.parent.joinpath("engine").is_dir()
+
+
 def test_sample_receipt_id_is_real_when_receipts_exist(client: Any) -> None:
     """The page shows a copy-pasteable curl. A hardcoded id from another
     environment would 404 for the first person who tried it."""

@@ -221,6 +221,7 @@ rows below now do.
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial**: quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet**: both run live with real USDC, txs confirmed on-chain (see below) |
 | P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: the fee settles live on mainnet as a plain USDC transfer bound into the receipt. MergeGate additionally serves a real x402 v2 challenge at `/x402/verify`, which `circle services inspect` reports as **payable at $0.05 USDC on Base**; settlement of the signed authorization is not implemented, so no fee moves through x402 yet |
+| P2.3 third-party verification | Anyone can check a receipt without trusting MergeGate | **Done**: `mergegate verify` re-derives the chain offline, and an MCP server exposes the read side to agents. Verified against a live mainnet receipt: 17 of 17 checks, exit 0; redirecting `settlement_recipient` drops it to exit 1 |
 
 ---
 
@@ -358,6 +359,9 @@ Served by the same Cloud Run service that receives webhooks.
 | `/receipts/{id}` | The verdict, the binding, and the on-chain settlement |
 | `/receipts/{id}.json` | The raw signed receipt, byte-identical to what was signed |
 | `/verifier` | Pinned environment, grading order, the measured egress probe, defeated attacks |
+| `/integrate` | The CLI, the MCP server, the HTTP surface, and the verification key |
+| `/api/receipts` | The receipt index for programs, carrying `source_error` rather than hiding it |
+| `/api/verification-key` | The public half of the signing key, served with its caveat |
 | `/health`, `/api/status` | Liveness and machine-readable status |
 
 Four properties are deliberate, and each has a test:
@@ -385,6 +389,87 @@ mainnet contracts predate that. Their terms were reconstructed and then
 and the backfill refuses to store anything that fails that check. Where no
 record exists the page says the terms were not recorded rather than inventing
 them.
+
+## Integrating
+
+The asymmetry the design aims for: running MergeGate needs wallet credentials and
+a GCP project, and *checking* it needs neither. Verifying a receipt requires no
+account, no permission, and no network call.
+
+### Verify a receipt without trusting us
+
+```bash
+git clone --recurse-submodules https://github.com/4KInc/mergegate.git
+cd mergegate && pip install -e .
+
+curl -O https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-1758ca302557.json
+export MERGEGATE_RECEIPT_PUBLIC_KEY=bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U
+
+mergegate verify 4KInc-mergegate-demo-task-1758ca302557.json
+```
+
+`--recurse-submodules` is not optional. Canonical JSON, Merkle hashing and
+signature verification come from the shared engine rather than being
+reimplemented here, so a copy without it cannot verify anything. It says so and
+exits rather than proceeding: a verifier that silently degraded would be worse
+than one that refuses. MergeGate is not on PyPI, and a plain wheel install would
+carry the code without the proof layer.
+
+Seventeen checks, recomputed locally. Exit codes are the interface, because the
+caller is usually another program:
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | verified |
+| `1` | failed verification, which is a result rather than a crash |
+| `2` | could not check: no key, unreadable file, bad usage |
+
+`1` and `2` are kept apart deliberately. A program that reads "I had no key" as
+"this receipt is forged" raises a fraud alarm over its own misconfiguration.
+
+**The key is not fetched by default, and that is the point.** Downloading it from
+the service that served the receipt is circular: a service that forged a receipt
+would serve the key matching the forgery, and the check would pass while proving
+nothing. `--key-from-service` exists and prints what it costs. The guarantee
+being defended is *this receipt was issued by the holder of key K*, so K has to
+be pinned by some route other than asking the signer.
+
+### MCP, so an agent can ask whether it was paid
+
+```json
+{"mcpServers": {"mergegate": {"command": "mergegate-mcp",
+  "env": {"MERGEGATE_SERVICE": "https://mergegate-api-1031148889398.us-central1.run.app",
+          "MERGEGATE_RECEIPT_PUBLIC_KEY": "bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U"}}}}
+```
+
+`mergegate_status`, `mergegate_list_receipts`, `mergegate_get_receipt`,
+`mergegate_verify_receipt`. An agent that cannot query the settlement layer needs
+a human to read the dashboard for it, which puts the human back in the loop this
+project exists to remove.
+
+**Read only, deliberately.** Nothing on it funds escrow, signs a mandate or moves
+USDC. An MCP server is driven by whatever the model decides to call, so a funding
+tool would be a wallet-draining primitive one prompt injection away. Funding
+stays in the buyer's own process holding the buyer's own credentials, and a test
+asserts no tool name contains `fund`, `pay`, `transfer`, `settle` or `sign`.
+
+The tool half of MCP is a small JSON-RPC surface over stdio, so it is implemented
+directly rather than adding a dependency. The tests drive real protocol messages
+rather than a mock.
+
+### The failure this closes
+
+`pyproject.toml` declared `mergegate = "mergegate.cli:main"` and the receipt page
+told readers to run `mergegate verify <id>.json`, while `mergegate/cli.py` did
+not exist and the command raised `ModuleNotFoundError`. The public key lived only
+in the deployment's environment. So the central claim, independently verifiable
+receipts, was unexercisable by anyone outside the deployment for as long as it
+had been advertised.
+
+Both entry points are now asserted to resolve, every documented endpoint is
+checked against the served OpenAPI schema, and the `/integrate` page derives its
+tool list from the MCP server and its sample receipt id from what the deployment
+actually holds, so it cannot drift into documenting something that is not there.
 
 ## Sandbox network posture: measured, not assumed
 

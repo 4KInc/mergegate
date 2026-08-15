@@ -237,7 +237,12 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
                 "Fetching this from the issuer proves self-consistency, not "
                 "authenticity. Pin it out of band."
             ),
-            "verify_with": "pip install mergegate && mergegate verify <receipt>.json",
+            # Not "pip install mergegate": it is not on PyPI, and a plain wheel
+            # would omit the shared engine the verifier needs.
+            "verify_with": (
+                "git clone --recurse-submodules https://github.com/4KInc/mergegate.git"
+                " && pip install -e . && mergegate verify <receipt>.json"
+            ),
         }
 
     return app
