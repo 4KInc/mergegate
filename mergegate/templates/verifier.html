@@ -21,11 +21,15 @@
     Contracts pin this image <em>by digest</em>. A tag would let the graded
     environment drift after funding.
   </p>
+  {# Long values are data, so they scroll inside their own row rather than
+     wrapping mid-digest across two lines and breaking the label alignment.
+     A digest split over a line break is also harder to compare by eye, which
+     is the only reason it is shown at all. #}
   <div class="space-y-2.5">
     {% for label, value in environment %}
-    <div class="grid md:grid-cols-[190px_1fr] gap-1 md:gap-3">
+    <div class="grid md:grid-cols-[190px_1fr] gap-1 md:gap-3 items-baseline">
       <div class="text-xs text-on-faint pt-0.5">{{ label }}</div>
-      <div class="mono text-xs hash">{{ value }}</div>
+      <div class="mono text-xs text-on-muted overflow-x-auto whitespace-nowrap pb-0.5">{{ value }}</div>
     </div>
     {% endfor %}
   </div>

@@ -649,6 +649,14 @@ def build_web_router(
                     "chain": v.chain or "unknown",
                     "valid": result["valid"],
                     "checks": result["checks"],
+                    # The cards were mostly empty space. These are the facts a
+                    # reader wants without opening each one: which commit, which
+                    # transaction, and what the verifier was paid.
+                    "task_id": v.binding.get("task_id", ""),
+                    "submission_short": short(v.binding.get("submission_sha", ""), 8, 6),
+                    "settlement_short": short(v.settlement_tx, 8, 6),
+                    "explorer": explorer_url(v.chain, v.settlement_tx),
+                    "fee_amount": v.fee_amount,
                 }
             )
         return templates.TemplateResponse(

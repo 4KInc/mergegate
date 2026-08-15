@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -20,6 +21,7 @@ from mergegate.mcp import TOOLS
 from mergegate.web import HTTP_ENDPOINTS, MCP_TOOLS
 
 PUBLIC_KEY = "bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U"
+TEMPLATE = "mergegate/templates/base.html"
 
 
 def _app() -> Any:
@@ -150,6 +152,48 @@ def test_integrate_page_states_the_scope_limit(client: Any) -> None:
 
 def test_integrate_page_has_no_em_dashes(client: Any) -> None:
     assert "—" not in client.get("/integrate").text
+
+
+def _contrast(fg: str, bg: str) -> float:
+    """WCAG relative-contrast ratio between two hex colours."""
+
+    def luminance(value: str) -> float:
+        v = value.lstrip("#")
+        channels = [int(v[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+        linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    a, b = luminance(fg), luminance(bg)
+    return (max(a, b) + 0.05) / (min(a, b) + 0.05)
+
+
+def test_faint_text_meets_contrast_on_both_grounds(client: Any) -> None:
+    """The faint tone carries the smallest text on every page, so it was the
+    least readable colour doing the most work. It measured 4.09:1 on the page
+    and 3.80:1 on a card, below the 4.5:1 WCAG AA needs for text this size.
+    """
+    text = client.get("/").text
+    match = re.search(r"faint:\s*'(#[0-9a-fA-F]{6})'", text) or re.search(
+        r"faint:\s*'(#[0-9a-fA-F]{6})'", (Path(__file__).parent.parent / TEMPLATE).read_text()
+    )
+    assert match, "could not find the faint colour token"
+    faint = match.group(1)
+    for ground in ("#0a0a0c", "#141417"):
+        assert _contrast(faint, ground) >= 4.5, (
+            f"faint {faint} is {_contrast(faint, ground):.2f}:1 on {ground}"
+        )
+
+
+def test_navigation_survives_a_narrow_viewport(client: Any) -> None:
+    """The sidebar is hidden below md. Until a replacement existed, a phone
+    landed on the dashboard with no route to any other page: nav, network and
+    the scope line all disappeared with it.
+    """
+    text = client.get("/").text
+    assert "md:hidden" in text, "no small-viewport header"
+    header = text.split('class="md:hidden', 1)[1].split("</header>", 1)[0]
+    for href in ("/receipts", "/verifier", "/integrate"):
+        assert href in header, f"{href} unreachable on a narrow viewport"
 
 
 def test_page_uses_the_forwarded_scheme(client: Any) -> None:

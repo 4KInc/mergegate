@@ -21,7 +21,11 @@ tailwind.config = {
   theme: { extend: {
     colors: {
       surface:   { DEFAULT: '#0a0a0c', container: '#141417', high: '#1e1e22' },
-      on:        { surface: '#f4f4f5', muted: '#a1a1aa', faint: '#71717a' },
+      {# faint was #71717a, which measured 4.09:1 on the page and 3.80:1 on a
+         card. It carries the smallest text on every screen (10-11px), so the
+         least readable tone was doing the most work. #8b8b93 measures 5.85:1
+         and 5.44:1, clearing WCAG AA on both grounds. #}
+      on:        { surface: '#f4f4f5', muted: '#a1a1aa', faint: '#8b8b93' },
       accent:    { DEFAULT: '#4ade80', dark: '#22c55e', container: 'rgba(74,222,128,0.10)' },
       danger:    { DEFAULT: '#f87171', container: 'rgba(248,113,113,0.10)' },
       warn:      { DEFAULT: '#fbbf24', container: 'rgba(251,191,36,0.10)' },
@@ -104,6 +108,29 @@ tailwind.config = {
 </head>
 <body class="bg-surface text-on-surface min-h-screen antialiased">
 <div class="grain"></div>
+
+{# Below md the sidebar is hidden, and until this existed nothing replaced it:
+   nav, network and the scope line all vanished, so a phone landed on the
+   dashboard with no way to reach any other page. #}
+<header class="md:hidden sticky top-0 z-30 bg-surface/85 backdrop-blur-xl border-b border-line">
+  <div class="flex items-center gap-2.5 px-4 py-3">
+    <a href="/" class="flex items-center gap-2">
+      <span class="w-7 h-7 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center">
+        <svg viewBox="0 0 32 32" class="w-3.5 h-3.5" aria-hidden="true"><path d="M8 21V11l8 6 8-6v10" stroke="#4ade80" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="font-display font-semibold tracking-tight text-sm">MergeGate</span>
+    </a>
+    <span class="mono text-[10px] text-on-faint ml-auto truncate max-w-[40%]">{{ network }}</span>
+  </div>
+  <nav class="flex gap-1 px-3 pb-2.5 overflow-x-auto">
+    {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier"),("Integrate","/integrate")] %}
+    <a href="{{ href }}"
+       class="shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors
+       {% if active == label %}bg-accent/10 text-accent border border-accent/25{% else %}text-on-muted border border-transparent{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+</header>
+
 <div class="flex min-h-screen">
   <aside class="w-60 shrink-0 border-r border-line px-5 py-6 hidden md:flex md:flex-col sticky top-0 h-screen">
     <a href="/" class="flex items-center gap-2.5 mb-9 group">
@@ -123,6 +150,16 @@ tailwind.config = {
       </a>
       {% endfor %}
     </nav>
+
+    {# The sidebar used to run four links straight into ~450px of nothing. This
+       fills it with the claim the whole project rests on, rather than padding:
+       a reader can check any receipt without asking this service for anything. #}
+    <div class="mt-8 rounded-lg border border-line bg-white/[.02] p-3.5">
+      <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Check it yourself</div>
+      <div class="mono text-[10px] leading-relaxed text-on-muted break-all">mergegate verify<br/>&lt;receipt&gt;.json</div>
+      <p class="text-[10px] leading-relaxed text-on-faint mt-2">Offline, against a pinned key. No access to MergeGate needed.</p>
+      <a href="/integrate" class="inline-block mt-2 text-[11px] text-accent hover:underline">How to verify &rarr;</a>
+    </div>
 
     <div class="mt-auto pt-6 space-y-3">
       <div class="rule"></div>

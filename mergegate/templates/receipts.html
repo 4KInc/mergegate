@@ -28,33 +28,46 @@
 <div class="grid md:grid-cols-2 gap-4">
   {% for r in receipts %}
   <a href="/receipts/{{ r.id }}"
-     class="card p-5 block hover:border-accent/40 hover:bg-white/[.05]/30 transition-colors group">
-    <div class="flex items-center justify-between gap-3 mb-3">
+     class="card card-hover p-5 block group">
+    <div class="flex items-center justify-between gap-3 mb-3.5">
       <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium
         {% if r.decision == 'PASS' %}bg-accent-container text-accent{% else %}bg-danger-container text-danger{% endif %}">
         <span class="w-1.5 h-1.5 rounded-full {% if r.decision == 'PASS' %}bg-accent{% else %}bg-danger{% endif %}"></span>
         {{ r.decision }}
       </span>
-      <span class="text-[11px] text-on-faint">{{ r.chain }}</span>
+      <span class="mono text-[10px] text-on-faint truncate">{{ r.task_id or r.id }}</span>
     </div>
 
-    <div class="flex items-baseline gap-2 mb-1">
-      <span class="font-display text-xl font-semibold tracking-tight">{{ r.amount }} USDC</span>
-      <span class="text-xs text-on-faint">
-        {% if r.action == 'release' %}released to provider{% else %}refunded to buyer{% endif %}
-      </span>
+    <div class="flex items-baseline gap-2">
+      <span class="figure text-[22px] font-medium">{{ r.amount }}</span>
+      <span class="text-xs text-on-muted">USDC {% if r.action == 'release' %}released to provider{% else %}refunded to buyer{% endif %}</span>
     </div>
-    <p class="mono text-[11px] text-on-faint mb-4">{{ r.id }}</p>
 
-    <div class="rule mb-3"></div>
+    {# The facts that previously required opening every card to see. #}
+    <div class="mt-3.5 grid grid-cols-3 gap-3 text-[10px]">
+      <div>
+        <div class="uppercase tracking-widest text-on-faint mb-1">Submission</div>
+        <div class="mono text-[11px] text-on-muted truncate">{{ r.submission_short or "not recorded" }}</div>
+      </div>
+      <div>
+        <div class="uppercase tracking-widest text-on-faint mb-1">Settlement</div>
+        <div class="mono text-[11px] text-on-muted truncate">{{ r.settlement_short or "none" }}</div>
+      </div>
+      <div>
+        <div class="uppercase tracking-widest text-on-faint mb-1">Verifier fee</div>
+        <div class="mono text-[11px] text-on-muted">{{ r.fee_amount or "0" }}</div>
+      </div>
+    </div>
+
+    <div class="rule my-3.5"></div>
 
     <div class="flex items-center justify-between gap-3">
       {% if r.valid %}
-      <span class="text-xs text-accent">✓ {{ r.checks }} checks passed</span>
+      <span class="text-xs text-accent">&#10003; {{ r.checks }} checks passed, re-run now</span>
       {% else %}
-      <span class="text-xs text-danger">✗ verification failed</span>
+      <span class="text-xs text-danger">&#10007; verification failed</span>
       {% endif %}
-      <span class="text-xs text-on-faint group-hover:text-accent transition-colors">Open →</span>
+      <span class="text-xs text-on-faint group-hover:text-accent transition-colors">Open &rarr;</span>
     </div>
   </a>
   {% else %}
