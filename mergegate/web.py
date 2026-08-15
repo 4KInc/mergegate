@@ -659,11 +659,22 @@ def build_web_router(
                     "fee_amount": v.fee_amount,
                 }
             )
+        # Computed from what was just verified, never from a stored figure:
+        # this line asserts that every receipt was re-checked on this request,
+        # so it has to be derived from those results or it is decoration.
+        verified = sum(1 for c in cards if c["valid"])
         return templates.TemplateResponse(
             request,
             "receipts.html",
             {
                 "receipts": cards,
+                "summary": {
+                    "total": len(cards),
+                    "verified": verified,
+                    "all_valid": verified == len(cards) and bool(cards),
+                    "checks": sum(c["checks"] for c in cards),
+                    "chains": len({c["chain"] for c in cards}),
+                },
                 "network": ", ".join(bundle.networks()) or network,
                 "source_error": bundle.source_error,
                 "active": "Receipts",

@@ -20,6 +20,7 @@ from fastapi.testclient import TestClient
 from mergegate.mandate import PaymentMandate, execute_mandate
 from mergegate.receipt import build_receipt, sign_receipt
 from mergegate.verifier.manifest import CommandResult, VerificationManifest
+from mergegate.verifier.sandbox import EGRESS_PROBE
 from mergegate.web import ReceiptBundle, build_web_router, short
 
 from .conftest import BASE_SHA, IMAGE
@@ -318,8 +319,13 @@ def test_verifier_page_shows_the_measured_probe(
     assert "1.1.1.1:443" in html
     assert "loopback (control)" in html
     assert "reachable" in html and "blocked" in html
-    assert "probe exit codes" in html
-    assert "before 21" in html and "after 17" in html
+
+    # Both measured exit codes, asserted as values rather than as a sentence:
+    # the layout moved them into a featured panel and the previous check was
+    # pinned to the wording around them, not to the measurement itself.
+    assert str(EGRESS_PROBE["before_exit_code"]) in html
+    assert str(EGRESS_PROBE["after_exit_code"]) in html
+    assert "Default Cloud Run" in html and "Sealed VPC" in html
 
 
 def test_verifier_page_states_the_egress_claim_exactly(

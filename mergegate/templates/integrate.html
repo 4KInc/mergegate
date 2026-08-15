@@ -21,7 +21,11 @@
     re-derives the whole chain locally. It contacts no server, so a compromised
     MergeGate cannot change the answer.
   </p>
-  <div class="rounded-lg bg-black/20 border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
+  {# Two columns: the command is what a reader runs, the exit codes are what
+     their program branches on. Stacking them made this section read like the
+     three below it, when it is the one that matters. #}
+  <div class="grid lg:grid-cols-[1.6fr_1fr] gap-4">
+    <div class="rounded-lg bg-black/20 border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
 <pre><span class="text-on-faint"># --recurse-submodules is required: the proof layer is a shared submodule</span>
 git clone --recurse-submodules https://github.com/4KInc/mergegate.git
 cd mergegate &amp;&amp; pip install -e .
@@ -31,14 +35,15 @@ curl -O {{ base_url }}/receipts/{{ sample_receipt }}.json
 export MERGEGATE_RECEIPT_PUBLIC_KEY={{ public_key }}
 
 mergegate verify {{ sample_receipt }}.json</pre>
-  </div>
-  <div class="mt-4 grid md:grid-cols-3 gap-3">
-    {% for code, meaning in [("0","receipt verified"),("1","failed verification: a result, not a crash"),("2","could not check: no key, bad file")] %}
-    <div class="rounded-lg bg-black/20 px-3 py-2.5 border border-line">
-      <div class="mono text-sm text-accent">exit {{ code }}</div>
-      <div class="text-[11px] text-on-faint mt-0.5 leading-snug">{{ meaning }}</div>
     </div>
-    {% endfor %}
+    <div class="space-y-2">
+      {% for code, meaning in [("0","receipt verified"),("1","failed verification: a result, not a crash"),("2","could not check: no key, bad file")] %}
+      <div class="rounded-lg bg-black/20 px-3.5 py-3 border border-line flex items-baseline gap-3">
+        <div class="mono text-sm text-accent shrink-0">exit {{ code }}</div>
+        <div class="text-[11px] text-on-faint leading-snug">{{ meaning }}</div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
   <p class="text-[11px] text-on-faint mt-4 leading-relaxed max-w-3xl">
     Exit 1 and exit 2 are kept apart on purpose. A program that treats "I had no

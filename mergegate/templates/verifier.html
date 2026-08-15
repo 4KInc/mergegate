@@ -57,7 +57,33 @@
   </ol>
 </section>
 
-<section class="card p-6 mb-4">
+{# The page's one asymmetric block. Every other section here is a full-width
+   card, which made a wall of equal panels; the headline measurement deserves
+   more weight than the table that supports it. #}
+<section class="grid lg:grid-cols-[1fr_1.35fr] gap-4 mb-4">
+  <div class="card p-6 flex flex-col justify-center">
+    <div class="text-[10px] uppercase tracking-widest text-on-faint mb-4">Probe exit code</div>
+    <div class="flex items-baseline gap-4">
+      <div>
+        <div class="figure text-[40px] leading-none text-danger">{{ probe.before_exit_code }}</div>
+        <div class="text-[10px] uppercase tracking-widest text-on-faint mt-2">Default Cloud Run</div>
+      </div>
+      <span class="text-on-faint text-2xl leading-none pb-1">&rarr;</span>
+      <div>
+        <div class="figure text-[40px] leading-none accent-text">{{ probe.after_exit_code }}</div>
+        <div class="text-[10px] uppercase tracking-widest text-on-faint mt-2">Sealed VPC</div>
+      </div>
+    </div>
+    <div class="rule my-5"></div>
+    <p class="text-xs text-on-faint leading-relaxed">
+      Each bit of the exit code is one destination. The change from
+      <span class="mono text-on-muted">{{ probe.before_exit_code }}</span> to
+      <span class="mono text-on-muted">{{ probe.after_exit_code }}</span> is the
+      whole measurement: the same probe, run twice, against two configurations.
+    </p>
+  </div>
+
+  <div class="card p-6">
   <h2 class="font-display text-lg font-semibold tracking-tight mb-1">Network posture: measured</h2>
   <p class="text-xs text-on-faint mb-4 max-w-3xl">
     {{ probe.method }}
@@ -95,9 +121,7 @@
     <span class="mono">{{ egress_claim }}</span>. DNS still resolves and is
     disclosed as a residual signalling channel rather than rounded up.
   </p>
-  <p class="text-xs text-on-faint mt-2 mono">
-    probe exit codes: before {{ probe.before_exit_code }}, after {{ probe.after_exit_code }}
-  </p>
+  </div>
 </section>
 
 <section class="card p-6">

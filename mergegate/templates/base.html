@@ -98,6 +98,33 @@ tailwind.config = {
   .accent-text { background:linear-gradient(135deg,#bbf7d0 0%,#4ade80 55%,#22c55e 100%);
                  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
 
+  /* Entrance. Content settles once on load rather than appearing stamped, and
+     the stagger gives the eye an order to read in. Deliberately short: this is
+     a ledger, and motion that keeps a reader waiting for a number to arrive is
+     working against the page.
+
+     No count-up on the figures. Animating 0.13 -> 0.75 USDC would display
+     amounts that were never true of any settlement, which is exactly the kind
+     of decorative fiction the rest of this project refuses. */
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes rise { from { opacity:0; transform:translateY(9px) } to { opacity:1; transform:none } }
+    .stagger > * { animation: rise .45s cubic-bezier(.22,.7,.3,1) backwards; }
+    .stagger > *:nth-child(1) { animation-delay:.03s }
+    .stagger > *:nth-child(2) { animation-delay:.08s }
+    .stagger > *:nth-child(3) { animation-delay:.13s }
+    .stagger > *:nth-child(4) { animation-delay:.18s }
+    .stagger > *:nth-child(5) { animation-delay:.23s }
+    .stagger > *:nth-child(6) { animation-delay:.27s }
+    .stagger > *:nth-child(n+7) { animation-delay:.3s }
+    html { scroll-behavior:smooth }
+  }
+
+  /* Keyboard users could tab through the whole app with no visible focus.
+     :focus-visible keeps it off mouse clicks. */
+  a:focus-visible, button:focus-visible {
+    outline:2px solid rgba(74,222,128,.65); outline-offset:3px; border-radius:.35rem;
+  }
+
   ::-webkit-scrollbar { width:6px; height:6px }
   ::-webkit-scrollbar-track { background:transparent }
   ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.10); border-radius:3px }
@@ -174,7 +201,7 @@ tailwind.config = {
   </aside>
 
   <main class="flex-1 min-w-0">
-    <div class="max-w-[1180px] px-6 md:px-10 py-8 md:py-12">
+    <div class="max-w-[1180px] px-6 md:px-10 py-8 md:py-12 stagger">
       {% block content %}{% endblock %}
 
       <footer class="mt-16 pt-6 border-t border-line text-[11px] leading-relaxed text-on-faint">Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority.</footer>

@@ -25,6 +25,26 @@
 </div>
 {% endif %}
 
+{# A single inline bar rather than the dashboard's four tiles: this page opened
+   straight into a uniform grid, and the counts are the reason to trust it. #}
+{% if summary.total %}
+<div class="card px-5 py-4 mb-4 flex flex-wrap items-center gap-x-8 gap-y-3">
+  <div class="flex items-baseline gap-2">
+    <span class="figure text-xl {% if summary.all_valid %}text-accent{% else %}text-danger{% endif %}">{{ summary.verified }}/{{ summary.total }}</span>
+    <span class="text-xs text-on-muted">{% if summary.all_valid %}verified just now{% else %}verified, the rest failed{% endif %}</span>
+  </div>
+  <div class="flex items-baseline gap-2">
+    <span class="figure text-xl text-on-surface">{{ summary.checks }}</span>
+    <span class="text-xs text-on-muted">checks re-run on this request</span>
+  </div>
+  <div class="flex items-baseline gap-2">
+    <span class="figure text-xl text-on-surface">{{ summary.chains }}</span>
+    <span class="text-xs text-on-muted">{{ "chain" if summary.chains == 1 else "chains" }}</span>
+  </div>
+  <span class="text-[11px] text-on-faint ml-auto max-w-xs leading-snug">Recomputed per request from the receipts themselves. Never a stored flag.</span>
+</div>
+{% endif %}
+
 <div class="grid md:grid-cols-2 gap-4">
   {% for r in receipts %}
   <a href="/receipts/{{ r.id }}"

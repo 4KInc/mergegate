@@ -196,6 +196,32 @@ def test_navigation_survives_a_narrow_viewport(client: Any) -> None:
         assert href in header, f"{href} unreachable on a narrow viewport"
 
 
+def test_receipts_summary_is_computed_not_asserted(client: Any) -> None:
+    """The bar claims every receipt was re-verified on this request, so the
+    figure has to come from those results. A hardcoded count would keep
+    reading 'all verified' after a receipt started failing."""
+    listing = client.get("/api/receipts").json()
+    if not listing["receipts"]:
+        pytest.skip("no receipts in this environment")
+    text = client.get("/receipts").text
+    total = listing["count"]
+    assert f"{total}/{total}" in text, "summary count does not match the receipts served"
+
+
+def test_motion_is_disabled_for_reduced_motion(client: Any) -> None:
+    """Entrance animation must be opt-out for anyone who asked the OS to stop
+    it, and the pulsing dot alongside it."""
+    css = client.get("/").text
+    assert "prefers-reduced-motion: no-preference" in css
+    assert "prefers-reduced-motion: reduce" in css
+
+
+def test_keyboard_focus_is_visible(client: Any) -> None:
+    """Every control here is a link, and without this a keyboard user tabs
+    through the whole app with nothing indicating where they are."""
+    assert "focus-visible" in client.get("/").text
+
+
 def test_page_uses_the_forwarded_scheme(client: Any) -> None:
     """Behind Cloud Run's TLS-terminating proxy the app sees plain HTTP, so
     request.base_url reported http:// and the page shipped that inside curl
