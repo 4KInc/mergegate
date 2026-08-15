@@ -22,16 +22,22 @@ correct seller, and a real ``circle services pay`` produced a signed EIP-3009
 challenge half is not merely plausible, it is readable by an off-the-shelf x402
 payer.
 
-**What this module does not do, stated plainly.** It does not settle. In the
-``exact`` scheme the payer *signs* an authorization and the server submits it;
-MergeGate does not, so no funds move. That was confirmed rather than assumed:
-after a real paid call, both the payer and payee balances were unchanged.
+**Verification is implemented; settlement waits on gas.** See
+``x402_settle.py``. A presented payment is decoded, its terms checked against
+this quote, and its signature validated. A real ``circle services pay`` from a
+Circle Agent Wallet passes all six checks against the deployed endpoint.
 
-Settlement needs a relayer holding gas to call ``transferWithAuthorization`` on
-the USDC contract, and every wallet here holds 0 ETH on Base. That is the whole
-gap, and it is an operational one rather than a design one.
+Getting there required two corrections that only real infrastructure could
+force. Circle's CLI nests ``scheme`` and ``network`` under ``accepted``, and
+Circle Agent Wallets are smart contract accounts whose ERC-1271 signatures do
+not ECDSA-recover to the account address.
 
-Until it closes, presenting a payment gets 402 again with an explicit reason.
+What remains is submission. ``transferWithAuthorization`` must be relayed by
+someone holding ETH, which is the point of EIP-3009: the payer never needs gas,
+so the recipient side does. Every wallet here holds 0 ETH on Base and neither
+public x402 facilitator supports Base mainnet, only Sepolia.
+
+So a verified payment answers 402 carrying ``verified: true`` and the reason.
 Answering 200 would claim a fee that never moved, which is worse than charging
 nothing, and the receipt continues to bind the plain USDC transfer that does.
 """

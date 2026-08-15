@@ -220,7 +220,7 @@ rows below now do.
 | P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)**: probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial**: quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet**: both run live with real USDC, txs confirmed on-chain (see below) |
-| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: the fee settles live on mainnet as a plain USDC transfer bound into the receipt. MergeGate additionally serves a real x402 v2 challenge at `/x402/verify`, which `circle services inspect` reports as **payable at $0.05 USDC on Base**; settlement of the signed authorization is not implemented, so no fee moves through x402 yet |
+| P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Partial**: the fee settles live on mainnet as a plain USDC transfer bound into the receipt. The x402 endpoint at `/x402/verify` now **verifies a real Circle Agent Wallet payment end to end**: a live `circle services pay` passes all six checks, including the ERC-1271 signature of a smart contract account. Submission still needs a relayer holding ETH, so a verified payment answers 402 with `verified: true` rather than claiming a fee that never moved |
 | P2.3 third-party verification | Anyone can check a receipt without trusting MergeGate | **Done**: `mergegate verify` re-derives the chain offline, and an MCP server exposes the read side to agents. Verified against a live mainnet receipt: 17 of 17 checks, exit 0; redirecting `settlement_recipient` drops it to exit 1 |
 
 ---
@@ -538,6 +538,47 @@ export GEMINI_API_KEY=...
 ```
 
 Without the key or the extra, the deterministic core runs exactly as before.
+
+## x402, verified against Circle's own client
+
+`/x402/verify` serves a v2 challenge that `circle services inspect` reports as
+**payable at $0.05 USDC on Base**. A real `circle services pay` from the buyer's
+Circle Agent Wallet now verifies completely:
+
+```
+checks: {"scheme": true, "network": true, "recipient": true,
+         "amount": true, "validity_window": true, "signature": true}
+error : payment verified but not settled
+detail: no relayer configured: set X402_RELAYER_PRIVATE_KEY to a key holding
+        ETH on Base. EIP-3009 requires the recipient side to pay gas.
+```
+
+Two corrections were needed to get there, and neither was findable without
+pointing Circle's client at the running service.
+
+**Circle nests the terms.** Its CLI echoes the quote it is paying under
+`accepted` and puts `scheme` and `network` nowhere else. Reading only the top
+level produced `scheme=''`, which reads like a malformed request rather than a
+shape difference.
+
+**Circle Agent Wallets are smart contract accounts.** `eth_getCode` on the buyer
+wallet returns 210 bytes. Their signatures are ERC-1271 and do **not**
+ECDSA-recover to the account address: recovery returned an unrelated address
+every time, which is indistinguishable from a forgery until you check for code.
+Verification now recovers for EOAs and calls `isValidSignature` for contract
+accounts, expecting the `0x1626ba7e` magic value.
+
+Those paths differ in a way worth stating: EOA verification is pure arithmetic
+and stays offline, while ERC-1271 needs a read-only node call. A node that
+cannot be reached is reported as an *inability to verify*, never as an invalid
+signature, because those are different claims about the payer.
+
+**What is still missing is gas, not code.** EIP-3009 exists so the payer never
+needs it, which means the recipient side must relay. Every wallet here holds 0
+ETH on Base, and neither public x402 facilitator supports Base mainnet, only
+Sepolia. The relayer is generated and its key is in Secret Manager; funding
+`0x349eF760fBc613e8B01947d6B8662Ec6E076e515` with a dollar of ETH completes the
+loop.
 
 ## Integrating
 
