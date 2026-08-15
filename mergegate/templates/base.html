@@ -51,7 +51,7 @@ tailwind.config = {
     </a>
 
     <nav class="space-y-0.5 text-sm">
-      {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier")] %}
+      {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier"),("Integrate","/integrate")] %}
       <a href="{{ href }}"
          class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
          {% if active == label %}bg-surface-high text-on-surface{% else %}text-on-muted hover:text-on-surface hover:bg-surface-container{% endif %}">

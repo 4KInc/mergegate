@@ -204,6 +204,40 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
                 "settlement. MergeGate holds escrow authority."
             ),
             "webhook": "/webhooks/github",
+            "verification_key": "/api/verification-key",
+            "integrate": "/integrate",
+        }
+
+    @app.get("/api/verification-key")
+    def verification_key() -> Any:
+        """Publish the public half of the receipt signing key.
+
+        Receipts claimed to be independently verifiable while the key needed to
+        verify them existed only in the deployment's environment, which made the
+        claim unexercisable by anyone outside it. Publishing the *public* half is
+        the entire point of signing.
+
+        The caveat is served with it rather than left implicit: a key taken from
+        the issuer proves the issuer is self-consistent, not that it is honest.
+        Pin it out of band to get the guarantee the signature is meant to carry.
+        """
+        from fastapi.responses import JSONResponse
+
+        raw = os.environ.get("MERGEGATE_RECEIPT_PUBLIC_KEY", "")
+        if not raw:
+            return JSONResponse(
+                {"error": "this deployment publishes no verification key"}, status_code=503
+            )
+        return {
+            "alg": "Ed25519",
+            "encoding": "base64url, unpadded",
+            "public_key": raw,
+            "kid": os.environ.get("MERGEGATE_RECEIPT_KEY_ID", "mergegate-e5683130"),
+            "caveat": (
+                "Fetching this from the issuer proves self-consistency, not "
+                "authenticity. Pin it out of band."
+            ),
+            "verify_with": "pip install mergegate && mergegate verify <receipt>.json",
         }
 
     return app

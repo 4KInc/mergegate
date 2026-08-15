@@ -22,6 +22,7 @@ templates are the live implementation of them.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -296,6 +297,29 @@ class ReceiptBundle:
             ("Contracts settled", str(len(self.all()))),
         ]
 
+
+def _mcp_tools() -> list[tuple[str, str]]:
+    """The MCP tool list for the integrate page, read from the server itself.
+
+    Derived rather than retyped: a hand-maintained copy would drift the moment a
+    tool is renamed, and a documentation page that lists a tool the server does
+    not implement is worse than no page.
+    """
+    from .mcp import TOOLS
+
+    return [(tool["name"], tool["description"].split(".")[0] + ".") for tool in TOOLS]
+
+
+MCP_TOOLS = _mcp_tools()
+
+HTTP_ENDPOINTS = [
+    ("GET", "/api/status", "What this deployment attests, and what custody it holds."),
+    ("GET", "/api/receipts", "Every settled task: decision, amount, settlement transaction."),
+    ("GET", "/receipts/{id}.json", "One signed receipt envelope, manifest and mandate included."),
+    ("GET", "/api/verification-key", "The public half of the signing key, with its caveat."),
+    ("GET", "/x402/verify", "402 challenge pricing the verifier. Serves, does not settle."),
+    ("POST", "/webhooks/github", "Submission events. HMAC signed; rejects unsigned deliveries."),
+]
 
 GRADING_PIPELINE = [
     (
@@ -618,6 +642,38 @@ def build_web_router(
             },
         )
 
+    @router.get("/api/receipts")
+    def receipts_json() -> Any:
+        """The receipt index for programs rather than people.
+
+        ``source_error`` is carried through rather than collapsed into an empty
+        list, for the same reason the page shows it: a datastore that is
+        unreachable and one that is genuinely empty are different facts, and an
+        agent polling for its own settlement must be able to tell them apart.
+        """
+        views = bundle.all()
+        return JSONResponse(
+            {
+                "count": len(views),
+                "source_error": bundle.source_error,
+                "receipts": [
+                    {
+                        "id": v.id,
+                        "task_id": v.binding.get("task_id", ""),
+                        "decision": v.decision,
+                        "action": v.action,
+                        "amount_usdc": v.amount,
+                        "chain": v.chain,
+                        "settlement_tx": v.settlement_tx,
+                        "contract_hash": v.binding.get("contract_hash", ""),
+                        "submission_sha": v.binding.get("submission_sha", ""),
+                        "envelope_url": f"/receipts/{v.id}.json",
+                    }
+                    for v in views
+                ],
+            }
+        )
+
     @router.get("/receipts/{receipt_id}.json")
     def receipt_json(receipt_id: str) -> Any:
         view = bundle.get(receipt_id)
@@ -690,6 +746,29 @@ def build_web_router(
                 "egress_claim": EGRESS_DENY_TCP,
                 "network": ", ".join(bundle.networks()) or network,
                 "active": "Verifier",
+            },
+        )
+
+    @router.get("/integrate", response_class=HTMLResponse)
+    def integrate(request: Request) -> Any:
+        """How another agent talks to MergeGate.
+
+        The sample receipt id is taken from whatever this deployment actually
+        holds rather than hardcoded, so the copy-pasteable command works instead
+        of 404ing against an id from some other environment.
+        """
+        views = bundle.all()
+        return templates.TemplateResponse(
+            request,
+            "integrate.html",
+            {
+                "base_url": str(request.base_url).rstrip("/"),
+                "sample_receipt": views[0].id if views else "<receipt-id>",
+                "public_key": os.environ.get("MERGEGATE_RECEIPT_PUBLIC_KEY", ""),
+                "tools": MCP_TOOLS,
+                "endpoints": HTTP_ENDPOINTS,
+                "network": ", ".join(bundle.networks()) or network,
+                "active": "Integrate",
             },
         )
 

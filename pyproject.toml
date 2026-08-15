@@ -36,6 +36,7 @@ dev = [
 
 [project.scripts]
 mergegate = "mergegate.cli:main"
+mergegate-mcp = "mergegate.mcp:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["mergegate"]
