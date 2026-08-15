@@ -35,7 +35,7 @@
       <span class="shrink-0 w-6 h-6 rounded-full grid place-items-center text-[11px] mono z-10
         {% if s.state == 'done' %}bg-accent-container text-accent border border-accent/40
         {% elif s.state == 'failed' %}bg-danger-container text-danger border border-danger/40
-        {% else %}bg-surface-high text-on-faint border border-line{% endif %}">
+        {% else %}bg-white/[.05] text-on-faint border border-line{% endif %}">
         {% if s.state == 'done' %}✓{% elif s.state == 'failed' %}✗{% else %}{{ loop.index }}{% endif %}
       </span>
       <div class="min-w-0">
@@ -104,7 +104,7 @@
   {% if e.commands %}
   <div class="space-y-3">
     {% for c in e.commands %}
-    <div class="rounded-lg bg-surface border border-line overflow-hidden">
+    <div class="rounded-lg bg-black/20 border border-line overflow-hidden">
       <div class="flex items-center justify-between gap-3 px-3 py-2 border-b border-line">
         <span class="mono text-xs text-on-muted">$ {{ c.argv }}</span>
         <span class="mono text-[11px] {% if c.exit_code == 0 %}text-accent{% else %}text-danger{% endif %}">
@@ -130,7 +130,7 @@
     digest instead of carrying attacker-controlled text.
   </p>
   {% else %}
-  <div class="rounded-lg bg-surface border border-line px-4 py-6 text-center">
+  <div class="rounded-lg bg-black/20 border border-line px-4 py-6 text-center">
     <p class="text-sm text-on-faint">No commands executed.</p>
     <p class="text-xs text-on-faint mt-1">The contract-term violation decided the verdict first.</p>
   </div>
@@ -153,8 +153,8 @@
   </div>
   <div class="rule my-4"></div>
   <div class="flex flex-wrap gap-1.5">
-    <span class="px-2 py-1 rounded-md bg-surface-high text-[11px] text-on-muted border border-line">egress: {{ e.egress }}</span>
-    <span class="px-2 py-1 rounded-md bg-surface-high text-[11px] text-on-muted border border-line">
+    <span class="px-2 py-1 rounded-md bg-white/[.05] text-[11px] text-on-muted border border-line">egress: {{ e.egress }}</span>
+    <span class="px-2 py-1 rounded-md bg-white/[.05] text-[11px] text-on-muted border border-line">
       .git {% if e.git_stripped %}stripped{% else %}present{% endif %}
     </span>
   </div>

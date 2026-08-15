@@ -298,6 +298,26 @@ class ReceiptBundle:
         ]
 
 
+def public_base_url(request: Request) -> str:
+    """The URL a reader should actually use, not the one the app was reached on.
+
+    Cloud Run terminates TLS at its proxy and forwards plain HTTP to the
+    container, so ``request.base_url`` reports ``http://``. The integrate page
+    puts that string into copy-pasteable ``curl`` commands and an MCP config
+    block, and shipping ``http://`` there is wrong even though the platform
+    would redirect: it reads as a service that does not know its own address,
+    and the MCP config would be stored that way.
+
+    ``X-Forwarded-Proto`` is the proxy's statement of the original scheme. Only
+    the first value matters when several proxies have appended to it.
+    """
+    base = str(request.base_url).rstrip("/")
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
+    if forwarded and base.startswith("http://"):
+        return forwarded + base[len("http") :]
+    return base
+
+
 def _mcp_tools() -> list[tuple[str, str]]:
     """The MCP tool list for the integrate page, read from the server itself.
 
@@ -762,7 +782,7 @@ def build_web_router(
             request,
             "integrate.html",
             {
-                "base_url": str(request.base_url).rstrip("/"),
+                "base_url": public_base_url(request),
                 "sample_receipt": views[0].id if views else "<receipt-id>",
                 "public_key": os.environ.get("MERGEGATE_RECEIPT_PUBLIC_KEY", ""),
                 "tools": MCP_TOOLS,

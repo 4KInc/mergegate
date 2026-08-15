@@ -53,7 +53,7 @@
     <h2 class="text-[10px] uppercase tracking-widest text-on-faint mb-3">Offline verification</h2>
     {% if verification.valid %}
     <div class="flex items-baseline gap-2">
-      <span class="font-display text-3xl font-semibold text-accent">{{ verification.checks }}</span>
+      <span class="figure text-[34px] font-medium accent-text">{{ verification.checks }}</span>
       <span class="text-sm text-on-muted">checks passed</span>
     </div>
     <p class="text-xs text-on-faint mt-3 leading-relaxed">
@@ -67,7 +67,7 @@
       {% for f in verification.failures %}<li>{{ f }}</li>{% endfor %}
     </ul>
     {% endif %}
-    <div class="mt-4 rounded-lg bg-surface px-3 py-2 mono text-[11px] text-on-muted border border-line">
+    <div class="mt-4 rounded-lg bg-black/20 px-3 py-2 mono text-[11px] text-on-muted border border-line">
       mergegate verify {{ receipt.id }}.json
     </div>
     <div class="flex items-center gap-3 mt-3">

@@ -4,16 +4,16 @@
 
 {# The headline fact is the FAIL flow, not the totals. Leading with a stat grid
    buried the one thing that distinguishes this from CI plus a transfer. #}
-<header class="mb-10">
-  <div class="flex items-center gap-3 mb-3">
-    <span class="text-[10px] uppercase tracking-widest text-accent">Settled on-chain</span>
-    <span class="h-px flex-1 bg-line"></span>
-  </div>
-  <h1 class="font-display text-3xl md:text-[38px] leading-[1.1] font-semibold tracking-tight max-w-3xl">
+<header class="mb-11">
+  <span class="pill mb-5">
+    <span class="dot dot-live"></span>
+    <span class="mono text-[10px] uppercase tracking-widest text-accent">Settled on-chain</span>
+  </span>
+  <h1 class="font-display text-3xl md:text-[42px] leading-[1.08] font-semibold tracking-tight max-w-3xl">
     Correct code still gets refunded<br class="hidden md:block"/>
-    if it touches a protected path.
+    if it touches <span class="accent-text">a protected path</span>.
   </h1>
-  <p class="text-sm text-on-muted mt-4 max-w-2xl leading-relaxed">
+  <p class="text-sm text-on-muted mt-5 max-w-2xl leading-relaxed">
     Every row below is a real settlement with a transaction you can open. The
     refunded one passed the buyer's tests on its merits. It was rejected
     before those tests ever ran, because it also edited the deploy gate.
@@ -34,10 +34,10 @@
 {# Compact strip rather than four large tiles holding four short numbers. #}
 <section class="card divide-y md:divide-y-0 md:divide-x divide-line grid md:grid-cols-4 mb-10">
   {% for label, value in stats %}
-  <div class="px-5 py-4">
-    <div class="font-display text-2xl font-semibold tracking-tight
-      {% if 'released' in label %}text-accent{% elif 'refunded' in label %}text-warn{% endif %}">{{ value }}</div>
-    <div class="text-[11px] uppercase tracking-wider text-on-faint mt-1">{{ label }}</div>
+  <div class="px-5 py-5">
+    <div class="figure text-[26px] font-medium
+      {% if 'released' in label %}text-accent{% elif 'refunded' in label %}text-warn{% else %}text-on-surface{% endif %}">{{ value }}</div>
+    <div class="text-[10px] uppercase tracking-widest text-on-faint mt-1.5">{{ label }}</div>
   </div>
   {% endfor %}
 </section>
@@ -68,7 +68,7 @@
         {# The whole row links to the receipt. A small link in the last column
            was easy to miss and could be scrolled out of view on a narrow
            viewport, which made the receipts look unreachable. #}
-        <tr class="relative border-b border-line/60 last:border-0 hover:bg-surface-high/40 transition-colors group">
+        <tr class="relative border-b border-line last:border-0 hover:bg-white/[.025] transition-colors group">
           <td class="px-5 py-3.5">
             <a href="/receipts/{{ r.id }}" class="absolute inset-0" aria-label="Open receipt {{ r.id }}"></a>
             <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium
@@ -78,7 +78,7 @@
             </span>
           </td>
           <td class="px-5 py-3.5"><span class="mono text-xs chip">{{ r.submission_short }}</span></td>
-          <td class="px-5 py-3.5 text-right mono text-[13px]">{{ r.amount }}</td>
+          <td class="px-5 py-3.5 text-right figure text-[13px]">{{ r.amount }}</td>
           <td class="px-5 py-3.5 mono text-xs text-on-muted">{{ r.recipient_short }}</td>
           <td class="px-5 py-3.5">
             <span class="text-[11px] text-on-muted">
@@ -110,7 +110,7 @@
 </p>
 
 <section class="mt-10 grid md:grid-cols-2 gap-4">
-  <div class="card p-5">
+  <div class="card card-hover p-5">
     <h3 class="font-display font-semibold mb-3 text-[15px]">Settlement integrity</h3>
     <p class="mono text-xs text-on-muted leading-relaxed">
       one contract → one eligible SHA<br/>
@@ -123,11 +123,11 @@
       fail independently, which is the point.
     </p>
   </div>
-  <div class="card p-5">
+  <div class="card card-hover p-5">
     <h3 class="font-display font-semibold mb-3 text-[15px]">Sandbox posture</h3>
     <div class="flex flex-wrap gap-1.5">
       {% for badge in badges %}
-      <span class="px-2 py-1 rounded-md bg-surface-high text-[11px] text-on-muted border border-line">{{ badge }}</span>
+      <span class="px-2 py-1 rounded-md bg-white/[.04] text-[11px] text-on-muted border border-line">{{ badge }}</span>
       {% endfor %}
     </div>
     <div class="rule my-4"></div>

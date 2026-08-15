@@ -3,7 +3,10 @@
 {% block content %}
 
 <header class="mb-8">
-  <div class="flex items-center gap-3 mb-3"><span class="text-[10px] uppercase tracking-widest text-accent">Agent to agent</span><span class="h-px flex-1 bg-line"></span></div>
+  <span class="pill mb-5">
+    <span class="dot dot-live"></span>
+    <span class="mono text-[10px] uppercase tracking-widest text-accent">Agent to agent</span>
+  </span>
   <h1 class="font-display text-3xl md:text-[34px] leading-tight font-semibold tracking-tight">Integrate</h1>
   <p class="text-sm text-on-faint mt-1 max-w-3xl">
     Four ways in, ordered by how much you have to trust us. Verifying a receipt
@@ -18,7 +21,7 @@
     re-derives the whole chain locally. It contacts no server, so a compromised
     MergeGate cannot change the answer.
   </p>
-  <div class="rounded-lg bg-surface border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
+  <div class="rounded-lg bg-black/20 border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
 <pre><span class="text-on-faint"># --recurse-submodules is required: the proof layer is a shared submodule</span>
 git clone --recurse-submodules https://github.com/4KInc/mergegate.git
 cd mergegate &amp;&amp; pip install -e .
@@ -31,7 +34,7 @@ mergegate verify {{ sample_receipt }}.json</pre>
   </div>
   <div class="mt-4 grid md:grid-cols-3 gap-3">
     {% for code, meaning in [("0","receipt verified"),("1","failed verification: a result, not a crash"),("2","could not check: no key, bad file")] %}
-    <div class="rounded-lg bg-surface px-3 py-2.5 border border-line">
+    <div class="rounded-lg bg-black/20 px-3 py-2.5 border border-line">
       <div class="mono text-sm text-accent">exit {{ code }}</div>
       <div class="text-[11px] text-on-faint mt-0.5 leading-snug">{{ meaning }}</div>
     </div>
@@ -50,7 +53,7 @@ mergegate verify {{ sample_receipt }}.json</pre>
     So a coding agent can ask whether it has been paid without a human reading
     this dashboard for it. Add to any MCP client:
   </p>
-  <div class="rounded-lg bg-surface border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
+  <div class="rounded-lg bg-black/20 border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
 <pre>{
   "mcpServers": {
     "mergegate": {
@@ -100,7 +103,7 @@ mergegate verify {{ sample_receipt }}.json</pre>
     Buyers drive MergeGate in process, because funding escrow needs wallet
     credentials that should never leave the buyer's own machine.
   </p>
-  <div class="rounded-lg bg-surface border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
+  <div class="rounded-lg bg-black/20 border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
 <pre><span class="text-on-faint"># pin the terms, then seal them: contract_hash covers all of it</span>
 contract = build_contract(
     repository="owner/repo", base_sha=sha, grader_bundle=Path("tests/"),
@@ -121,7 +124,7 @@ directive = execute_mandate(mandate=mandate, manifest=manifest, now=now)</pre>
 
 <section class="card p-6">
   <h2 class="font-display text-lg font-semibold tracking-tight mb-1">The verification key</h2>
-  <div class="rounded-lg bg-surface border border-line px-3 py-2.5 mono text-[11px] text-on-muted break-all mt-3">{{ public_key or "not published by this deployment" }}</div>
+  <div class="rounded-lg bg-black/20 border border-line px-3 py-2.5 mono text-[11px] text-on-muted break-all mt-3">{{ public_key or "not published by this deployment" }}</div>
   <p class="text-[11px] text-on-faint mt-3 leading-relaxed max-w-3xl">
     Served at <span class="mono text-on-muted">/api/verification-key</span>,
     with the caveat attached: a key taken from the issuer proves the issuer is

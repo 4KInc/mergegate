@@ -1,13 +1,18 @@
-{# Theme taken from design/screens/03-bound-receipt.html: near-black zinc
-   surfaces with a single green accent. An earlier version used the flat
-   slate/blue palette from the dashboard screen, which left every element at
-   the same visual weight and nothing to draw the eye. #}
+{# Near-black zinc surfaces with a single emerald accent, over an ambient
+   gradient and a noise film. The flat version of this had every element at one
+   visual weight, so nothing drew the eye; depth here comes from translucency
+   and a hairline highlight rather than from heavier borders.
+
+   Deliberately not the sibling project's look: emerald rather than lime, a
+   sidebar rather than a floating top pill, Space Grotesk rather than Sora. The
+   techniques are shared, the identity is not. #}
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>{% block title %}MergeGate{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0a0c'/%3E%3Cpath d='M8 21V11l8 6 8-6v10' stroke='%234ade80' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
 <script>
@@ -15,12 +20,12 @@ tailwind.config = {
   darkMode: "class",
   theme: { extend: {
     colors: {
-      surface:   { DEFAULT: '#09090b', container: '#18181b', high: '#27272a' },
+      surface:   { DEFAULT: '#0a0a0c', container: '#141417', high: '#1e1e22' },
       on:        { surface: '#f4f4f5', muted: '#a1a1aa', faint: '#71717a' },
       accent:    { DEFAULT: '#4ade80', dark: '#22c55e', container: 'rgba(74,222,128,0.10)' },
       danger:    { DEFAULT: '#f87171', container: 'rgba(248,113,113,0.10)' },
       warn:      { DEFAULT: '#fbbf24', container: 'rgba(251,191,36,0.10)' },
-      line:      '#27272a',
+      line:      'rgba(255,255,255,0.07)',
     },
     borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", '2xl': "1rem" },
     fontFamily: {
@@ -32,30 +37,88 @@ tailwind.config = {
 }
 </script>
 <style>
-  body { font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; background:#0a0a0c; }
+
+  /* Ambient depth. Fixed and behind everything, so scrolling does not drag a
+     gradient around and cause repaints on long tables. */
+  body::before {
+    content:''; position:fixed; inset:-50%; z-index:-2; pointer-events:none;
+    background:
+      radial-gradient(circle at 18% 0%, rgba(74,222,128,.06) 0%, transparent 38%),
+      radial-gradient(circle at 82% 42%, rgba(56,189,248,.035) 0%, transparent 42%);
+  }
+  .grain {
+    position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.035;
+    mix-blend-mode:screen;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
   .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
   .hash { word-break: break-all; }
   /* Hashes read as data, not prose. */
-  .chip { background:#18181b; border:1px solid #27272a; border-radius:.375rem; padding:.125rem .375rem; }
-  .card { background:#18181b; border:1px solid #27272a; border-radius:.75rem; }
-  .rule { background: linear-gradient(90deg,#27272a,transparent); height:1px; }
+
+  /* One card style, restyled here so every page inherits it. Translucent over
+     the ambient gradient, with a hairline that catches the accent at its
+     midpoint the way a lit edge would. */
+  .card {
+    position:relative; background:rgba(20,20,23,.72); backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.07); border-radius:.85rem;
+    transition:border-color .25s, transform .25s, box-shadow .25s;
+  }
+  .card::before {
+    content:''; position:absolute; top:0; left:1px; right:1px; height:1px; border-radius:.85rem .85rem 0 0;
+    background:linear-gradient(90deg, transparent, rgba(74,222,128,.35), transparent);
+    opacity:.7;
+  }
+  /* Lift only where it means "this is actionable". Tables and static panels
+     stay put, or every page would shimmer on mouse-over. */
+  .card-hover:hover {
+    transform:translateY(-2px); border-color:rgba(74,222,128,.22);
+    box-shadow:0 12px 36px rgba(0,0,0,.45), 0 0 22px rgba(74,222,128,.05);
+  }
+
+  .chip { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:.375rem; padding:.125rem .375rem; }
+  .rule { background: linear-gradient(90deg,rgba(255,255,255,.10),transparent); height:1px; }
+
+  /* Status pill with a live dot. Used where something is genuinely live. */
+  .pill { display:inline-flex; align-items:center; gap:.5rem; padding:.3rem .7rem; border-radius:9999px;
+          background:rgba(74,222,128,.07); border:1px solid rgba(74,222,128,.20); }
+  .dot { width:.4rem; height:.4rem; border-radius:9999px; background:#4ade80; box-shadow:0 0 9px #4ade80; }
+  @keyframes breathe { 0%,100%{opacity:1} 50%{opacity:.45} }
+  .dot-live { animation:breathe 2.4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .dot-live { animation:none } }
+
+  /* Figures are data: tabular numerals stop them jittering between rows. */
+  .figure { font-family:"JetBrains Mono", ui-monospace, monospace; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+
+  .accent-text { background:linear-gradient(135deg,#bbf7d0 0%,#4ade80 55%,#22c55e 100%);
+                 -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+
+  ::-webkit-scrollbar { width:6px; height:6px }
+  ::-webkit-scrollbar-track { background:transparent }
+  ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.10); border-radius:3px }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.18) }
+
   a { text-underline-offset: 3px; }
 </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen antialiased">
+<div class="grain"></div>
 <div class="flex min-h-screen">
-  <aside class="w-60 shrink-0 border-r border-line px-5 py-6 hidden md:flex md:flex-col">
+  <aside class="w-60 shrink-0 border-r border-line px-5 py-6 hidden md:flex md:flex-col sticky top-0 h-screen">
     <a href="/" class="flex items-center gap-2.5 mb-9 group">
-      <span class="w-7 h-7 rounded-lg bg-accent/15 border border-accent/30 grid place-items-center text-accent text-sm">⊟</span>
+      <span class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center transition-colors group-hover:border-accent/50">
+        <svg viewBox="0 0 32 32" class="w-4 h-4" aria-hidden="true"><path d="M8 21V11l8 6 8-6v10" stroke="#4ade80" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
       <span class="font-display font-semibold tracking-tight text-[15px] group-hover:text-accent transition-colors">MergeGate</span>
     </a>
 
     <nav class="space-y-0.5 text-sm">
       {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier"),("Integrate","/integrate")] %}
       <a href="{{ href }}"
-         class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors
-         {% if active == label %}bg-surface-high text-on-surface{% else %}text-on-muted hover:text-on-surface hover:bg-surface-container{% endif %}">
-        {% if active == label %}<span class="w-1 h-3.5 rounded-full bg-accent -ml-1.5"></span>{% else %}<span class="w-1 h-3.5 -ml-1.5"></span>{% endif %}
+         class="flex items-center gap-2 px-3 py-2 rounded-lg transition-all
+         {% if active == label %}bg-white/[.05] text-on-surface border border-accent/15{% else %}text-on-muted hover:text-on-surface hover:bg-white/[.03] border border-transparent{% endif %}">
+        {% if active == label %}<span class="w-1 h-3.5 rounded-full bg-accent -ml-1.5 shadow-[0_0_8px_#4ade80]"></span>{% else %}<span class="w-1 h-3.5 -ml-1.5"></span>{% endif %}
         {{ label }}
       </a>
       {% endfor %}

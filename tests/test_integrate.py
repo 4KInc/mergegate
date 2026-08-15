@@ -152,6 +152,21 @@ def test_integrate_page_has_no_em_dashes(client: Any) -> None:
     assert "—" not in client.get("/integrate").text
 
 
+def test_page_uses_the_forwarded_scheme(client: Any) -> None:
+    """Behind Cloud Run's TLS-terminating proxy the app sees plain HTTP, so
+    request.base_url reported http:// and the page shipped that inside curl
+    commands and an MCP config block. Production served it that way."""
+    text = client.get("/integrate", headers={"x-forwarded-proto": "https"}).text
+    assert "http://testserver" not in text
+    assert "https://testserver" in text
+
+
+def test_scheme_is_not_forced_when_nothing_forwarded(client: Any) -> None:
+    """Plain local HTTP must stay http, or the page tells a developer running
+    `uvicorn` to curl an address that refuses the connection."""
+    assert "http://testserver" in client.get("/integrate").text
+
+
 def test_install_instructions_do_not_promise_pypi(client: Any) -> None:
     """MergeGate is not on PyPI, and `pip install mergegate` fails.
 

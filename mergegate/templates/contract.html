@@ -54,7 +54,7 @@
       <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Allowed source</div>
       <div class="flex flex-wrap gap-1.5">
         {% for p in c.allowed_paths %}
-        <span class="mono text-[11px] px-2 py-1 rounded-md bg-surface-high border border-line text-on-muted">{{ p }}</span>
+        <span class="mono text-[11px] px-2 py-1 rounded-md bg-white/[.05] border border-line text-on-muted">{{ p }}</span>
         {% endfor %}
       </div>
     </div>
@@ -70,7 +70,7 @@
       <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Grader</div>
       <div class="flex flex-wrap gap-1.5">
         {% for p in c.grader_paths %}
-        <span class="mono text-[11px] px-2 py-1 rounded-md bg-surface-high border border-line text-on-muted">{{ p }}</span>
+        <span class="mono text-[11px] px-2 py-1 rounded-md bg-white/[.05] border border-line text-on-muted">{{ p }}</span>
         {% endfor %}
       </div>
     </div>
@@ -85,7 +85,7 @@
   <div class="rule my-5"></div>
   <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Required commands</div>
   {% for cmd in c.commands %}
-  <div class="mono text-xs rounded-lg bg-surface px-3 py-2 border border-line text-on-muted">$ {{ cmd }}</div>
+  <div class="mono text-xs rounded-lg bg-black/20 px-3 py-2 border border-line text-on-muted">$ {{ cmd }}</div>
   {% endfor %}
   <p class="text-xs text-on-faint mt-2">
     Argv vectors, run with no shell. Nothing to quote, nothing to inject into.

@@ -6,10 +6,10 @@
    this answers "does the evidence hold up", which is a different question and
    the reason the nav item exists. #}
 <header class="mb-9">
-  <div class="flex items-center gap-3 mb-3">
-    <span class="text-[10px] uppercase tracking-widest text-accent">Independently verifiable</span>
-    <span class="h-px flex-1 bg-line"></span>
-  </div>
+  <span class="pill mb-5">
+    <span class="dot dot-live"></span>
+    <span class="mono text-[10px] uppercase tracking-widest text-accent">Independently verifiable</span>
+  </span>
   <h1 class="font-display text-3xl md:text-[34px] leading-tight font-semibold tracking-tight">Receipts</h1>
   <p class="text-sm text-on-muted mt-3 max-w-2xl leading-relaxed">
     Each receipt is re-verified against the published signing key on this
@@ -28,7 +28,7 @@
 <div class="grid md:grid-cols-2 gap-4">
   {% for r in receipts %}
   <a href="/receipts/{{ r.id }}"
-     class="card p-5 block hover:border-accent/40 hover:bg-surface-high/30 transition-colors group">
+     class="card p-5 block hover:border-accent/40 hover:bg-white/[.05]/30 transition-colors group">
     <div class="flex items-center justify-between gap-3 mb-3">
       <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium
         {% if r.decision == 'PASS' %}bg-accent-container text-accent{% else %}bg-danger-container text-danger{% endif %}">

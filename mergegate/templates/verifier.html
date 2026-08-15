@@ -3,7 +3,10 @@
 {% block content %}
 
 <header class="mb-8">
-  <div class="flex items-center gap-3 mb-3"><span class="text-[10px] uppercase tracking-widest text-accent">Measured, not asserted</span><span class="h-px flex-1 bg-line"></span></div>
+  <span class="pill mb-5">
+    <span class="dot dot-live"></span>
+    <span class="mono text-[10px] uppercase tracking-widest text-accent">Measured, not asserted</span>
+  </span>
   <h1 class="font-display text-3xl md:text-[34px] leading-tight font-semibold tracking-tight">Verifier</h1>
   <p class="text-sm text-on-faint mt-1 max-w-3xl">
     The advantage is not that grading happens in a sandbox; plenty of things
@@ -40,7 +43,7 @@
   <ol class="space-y-3">
     {% for n, title, detail in pipeline %}
     <li class="flex gap-3">
-      <span class="shrink-0 w-6 h-6 rounded-full bg-surface-high text-xs flex items-center justify-center mono">{{ n }}</span>
+      <span class="shrink-0 w-6 h-6 rounded-full bg-white/[.05] text-xs flex items-center justify-center mono">{{ n }}</span>
       <div>
         <div class="text-sm">{{ title }}</div>
         <div class="text-xs text-on-faint mt-0.5">{{ detail }}</div>
