@@ -147,9 +147,16 @@ def decode_payment(header: str) -> PaymentPayload | None:
     if not isinstance(authorization, dict):
         return None
 
+    # Circle's CLI nests scheme and network inside "accepted", echoing back the
+    # quote it is paying, while other clients put them at the top level. Reading
+    # only the top level made a genuine Circle payment fail on scheme='' and
+    # network='', which looked like a malformed request rather than a shape
+    # difference. Both are accepted; top level wins when present.
+    raw_accepted = data.get("accepted")
+    accepted: dict[str, Any] = raw_accepted if isinstance(raw_accepted, dict) else {}
     return PaymentPayload(
-        scheme=str(data.get("scheme", "")),
-        network=str(data.get("network", "")),
+        scheme=str(data.get("scheme") or accepted.get("scheme") or ""),
+        network=str(data.get("network") or accepted.get("network") or ""),
         signature=str(payload.get("signature", "")),
         authorization=authorization,
         x402_version=int(data.get("x402Version", 2) or 2),
@@ -203,6 +210,81 @@ def _typed_data(
     }
 
 
+#: ERC-1271's "this signature is valid" answer, from the standard.
+ERC1271_MAGIC = "0x1626ba7e"
+
+
+def _check_signature(
+    payload: PaymentPayload, price: X402Price, token_name: str, token_version: str
+) -> tuple[str, str]:
+    """Validate the payer's signature. Returns ``(signer, failure_detail)``.
+
+    **Two kinds of signer, and the difference is not cosmetic.** An EOA signs
+    with a key whose address is recoverable from the signature, so verification
+    is pure arithmetic. A smart contract account has no key: it answers
+    ``isValidSignature`` itself, and the only way to ask is an ``eth_call``.
+
+    Circle Agent Wallets are smart contract accounts. Recovery against a real
+    Circle payment returned an unrelated address every time, which reads exactly
+    like a forgery and is not one. Checking for contract code first is what
+    separates "this account validates its own signatures" from "someone is
+    spending an address they do not control".
+
+    The EOA path stays offline. The ERC-1271 path needs a read-only node call,
+    which is a real dependency and is why a failure to reach one is reported as
+    an inability to verify rather than as an invalid signature.
+    """
+    try:
+        from eth_account import Account
+        from eth_account.messages import _hash_eip191_message, encode_typed_data
+
+        message = encode_typed_data(
+            full_message=_typed_data(payload, price, token_name, token_version)
+        )
+    except Exception as exc:  # noqa: BLE001
+        return "", f"could not build the signed message: {type(exc).__name__}"
+
+    # EOA first: cheapest, and the common case for non-agent payers.
+    try:
+        recovered = Account.recover_message(message, signature=payload.signature)
+        if recovered.lower() == payload.payer.lower():
+            return recovered, ""
+    except Exception:  # noqa: BLE001 - fall through to the contract path
+        pass
+
+    try:
+        from web3 import Web3
+
+        w3 = Web3(Web3.HTTPProvider(os.environ.get(RPC_VAR, DEFAULT_RPC)))
+        payer = Web3.to_checksum_address(payload.payer)
+        if w3.eth.get_code(payer) in (b"", b"0x"):
+            return "", "signature does not recover to the stated payer"
+
+        digest = _hash_eip191_message(message)
+        signature = bytes.fromhex(payload.signature.removeprefix("0x"))
+        contract = w3.eth.contract(
+            address=payer,
+            abi=[
+                {
+                    "name": "isValidSignature",
+                    "type": "function",
+                    "stateMutability": "view",
+                    "inputs": [
+                        {"name": "hash", "type": "bytes32"},
+                        {"name": "signature", "type": "bytes"},
+                    ],
+                    "outputs": [{"name": "", "type": "bytes4"}],
+                }
+            ],
+        )
+        answer = contract.functions.isValidSignature(digest, signature).call()
+        if "0x" + answer.hex() == ERC1271_MAGIC:
+            return payload.payer, ""
+        return "", "the payer contract rejected this signature (ERC-1271)"
+    except Exception as exc:  # noqa: BLE001
+        return "", f"could not verify a contract-account signature: {type(exc).__name__}"
+
+
 def verify_payment(
     payload: PaymentPayload,
     price: X402Price,
@@ -253,22 +335,8 @@ def verify_payment(
 
     # Signature last: it is the expensive check, and a mismatch here means
     # something quite different from a term mismatch above.
-    signer = ""
-    try:
-        from eth_account import Account
-        from eth_account.messages import encode_typed_data
-
-        message = encode_typed_data(
-            full_message=_typed_data(payload, price, token_name, token_version)
-        )
-        signer = Account.recover_message(message, signature=payload.signature)
-        check(
-            "signature",
-            signer.lower() == payload.payer.lower(),
-            "signature does not recover to the stated payer",
-        )
-    except Exception as exc:  # noqa: BLE001 - any failure to recover is a failure
-        check("signature", False, f"could not verify signature: {type(exc).__name__}")
+    signer, detail = _check_signature(payload, price, token_name, token_version)
+    check("signature", bool(signer), detail)
 
     ok = all(passed for _, passed in checks)
     return VerificationOutcome(

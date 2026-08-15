@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import secrets
 import time
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -213,3 +215,82 @@ def test_settlement_never_raises(price: X402Price, monkeypatch: pytest.MonkeyPat
     tx_hash, error = settle_payment(payload, price)
     assert tx_hash == ""
     assert error
+
+
+# -- interoperability with Circle's own client ---------------------------------
+
+CIRCLE_PAYMENT = Path(__file__).parent / "data" / "circle_x402_payment.json"
+
+
+def _circle_payload() -> dict[str, Any]:
+    data: dict[str, Any] = json.loads(CIRCLE_PAYMENT.read_text())
+    return data
+
+
+def test_circles_nested_shape_decodes(price: X402Price) -> None:
+    """Circle's CLI echoes the quote it is paying under "accepted" and puts
+    nothing at the top level. Reading only the top level made a genuine payment
+    fail on scheme='' and network='', which reads like a malformed request
+    rather than a shape difference. Captured from a real `circle services pay`.
+    """
+    payload = decode_payment(_circle_payload()["paymentHeader"])
+    assert payload is not None
+    assert payload.scheme == "exact"
+    assert payload.network == "eip155:8453"
+    assert payload.recipient.lower() == PAY_TO
+    assert payload.value == 50_000  # 0.05 USDC
+
+
+def test_the_circle_payer_is_a_smart_contract_account() -> None:
+    """Pins the finding that shaped the verifier.
+
+    Circle Agent Wallets are smart contract accounts, so their signatures are
+    ERC-1271 and do not ECDSA-recover to the account address. Recovery against
+    this real payment returns an unrelated address, which looks exactly like a
+    forgery and is not one.
+    """
+    from eth_account import Account
+    from eth_account.messages import encode_typed_data
+
+    payload = decode_payment(_circle_payload()["paymentHeader"])
+    assert payload is not None
+    price = X402Price(pay_to=PAY_TO, asset=USDC, amount_usdc="0.05")
+
+    recovered = Account.recover_message(
+        encode_typed_data(full_message=typed_data(payload, price, "USD Coin", "2")),
+        signature=payload.signature,
+    )
+    assert recovered.lower() != payload.payer.lower()
+
+
+def test_terms_of_the_real_circle_payment_check_out(price: X402Price) -> None:
+    """Everything verifiable without a node: scheme, network, recipient, amount
+    and the validity window, evaluated inside the window it was signed for."""
+    payload = decode_payment(_circle_payload()["paymentHeader"])
+    assert payload is not None
+    a = payload.authorization
+    inside = (int(a["validAfter"]) + int(a["validBefore"])) // 2
+
+    outcome = verify_payment(payload, price, now=inside)
+    passed = dict(outcome.checks)
+    for name in ("scheme", "network", "recipient", "amount", "validity_window"):
+        assert passed[name], f"{name} failed on a real Circle payment: {outcome.reason}"
+
+
+@pytest.mark.skipif(
+    not os.environ.get("MERGEGATE_NETWORK_TESTS"),
+    reason="ERC-1271 validation needs a Base RPC; set MERGEGATE_NETWORK_TESTS=1",
+)
+def test_the_real_circle_payment_fully_verifies(price: X402Price) -> None:
+    """End to end against Base, including the ERC-1271 signature check.
+
+    Network-gated: CI has no outbound access, and a test that silently passed
+    without reaching a node would assert nothing.
+    """
+    payload = decode_payment(_circle_payload()["paymentHeader"])
+    assert payload is not None
+    a = payload.authorization
+    inside = (int(a["validAfter"]) + int(a["validBefore"])) // 2
+
+    outcome = verify_payment(payload, price, now=inside)
+    assert outcome.valid, outcome.reason

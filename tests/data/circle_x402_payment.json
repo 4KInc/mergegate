@@ -1,0 +1,37 @@
+{
+  "paymentHeader": "eyJ4NDAyVmVyc2lvbiI6MiwicGF5bG9hZCI6eyJhdXRob3JpemF0aW9uIjp7ImZyb20iOiIweDVjMzRlM2UwNWYwZjFiOWM0ZTNiOTI4NDY3OTFjNjUxNmRkNDMxYTIiLCJ0byI6IjB4ZTM2QjYxMkJhMGZkNkJFZDY1M2U5OTdkNTA2MDIyOEU1NDg4MjVGNSIsInZhbHVlIjoiNTAwMDAiLCJ2YWxpZEFmdGVyIjoiMTc4NjgxNzA3MSIsInZhbGlkQmVmb3JlIjoiMTc4NjgxNzc5MSIsIm5vbmNlIjoiMHhiMjM1YTZhZDNkMTc0MDQzZGQ3NDc3MGViYTVhZDZlY2M4ZTk4YmVlYmM0MzIxZWI5N2FhYmIzNmM5OWM4ODhlIn0sInNpZ25hdHVyZSI6IjB4ZDFmNjFjOTM4NzZkMWZkMjRlYWI5NTU0Zjk5YmFhODU3MTU5ZjAwNGQ1YTgzZGVkMzljMGU4NmY5ZDZjNzMwYzZjNjU1NzM0ZmM3ZmU3ODA1M2Q3ZTE4NGVlYTMwMTg5MDFkOTM3Yzk2OWI1YWUyM2Y2ODI0NDVkNDMzYTkyNGExYyJ9LCJhY2NlcHRlZCI6eyJzY2hlbWUiOiJleGFjdCIsIm5ldHdvcmsiOiJlaXAxNTU6ODQ1MyIsImFzc2V0IjoiMHg4MzM1ODlmQ0Q2ZURiNkUwOGY0YzdDMzJENGY3MWI1NGJkQTAyOTEzIiwicGF5VG8iOiIweGUzNmI2MTJiYTBmZDZiZWQ2NTNlOTk3ZDUwNjAyMjhlNTQ4ODI1ZjUiLCJhbW91bnQiOiI1MDAwMCIsIm1heFRpbWVvdXRTZWNvbmRzIjoxMjAsInJlc291cmNlIjoiaHR0cDovL21lcmdlZ2F0ZS1hcGktMTAzMTE0ODg4OTM5OC51cy1jZW50cmFsMS5ydW4uYXBwL3g0MDIvdmVyaWZ5IiwiZGVzY3JpcHRpb24iOiJNZXJnZUdhdGUgZGV0ZXJtaW5pc3RpYyBldmFsdWF0aW9uIG9mIG9uZSBzdWJtaXNzaW9uIiwibWltZVR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIiwiZXh0cmEiOnsibmFtZSI6IlVTRCBDb2luIiwidmVyc2lvbiI6IjIifX0sInJlc291cmNlIjp7InVybCI6Imh0dHBzOi8vbWVyZ2VnYXRlLWFwaS0xMDMxMTQ4ODg5Mzk4LnVzLWNlbnRyYWwxLnJ1bi5hcHAveDQwMi92ZXJpZnkiLCJkZXNjcmlwdGlvbiI6IlBhaWQgcmVzb3VyY2UiLCJtaW1lVHlwZSI6ImFwcGxpY2F0aW9uL2pzb24ifX0=",
+  "paymentPayload": {
+    "x402Version": 2,
+    "payload": {
+      "authorization": {
+        "from": "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2",
+        "to": "0xe36B612Ba0fd6BEd653e997d5060228E548825F5",
+        "value": "50000",
+        "validAfter": "1786817071",
+        "validBefore": "1786817791",
+        "nonce": "0xb235a6ad3d174043dd74770eba5ad6ecc8e98beebc4321eb97aabb36c99c888e"
+      },
+      "signature": "0xd1f61c93876d1fd24eab9554f99baa857159f004d5a83ded39c0e86f9d6c730c6c655734fc7fe78053d7e184eea3018901d937c969b5ae23f682445d433a924a1c"
+    },
+    "accepted": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0xe36b612ba0fd6bed653e997d5060228e548825f5",
+      "amount": "50000",
+      "maxTimeoutSeconds": 120,
+      "resource": "http://mergegate-api-1031148889398.us-central1.run.app/x402/verify",
+      "description": "MergeGate deterministic evaluation of one submission",
+      "mimeType": "application/json",
+      "extra": {
+        "name": "USD Coin",
+        "version": "2"
+      }
+    },
+    "resource": {
+      "url": "https://mergegate-api-1031148889398.us-central1.run.app/x402/verify",
+      "description": "Paid resource",
+      "mimeType": "application/json"
+    }
+  }
+}
