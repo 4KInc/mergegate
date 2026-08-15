@@ -478,6 +478,41 @@ decoded the payload. That is the good outcome, but it is **not** what the design
 relies on. The guarantee is the tested one: had the injection worked, the
 settlement would have been byte-identical anyway.
 
+### A false positive, and why it vindicates the architecture
+
+Running the screening over the **PASS** submission produced this, live:
+
+```
+score: 40/100   band: MEDIUM
+flags:
+  - Developer showed knowledge of specific grader test cases in comments,
+    indicating potential undue insight into the grading mechanism.
+```
+
+It is wrong. The comment it objected to reads
+`# The buyer's pinned grader asserts add(-1, -1) == -2.`, and that line is in
+the **buyer's own base tree**, seeded with the bug. The provider's diff deletes
+it. Gemini saw the line in the diff and attributed the knowledge to the party
+that removed it.
+
+This is exactly the failure mode that makes LLM-as-judge unsafe for settlement,
+observed on the first real submission it was pointed at. Had this screening
+carried gating power, a correct submission would have been held or refused over
+a comment its author deleted, and 0.25 USDC of real money would have gone to the
+wrong party.
+
+It did not, because the screening decides nothing. The tests passed, the guard
+found no violation, and the provider was paid
+[`0xf8cb4b0f`](https://basescan.org/tx/0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6).
+The flag is visible on the evaluation page next to a payment that completed
+normally.
+
+Both figures are on the live pages rather than quoted only here:
+[FAIL](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-1758ca302557)
+scored 95/100 HIGH,
+[PASS](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-97e4bd614868)
+scored 40/100 MEDIUM and was paid anyway.
+
 **Three further limits, held deliberately:**
 
 - **Nothing advisory enters a signed receipt.** The receipt is worth something
