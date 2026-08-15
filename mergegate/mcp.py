@@ -46,7 +46,10 @@ from typing import Any
 from .cli import PUBLIC_KEY_VAR, CliError, _get, _load_public_key
 from .receipt import verify_receipt
 
-__all__ = ["TOOLS", "call_tool", "handle_message", "serve", "main"]
+# PUBLIC_KEY_VAR is re-exported deliberately: the name of the variable a client
+# must set is part of this server's interface, and the config snippet on the
+# /integrate page is checked against it.
+__all__ = ["TOOLS", "PUBLIC_KEY_VAR", "call_tool", "handle_message", "serve", "main"]
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_INFO = {"name": "mergegate", "version": "0.1.0"}
