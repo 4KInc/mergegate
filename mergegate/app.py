@@ -183,22 +183,64 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
             return JSONResponse({"error": "verifier fee wallet not configured"}, status_code=503)
 
         body = payment_requirements(price, resource=str(request.url))
-        if not request.headers.get("X-PAYMENT"):
+        header = request.headers.get("X-PAYMENT")
+        if not header:
             return JSONResponse(body, status_code=402)
 
-        # A payment was presented. Settlement verification is not implemented,
-        # and answering 200 here would claim a fee that may never have moved.
+        # A payment was presented. Verify it, then settle it. These are separate
+        # outcomes: verification is pure computation, settlement needs a relayer
+        # holding gas, and a caller told "paid" when nothing moved is worse off
+        # than one told "verified but not settled".
+        import time
+
+        from .x402_settle import decode_payment, settle_payment, verify_payment
+
+        payload = decode_payment(header)
+        if payload is None:
+            return JSONResponse(
+                {**body, "error": "X-PAYMENT is not a decodable x402 payload"},
+                status_code=402,
+            )
+
+        outcome = verify_payment(payload, price, now=int(time.time()))
+        if not outcome.valid:
+            return JSONResponse(
+                {
+                    **body,
+                    "error": "payment verification failed",
+                    "detail": outcome.reason,
+                    "checks": {name: ok for name, ok in outcome.checks},
+                },
+                status_code=402,
+            )
+
+        tx_hash, error = settle_payment(payload, price)
+        if error:
+            # Verified but unsettled. Answering 200 here would claim a fee that
+            # never moved, so the caller is told exactly where it stopped.
+            return JSONResponse(
+                {
+                    **body,
+                    "error": "payment verified but not settled",
+                    "detail": error,
+                    "verified": True,
+                    "payer": outcome.payer,
+                    "checks": {name: ok for name, ok in outcome.checks},
+                },
+                status_code=402,
+            )
+
         return JSONResponse(
             {
-                **body,
-                "error": "payment verification not implemented",
-                "detail": (
-                    "MergeGate serves the x402 challenge but does not yet verify or "
-                    "settle a submitted authorization. The verifier fee that actually "
-                    "moves is a plain USDC transfer bound into the receipt."
-                ),
+                "verified": True,
+                "settled": True,
+                "payer": outcome.payer,
+                "transaction": tx_hash,
+                "amount_usdc": price.amount_usdc,
+                "network": price.network,
             },
-            status_code=402,
+            status_code=200,
+            headers={"X-PAYMENT-RESPONSE": tx_hash},
         )
 
     @app.get("/health")

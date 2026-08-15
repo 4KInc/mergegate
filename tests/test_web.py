@@ -570,15 +570,40 @@ def test_x402_challenge_matches_the_live_wire_format(
 def test_x402_does_not_claim_a_payment_it_cannot_verify(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Settlement verification is not implemented. Answering 200 to a presented
-    payment would claim a fee that may never have moved, which is worse than
-    charging nothing."""
+    """Answering 200 to a payment that was not verified and settled would claim
+    a fee that never moved, which is worse than charging nothing.
+
+    The endpoint now verifies presented authorizations rather than refusing them
+    all, so this pins the two ways it must still say 402: an undecodable
+    payload, and one that verifies but cannot be settled because no relayer
+    holds gas.
+    """
     from mergegate.app import create_app
     from mergegate.webhook import WebhookReceiver
+    from mergegate.x402_settle import RELAYER_KEY_VAR
 
     monkeypatch.setenv("VERIFIER_FEE_WALLET_ADDRESS", "0xFEE")
+    monkeypatch.delenv(RELAYER_KEY_VAR, raising=False)
     app = create_app(receiver=WebhookReceiver(secret="s", repository="r", resolve=lambda p: None))
-    r = TestClient(app).get("/x402/verify", headers={"X-PAYMENT": "anything"})
+    client = TestClient(app)
+
+    undecodable = client.get("/x402/verify", headers={"X-PAYMENT": "anything"})
+    assert undecodable.status_code == 402
+    assert "not a decodable" in undecodable.json()["error"]
+
+    # A real, correctly signed authorization, which must still not return 200
+    # while nothing can submit it on-chain.
+    from mergegate.x402 import X402Price
+    from tests.test_x402_settle import PAY_TO, USDC, _sign
+
+    monkeypatch.setenv("VERIFIER_FEE_WALLET_ADDRESS", PAY_TO)
+    monkeypatch.setenv("USDC_CONTRACT_ADDRESS", USDC)
+    app = create_app(receiver=WebhookReceiver(secret="s", repository="r", resolve=lambda p: None))
+    header = _sign(X402Price(pay_to=PAY_TO, asset=USDC, amount_usdc="0.05"))
+    r = TestClient(app).get("/x402/verify", headers={"X-PAYMENT": header})
 
     assert r.status_code == 402
-    assert "not implemented" in r.json()["error"]
+    body = r.json()
+    assert body["verified"] is True
+    assert "not settled" in body["error"]
+    assert "no relayer configured" in body["detail"]
