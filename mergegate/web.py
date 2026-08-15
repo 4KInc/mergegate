@@ -318,6 +318,23 @@ def public_base_url(request: Request) -> str:
     return base
 
 
+def _advisory_for(store: Any, receipt_id: str) -> dict[str, Any]:
+    """Gemini's advisory reports for one evaluation, if any were stored.
+
+    Absent is a normal state and is rendered as such. A page that showed an
+    empty screening panel would read like a clean result, when in fact nothing
+    looked. Store failures are swallowed here for the same reason the advisory
+    layer fails open everywhere else: a datastore hiccup must not take down the
+    page describing a settlement that already happened.
+    """
+    if store is None:
+        return {}
+    try:
+        return store.get(receipt_id) or {}
+    except Exception:  # noqa: BLE001 - advisory data is never worth an error page
+        return {}
+
+
 def _mcp_tools() -> list[tuple[str, str]]:
     """The MCP tool list for the integrate page, read from the server itself.
 
@@ -585,7 +602,11 @@ def contract_view(record: dict[str, Any] | None, views: list[ReceiptView]) -> di
 
 
 def build_web_router(
-    bundle: ReceiptBundle, *, network: str = "Base mainnet", contracts: Any = None
+    bundle: ReceiptBundle,
+    *,
+    network: str = "Base mainnet",
+    contracts: Any = None,
+    advisory: Any = None,
 ) -> Any:
     """Mount the dashboard.
 
@@ -746,6 +767,7 @@ def build_web_router(
             "evaluation.html",
             {
                 "e": evaluation_view(view),
+                "advisory": _advisory_for(advisory, receipt_id),
                 "network": view.chain or network,
                 "active": "Receipts",
             },

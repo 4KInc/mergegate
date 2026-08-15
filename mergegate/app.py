@@ -73,6 +73,19 @@ def _contract_store() -> Any:
     return FirestoreContractStore()
 
 
+def _advisory_store() -> Any:
+    """Gemini's screening and forensics reports, for the evaluation page.
+
+    Its own collection, never the receipt document. See store.AdvisoryStore for
+    why that separation is load-bearing rather than tidiness.
+    """
+    if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+        return None
+    from .store import FirestoreAdvisoryStore
+
+    return FirestoreAdvisoryStore()
+
+
 def _receipt_source() -> Any:
     """Where the dashboard reads receipts from.
 
@@ -140,6 +153,7 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
             ReceiptBundle(public_key=_dashboard_public_key(), source=_receipt_source()),
             network=os.environ.get("MERGEGATE_NETWORK", "Base mainnet"),
             contracts=_contract_store(),
+            advisory=_advisory_store(),
         )
     )
 

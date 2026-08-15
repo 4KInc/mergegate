@@ -25,6 +25,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Optional on purpose. The deterministic core runs without it, and the advisory
+# layer reports itself unavailable rather than failing, so a deployment that
+# omits this settles exactly as before.
+gemini = ["google-genai>=1.0.0"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24.0",

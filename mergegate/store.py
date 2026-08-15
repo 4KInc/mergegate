@@ -417,3 +417,65 @@ class FirestoreContractStore:
         return [
             self._decode(s.to_dict() or {}) for s in self._db.collection(self._collection).stream()
         ]
+
+
+ADVISORY_COLLECTION = "mergegate_advisory"
+
+
+class AdvisoryStore(Protocol):
+    """Gemini's screening and forensics reports, keyed by receipt id.
+
+    Kept in their own collection rather than added to the receipt document, and
+    that separation is the point rather than a filing preference. A receipt is
+    worth something because every field in it is mechanically derived and
+    cross-checked; a model's opinion cross-checks against nothing. Storing the
+    two together would eventually put them in one payload, and then in one
+    signature, and the receipt would start attesting to a judgement instead of a
+    measurement.
+
+    Nothing here is signed, and nothing here is consulted by settlement.
+    """
+
+    def put(self, receipt_id: str, record: dict[str, Any]) -> None: ...
+
+    def get(self, receipt_id: str) -> dict[str, Any] | None: ...
+
+
+@dataclass
+class MemoryAdvisoryStore:
+    reports: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def put(self, receipt_id: str, record: dict[str, Any]) -> None:
+        self.reports[receipt_id] = record
+
+    def get(self, receipt_id: str) -> dict[str, Any] | None:
+        return self.reports.get(receipt_id)
+
+
+class FirestoreAdvisoryStore:
+    """Advisory reports in Firestore. Flat scalars, so no JSON round-trip is
+    needed: unlike receipts and contracts, nothing here is hashed, so Firestore
+    reshaping a map cannot invalidate anything."""
+
+    def __init__(self, client: Any = None, *, collection: str = ADVISORY_COLLECTION) -> None:
+        if client is None:
+            from google.cloud import firestore
+
+            client = firestore.Client()
+        self._db = client
+        self._collection = collection
+
+    def _ref(self, receipt_id: str) -> Any:
+        return self._db.collection(self._collection).document(document_id(receipt_id))
+
+    def put(self, receipt_id: str, record: dict[str, Any]) -> None:
+        payload = dict(record)
+        payload["stored_at"] = datetime.now(UTC).isoformat()
+        payload["advisory"] = True
+        self._ref(receipt_id).set(payload)
+
+    def get(self, receipt_id: str) -> dict[str, Any] | None:
+        snap = self._ref(receipt_id).get()
+        if not snap.exists:
+            return None
+        return snap.to_dict() or {}

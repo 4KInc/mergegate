@@ -160,4 +160,78 @@
   </div>
 </section>
 
+{# Gemini's advisory layer. Rendered after the verdict and visibly outside it,
+   because the ordering on the page is the claim: nothing below changed
+   anything above. #}
+{% if advisory %}
+<section class="mt-4">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="text-[10px] uppercase tracking-widest text-on-faint">Advisory: Gemini</span>
+    <span class="h-px flex-1 bg-line"></span>
+    <span class="mono text-[10px] text-on-faint">no effect on settlement</span>
+  </div>
+
+  <div class="grid lg:grid-cols-2 gap-4">
+    {% set s = advisory.screening %}
+    <div class="card p-6">
+      <h2 class="font-display text-base font-semibold tracking-tight mb-1">Code security screening</h2>
+      <p class="text-[11px] text-on-faint mb-4">Ran before the sandbox. Did not gate it.</p>
+      {% if s and s.available %}
+      <div class="flex items-baseline gap-3 mb-3">
+        <span class="figure text-[30px] {% if s.band == 'HIGH' %}text-danger{% elif s.band == 'MEDIUM' %}text-warn{% else %}text-accent{% endif %}">{{ s.score }}</span>
+        <span class="text-xs text-on-muted">/ 100 &middot; {{ s.band }}</span>
+      </div>
+      {% if s.flags %}
+      <div class="space-y-1.5 mb-3">
+        {% for flag in s.flags %}
+        <div class="mono text-[11px] text-warn bg-warn-container border border-warn/20 rounded px-2 py-1">{{ flag }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <p class="text-xs text-on-muted leading-relaxed">{{ s.assessment }}</p>
+      {% else %}
+      <p class="text-xs text-on-faint leading-relaxed">
+        Not run for this evaluation{% if s and s.error %}: <span class="mono">{{ s.error }}</span>{% endif %}.
+        This is not a clean result. Nothing looked.
+      </p>
+      {% endif %}
+    </div>
+
+    {% set f = advisory.forensics %}
+    <div class="card p-6">
+      <h2 class="font-display text-base font-semibold tracking-tight mb-1">Failure forensics</h2>
+      <p class="text-[11px] text-on-faint mb-4">Written after the refund. Did not cause a re-run.</p>
+      {% if f and f.available %}
+      {% if f.retry_likelihood %}
+      <div class="mb-3"><span class="chip mono text-[11px] text-on-muted">retry likelihood: {{ f.retry_likelihood }}</span></div>
+      {% endif %}
+      <div class="space-y-3 text-xs leading-relaxed">
+        <div>
+          <div class="text-[10px] uppercase tracking-widest text-on-faint mb-1">Root cause</div>
+          <p class="text-on-muted">{{ f.root_cause }}</p>
+        </div>
+        <div>
+          <div class="text-[10px] uppercase tracking-widest text-on-faint mb-1">Suggested change</div>
+          <p class="text-on-muted">{{ f.suggestion }}</p>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-xs text-on-faint leading-relaxed">
+        Not generated for this evaluation{% if f and f.error %}: <span class="mono">{{ f.error }}</span>{% endif %}.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="text-[11px] text-on-faint mt-3 leading-relaxed max-w-3xl">
+    Produced by {{ advisory.model or "Gemini" }} and stored separately from the
+    receipt, which binds only mechanically derived fields. Neither report was
+    consulted by the verdict or the settlement, and neither is signed. The diff
+    is written by the party being assessed, so the screening is assumed to be
+    manipulable; that is acceptable precisely because manipulating it changes
+    nothing.
+  </p>
+</section>
+{% endif %}
+
 {% endblock %}
