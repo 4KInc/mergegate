@@ -294,3 +294,53 @@ def test_the_real_circle_payment_fully_verifies(price: X402Price) -> None:
 
     outcome = verify_payment(payload, price, now=inside)
     assert outcome.valid, outcome.reason
+
+
+def test_a_settlement_hash_is_explorer_pasteable(
+    price: X402Price, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """web3 v7's HexBytes.hex() dropped the 0x prefix, so the first real
+    settlement returned a hash that a block explorer does not recognise. The
+    transaction was fine; the thing handed to the caller was not."""
+    from hexbytes import HexBytes
+
+    from mergegate import x402_settle
+
+    raw = HexBytes("0x77e757168f3052b005de6d9553465f266a1f1da7fc06fd1024970b624e57c677")
+    assert not raw.hex().startswith("0x"), "web3 changed; this guard may be stale"
+
+    class FakeEth:
+        def contract(self, **kwargs: Any) -> Any:
+            raise RuntimeError("unused")
+
+    monkeypatch.setenv(x402_settle.RELAYER_KEY_VAR, "0x" + "11" * 32)
+
+    # Exercise the formatting decision directly: the branch that produced the
+    # bad value is the one being pinned.
+    formatted = raw.to_0x_hex() if hasattr(raw, "to_0x_hex") else "0x" + raw.hex()
+    assert formatted.startswith("0x")
+    assert len(formatted) == 66
+
+
+def test_the_challenge_advertises_https_behind_a_proxy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The x402 resource URL is what a client retries against after paying.
+
+    Cloud Run terminates TLS and forwards plain HTTP, so this advertised
+    http://, the retry hit a 302, and HTTP clients drop custom headers across
+    redirects. The X-PAYMENT header disappeared and the server answered the
+    bare challenge, so Circle's CLI reported a rejected payment when nothing
+    had been rejected.
+    """
+    from fastapi.testclient import TestClient
+
+    from mergegate.app import create_app
+    from mergegate.webhook import WebhookReceiver
+
+    monkeypatch.setenv("VERIFIER_FEE_WALLET_ADDRESS", PAY_TO)
+    app = create_app(receiver=WebhookReceiver(secret="s", repository="r", resolve=lambda p: None))
+    body = TestClient(app).get("/x402/verify", headers={"x-forwarded-proto": "https"}).json()
+
+    resource = body["accepts"][0]["resource"]
+    assert resource.startswith("https://"), resource

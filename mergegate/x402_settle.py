@@ -407,6 +407,13 @@ def settle_payment(payload: PaymentPayload, price: X402Price) -> tuple[str, str]
         )
         signed = relayer.sign_transaction(tx)
         tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
-        return tx_hash.hex(), ""
+        # HexBytes.hex() dropped the 0x prefix in web3 v7, and a hash without it
+        # is not something a caller can paste into a block explorer. The first
+        # real settlement returned one, so this is fixed rather than assumed.
+        return (
+            tx_hash.to_0x_hex()
+            if hasattr(tx_hash, "to_0x_hex")
+            else "0x" + tx_hash.hex().removeprefix("0x")
+        ), ""
     except Exception as exc:  # noqa: BLE001 - reported to the caller, not raised
         return "", f"{type(exc).__name__}: {exc}"

@@ -335,6 +335,23 @@ def _advisory_for(store: Any, receipt_id: str) -> dict[str, Any]:
         return {}
 
 
+def public_request_url(request: Request) -> str:
+    """The full URL of this request, with the scheme the caller actually used.
+
+    Same proxy problem as ``public_base_url``, but the consequence is worse
+    here. The x402 challenge advertises a ``resource`` URL, and a client pays
+    and then retries against it. Advertising ``http://`` sends that retry into
+    Cloud Run's 302, and HTTP clients drop custom headers across a redirect, so
+    the ``X-PAYMENT`` header vanishes and the server answers the bare challenge
+    again. The client reports a rejected payment; nothing was ever rejected.
+    """
+    url = str(request.url)
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
+    if forwarded and url.startswith("http://"):
+        return forwarded + url[len("http") :]
+    return url
+
+
 def _mcp_tools() -> list[tuple[str, str]]:
     """The MCP tool list for the integrate page, read from the server itself.
 

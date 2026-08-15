@@ -182,7 +182,9 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
         if not price.pay_to:
             return JSONResponse({"error": "verifier fee wallet not configured"}, status_code=503)
 
-        body = payment_requirements(price, resource=str(request.url))
+        from .web import public_request_url
+
+        body = payment_requirements(price, resource=public_request_url(request))
         header = request.headers.get("X-PAYMENT")
         if not header:
             return JSONResponse(body, status_code=402)
