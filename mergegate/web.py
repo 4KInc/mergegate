@@ -318,6 +318,24 @@ def public_base_url(request: Request) -> str:
     return base
 
 
+def _contract_record(store: Any, contract_hash: str) -> dict[str, Any] | None:
+    """Read one funded contract, or None.
+
+    Shared by the HTML and JSON views so they cannot disagree about what a
+    contract is. A datastore failure reads as "not recorded" rather than
+    propagating, for the same reason the receipt pages swallow theirs: a page
+    describing a settlement that already happened should not 500 because a
+    lookup was slow.
+    """
+    if store is None:
+        return None
+    try:
+        record: dict[str, Any] | None = store.get(contract_hash)
+    except Exception:  # noqa: BLE001 - rendered as "not recorded"
+        return None
+    return record
+
+
 def _advisory_for(store: Any, receipt_id: str) -> dict[str, Any]:
     """Gemini's advisory reports for one evaluation, if any were stored.
 
@@ -389,7 +407,14 @@ HTTP_ENDPOINTS = [
     ("GET", "/api/receipts", "Every settled task: decision, amount, settlement transaction."),
     ("GET", "/receipts/{id}.json", "One signed receipt envelope, manifest and mandate included."),
     ("GET", "/api/verification-key", "The public half of the signing key, with its caveat."),
-    ("GET", "/x402/verify", "402 challenge pricing the verifier. Serves, does not settle."),
+    ("GET", "/api/wallets", "Each agent wallet's role and its live Circle spending policy."),
+    ("GET", "/api/contracts/{hash}", "The pinned terms behind a funded contract."),
+    (
+        "GET",
+        "/api/receipts/{id}/advisory",
+        "Gemini's screening, forensics and retry plan. Unsigned.",
+    ),
+    ("GET", "/x402/verify", "402 challenge pricing the verifier. Verifies and settles a payment."),
     ("POST", "/webhooks/github", "Submission events. HMAC signed; rejects unsigned deliveries."),
 ]
 
@@ -769,6 +794,62 @@ def build_web_router(
             }
         )
 
+    @router.get("/api/wallets")
+    def wallets_json() -> Any:
+        """Wallet roles and their live spending policies, for agents."""
+        from .payments.policy import read_policy, wallet_roles
+
+        out = []
+        for role in wallet_roles():
+            policy = read_policy(role.address, chain=WALLET_CHAIN) if role.address else None
+            out.append(
+                {
+                    "name": role.name,
+                    "address": role.address,
+                    "purpose": role.purpose,
+                    "constraint": role.constraint,
+                    "policy_available": bool(policy and policy.available),
+                    "policy_error": policy.error if policy else "no address configured",
+                    "limits": [
+                        {
+                            "policy_type": limit.policy_type,
+                            "per_tx": limit.per_tx,
+                            "daily": limit.daily,
+                            "weekly": limit.weekly,
+                            "monthly": limit.monthly,
+                            "origin": limit.origin,
+                        }
+                        for limit in (policy.limits if policy else ())
+                    ],
+                }
+            )
+        return JSONResponse({"chain": WALLET_CHAIN, "wallets": out})
+
+    @router.get("/api/contracts/{contract_hash}")
+    def contract_json(contract_hash: str) -> Any:
+        """The pinned terms behind a contract hash, for a provider agent
+        deciding whether to attempt the work."""
+        record = _contract_record(contracts, contract_hash)
+        if record is None:
+            raise HTTPException(status_code=404, detail="no such contract")
+        return JSONResponse(record)
+
+    @router.get("/api/receipts/{receipt_id}/advisory")
+    def advisory_json(receipt_id: str) -> Any:
+        """Gemini's advisory artifacts for one evaluation.
+
+        Served separately from the receipt, and labelled, because none of it is
+        signed and none of it decided the settlement.
+        """
+        payload = _advisory_for(advisory, receipt_id)
+        return JSONResponse(
+            {
+                **payload,
+                "advisory": True,
+                "note": "None of this affected the verdict or the settlement.",
+            }
+        )
+
     @router.get("/receipts/{receipt_id}.json")
     def receipt_json(receipt_id: str) -> Any:
         view = bundle.get(receipt_id)
@@ -810,12 +891,7 @@ def build_web_router(
 
     @router.get("/contracts/{contract_hash}", response_class=HTMLResponse)
     def contract(request: Request, contract_hash: str) -> Any:
-        record = None
-        if contracts is not None:
-            try:
-                record = contracts.get(contract_hash)
-            except Exception:  # noqa: BLE001 - rendered as "not recorded"
-                record = None
+        record = _contract_record(contracts, contract_hash)
         related = [v for v in bundle.all() if v.binding.get("contract_hash") == contract_hash]
         if record is None and not related:
             raise HTTPException(status_code=404, detail="no such contract")

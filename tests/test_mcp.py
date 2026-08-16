@@ -21,6 +21,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from mergegate import mcp
+from mergegate.gemini import GeminiResult
 
 
 def _public_b64(private: Ed25519PrivateKey) -> str:
@@ -256,3 +257,133 @@ def test_unknown_tool_is_reported_to_the_model() -> None:
     )
     assert response is not None
     assert response["result"]["isError"] is True
+
+
+# -- the agent-facing surface --------------------------------------------------
+
+
+def test_draft_task_returns_the_policy_verdict_with_the_draft(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Returning a draft without its verdict would invite an agent to fund
+    something the policy would refuse."""
+    from mergegate import drafting
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(
+        drafting,
+        "generate_json",
+        lambda *a, **k: GeminiResult(
+            True,
+            data={
+                "title": "t",
+                "scope": "s",
+                "allowed_source_paths": ["src/**"],
+                "protected_paths": [".github/**"],
+                "acceptance_criteria": ["passes"],
+                "required_commands": [["pytest", "-q"]],
+                "reward_usdc": "0.25",
+                "deadline_hours": 24,
+            },
+        ),
+    )
+
+    response = mcp.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "mergegate_draft_task",
+                "arguments": {
+                    "request": "fix the importer",
+                    "repository": "o/r",
+                    "base_sha": "a" * 40,
+                },
+            },
+        }
+    )
+    assert response is not None
+    payload = _result(response)
+    assert payload["policy_verdict"]["may_be_funded"] is True
+    assert payload["draft"]["reward_usdc"] == "0.25"
+
+
+def test_draft_task_surfaces_a_policy_refusal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A draft over the reward cap must come back refused, with the reason,
+    rather than looking fundable."""
+    from mergegate import drafting
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(
+        drafting,
+        "generate_json",
+        lambda *a, **k: GeminiResult(
+            True,
+            data={
+                "title": "t",
+                "scope": "s",
+                "allowed_source_paths": ["src/**"],
+                "protected_paths": [".github/**"],
+                "acceptance_criteria": ["passes"],
+                "required_commands": [["pytest", "-q"]],
+                "reward_usdc": "9999.00",
+                "deadline_hours": 24,
+            },
+        ),
+    )
+
+    response = mcp.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "mergegate_draft_task",
+                "arguments": {
+                    "request": "fix it",
+                    "repository": "o/r",
+                    "base_sha": "a" * 40,
+                    "max_reward_usdc": "1.00",
+                },
+            },
+        }
+    )
+    assert response is not None
+    payload = _result(response)
+    assert payload["policy_verdict"]["may_be_funded"] is False
+    assert any("outside" in v for v in payload["policy_verdict"]["violations"])
+
+
+def test_no_tool_funds_or_signs_anything() -> None:
+    """The scope limit, restated as the surface grew. Drafting proposes terms;
+    it must not have acquired the ability to fund them."""
+    forbidden = ("fund", "pay", "release", "refund", "transfer", "settle", "sign", "mandate")
+    for tool in mcp.TOOLS:
+        assert not any(word in tool["name"] for word in forbidden), tool["name"]
+
+
+def test_the_skill_file_states_the_limits_it_must() -> None:
+    """SKILL.md is what another agent reads instead of the README. Every claim
+    a judge would check has to survive being read alone."""
+    # Whitespace-normalised before matching. Two earlier versions of this test
+    # failed on formatting rather than content: once on markdown bold, once on
+    # a line wrap splitting a phrase. A doc test that breaks when prose is
+    # re-wrapped teaches you to loosen it, which is how it stops checking.
+    import re as _re
+    from pathlib import Path
+
+    raw = (Path(__file__).parent.parent / "SKILL.md").read_text()
+    text = _re.sub(r"\s+", " ", raw.replace("*", ""))
+    # Matched on formatting-independent phrases. An earlier version pinned
+    # "not that the code is good" and failed on the markdown bold around "Not",
+    # which is the same way a probe test once broke: asserting the wording
+    # rather than the claim.
+    for required in (
+        "that the code is good, secure, or mergeable",
+        "Buyer griefing is unsolved",
+        "Gemini decides nothing",
+        "not a non-custodial arrangement",
+        "verifier fee, not the reward",
+    ):
+        assert required in text, f"SKILL.md omits: {required}"

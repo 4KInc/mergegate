@@ -10,8 +10,11 @@ mandate. Those need the buyer's wallet credentials, and an MCP server is
 reachable by whatever the model decides to call: a prompt-injected agent with a
 ``fund_escrow`` tool is a wallet-draining primitive. Funding stays in the buyer's
 own process where it belongs. What an agent genuinely needs from outside is to
-find out whether it got paid and to check the receipt saying so, and that is
-what these four tools do.
+find out whether it got paid, to check the receipt saying so, to draft terms it
+can fund, and to learn what a failure would take to fix.
+
+**Read only, still.** Drafting returns a *proposal plus a policy verdict*; it
+does not create a contract, and no tool funds one.
 
 **No SDK dependency.** The tool half of MCP is a small JSON-RPC surface
 (``initialize``, ``tools/list``, ``tools/call``) over stdio, so it is
@@ -98,6 +101,61 @@ TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "mergegate_draft_task",
+        "description": (
+            "Turn a natural-language software request into structured task-contract "
+            "terms, then validate them against the buyer's policy. Returns the draft "
+            "AND the policy verdict: a draft that fails validation cannot be funded, "
+            "and the violations say why. Gemini proposes; the policy decides."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "request": {"type": "string", "description": "What the buyer wants done."},
+                "repository": {"type": "string"},
+                "base_sha": {"type": "string"},
+                "max_reward_usdc": {"type": "string"},
+                "tree": {"type": "string", "description": "Optional repository layout."},
+            },
+            "required": ["request", "repository", "base_sha"],
+        },
+    },
+    {
+        "name": "mergegate_get_retry_plan",
+        "description": (
+            "For a failed evaluation, produce a structured remediation plan and check "
+            "it against the contract's path policy. Returns whether a provider agent "
+            "may act on it. A plan proposing a protected path is refused here rather "
+            "than after another paid attempt."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {"receipt_id": {"type": "string"}},
+            "required": ["receipt_id"],
+        },
+    },
+    {
+        "name": "mergegate_inspect_contract",
+        "description": (
+            "The pinned terms behind a receipt: writable paths, protected paths, "
+            "commands, reward and deadline. What a provider agent reads before "
+            "deciding whether to attempt the work."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {"contract_hash": {"type": "string"}},
+            "required": ["contract_hash"],
+        },
+    },
+    {
+        "name": "mergegate_wallet_policies",
+        "description": (
+            "The spending policy each agent wallet runs under, read live from Circle. "
+            "Tells a counterparty what this deployment can and cannot spend."
+        ),
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
         "name": "mergegate_verify_receipt",
         "description": (
             "Re-verify a receipt against a pinned Ed25519 public key: signature, "
@@ -182,10 +240,101 @@ def _tool_verify_receipt(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _tool_draft_task(args: dict[str, Any]) -> dict[str, Any]:
+    """Draft terms and validate them in one call.
+
+    Returning the draft without the verdict would invite an agent to fund
+    something the policy would refuse, so both travel together and the verdict
+    is not optional.
+    """
+    from .drafting import DraftPolicy, draft_contract, validate_draft
+
+    request = str(args.get("request", "")).strip()
+    if not request:
+        raise CliError("request is required")
+
+    policy = DraftPolicy(
+        repository=str(args.get("repository", "")),
+        base_sha=str(args.get("base_sha", "")),
+        max_reward_usdc=str(args.get("max_reward_usdc", "1.00")),
+    )
+    draft = draft_contract(request, policy, tree=str(args.get("tree", "")))
+    verdict = validate_draft(draft, policy)
+
+    return {
+        "draft": {
+            "title": draft.title,
+            "scope": draft.scope,
+            "allowed_source_paths": list(draft.allowed_source_paths),
+            "protected_paths": list(draft.protected_paths),
+            "required_commands": [list(c) for c in draft.required_commands],
+            "acceptance_criteria": list(draft.acceptance_criteria),
+            "reward_usdc": draft.reward_usdc,
+            "deadline_hours": draft.deadline_hours,
+            "assumptions": list(draft.assumptions),
+            "ambiguities": list(draft.ambiguities),
+            "risk_flags": list(draft.risk_flags),
+            "available": draft.available,
+            "error": draft.error,
+        },
+        "policy_verdict": {
+            "may_be_funded": verdict.ok,
+            "violations": list(verdict.violations),
+            "checks": {name: ok for name, ok in verdict.checks},
+        },
+        "note": (
+            "A draft is a proposal. It becomes fundable only after passing this "
+            "policy check, and the buyer agent signs the validated terms."
+        ),
+    }
+
+
+def _tool_get_retry_plan(args: dict[str, Any]) -> dict[str, Any]:
+    """A remediation plan for a failed receipt, plus whether it is actionable."""
+    receipt_id = args.get("receipt_id")
+    if not receipt_id:
+        raise CliError("receipt_id is required")
+
+    envelope = _get(f"{_service()}/receipts/{receipt_id}.json")
+    binding = (envelope.get("body") or {}).get("binding") or {}
+    if str(binding.get("decision", "")).upper() != "FAIL":
+        return {
+            "actionable": False,
+            "reason": "this receipt did not fail; there is nothing to retry",
+        }
+
+    advisory = _get(f"{_service()}/api/receipts/{receipt_id}/advisory")
+    plan = advisory.get("retry_plan") or {}
+    if not plan:
+        return {
+            "actionable": False,
+            "reason": "no retry plan was stored for this evaluation",
+            "failed_terms": list(
+                (envelope.get("body") or {}).get("manifest", {}).get("failed_terms", [])
+            ),
+        }
+    return plan
+
+
+def _tool_inspect_contract(args: dict[str, Any]) -> dict[str, Any]:
+    contract_hash = args.get("contract_hash")
+    if not contract_hash:
+        raise CliError("contract_hash is required")
+    return dict(_get(f"{_service()}/api/contracts/{contract_hash}"))
+
+
+def _tool_wallet_policies(_: dict[str, Any]) -> dict[str, Any]:
+    return dict(_get(f"{_service()}/api/wallets"))
+
+
 _IMPLEMENTATIONS = {
     "mergegate_status": _tool_status,
     "mergegate_list_receipts": _tool_list_receipts,
     "mergegate_get_receipt": _tool_get_receipt,
+    "mergegate_draft_task": _tool_draft_task,
+    "mergegate_get_retry_plan": _tool_get_retry_plan,
+    "mergegate_inspect_contract": _tool_inspect_contract,
+    "mergegate_wallet_policies": _tool_wallet_policies,
     "mergegate_verify_receipt": _tool_verify_receipt,
 }
 

@@ -452,9 +452,27 @@ class DemoRunner:
             print(f"  advisory screen   {screening.score}/100 {screening.band}")
 
             if manifest.verdict is Verdict.FAIL:
+                from .retry import check_plan, plan_retry
+
                 forensics = explain_failure(manifest, diff=diff)
                 record["forensics"] = flatten(asdict(forensics))
                 print(f"  advisory forensic retry likelihood {forensics.retry_likelihood or 'n/a'}")
+
+                # The retry plan is stored with its policy check already applied.
+                # Serving a plan without saying whether a provider may act on it
+                # would invite an agent to spend another attempt discovering
+                # what the checker already knows.
+                plan = plan_retry(manifest, contract, diff=diff)
+                checked = check_plan(plan, contract)
+                record["retry_plan"] = {
+                    **flatten(asdict(plan)),
+                    "actionable": checked.ok,
+                    "refusal_reasons": list(checked.reasons),
+                    "disallowed_files": list(checked.disallowed_files),
+                }
+                print(
+                    f"  advisory retry     {plan.recommendation or 'n/a'}, actionable={checked.ok}"
+                )
 
             receipt_id = f"{manifest.task_id}-{manifest.submission_sha[:12]}".replace("/", "-")
             self.advisory.put(receipt_id, record)
