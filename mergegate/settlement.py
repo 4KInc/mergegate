@@ -32,7 +32,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
-from .mandate import PaymentMandate, SettlementAction, SettlementDirective, execute_mandate
+from .mandate import (
+    PaymentMandate,
+    SettlementAction,
+    SettlementDirective,
+    execute_mandate,
+    expire_mandate,
+)
 
 __all__ = [
     "EventOutcome",
@@ -53,9 +59,23 @@ class TaskState(StrEnum):
     SETTLED = "SETTLED"
     REFUNDED = "REFUNDED"
 
+    EXPIRED = "EXPIRED"
+    """The deadline passed and no verdict ever existed.
+
+    Added because the machine had no exit for a task the verifier never
+    answered. :class:`~mergegate.verifier.dispatch.VerdictUnavailableError` is
+    deliberately not a FAIL — an infrastructure outage must not be able to spend
+    money — but without this the task simply stayed in ``VERIFYING`` forever,
+    with escrow funded and nothing able to release it. "Never releases funds
+    incorrectly" was true; "always reaches a terminal state" was not.
+
+    Reachable **only** from states where no verdict exists. See
+    :meth:`TaskStateMachine.on_deadline` for why a PASS may never expire.
+    """
+
     @property
     def is_terminal(self) -> bool:
-        return self in (TaskState.SETTLED, TaskState.REFUNDED)
+        return self in (TaskState.SETTLED, TaskState.REFUNDED, TaskState.EXPIRED)
 
 
 class Outcome(StrEnum):
@@ -242,6 +262,50 @@ class TaskStateMachine:
             if directive.action is SettlementAction.RELEASE
             else TaskState.REFUNDED
         )
+        return EventOutcome(Outcome.APPLIED, self.state, directive.reason, directive)
+
+    def on_deadline(self, *, now: datetime, delivery_id: str) -> EventOutcome:
+        """The deadline passed without a verdict. Return escrow to the buyer.
+
+        This is the exit that did not exist. A task whose evaluation never
+        produced a result — the verifier unreachable, the sealed job never
+        returning an acceptable manifest — stayed in ``VERIFYING`` with escrow
+        funded and no transition able to close it.
+
+        **A PASS may never expire, and that restriction is the point.**
+        Expiry is permitted only from ``FUNDED``, ``SUBMITTED`` and
+        ``VERIFYING``: states where no verdict exists. If a verdict already
+        exists the task settles through :meth:`on_settlement` instead.
+
+        Without that rule this method would be a griefing primitive. Because
+        :func:`~mergegate.mandate.execute_mandate` checks the deadline *before*
+        the verdict, anyone able to delay settlement past ``T`` could convert a
+        provider's PASS into a refund by doing nothing at all. Stalling would
+        become a way to not pay for work that was delivered and graded. So the
+        only tasks that can expire are the ones with nothing to pay *for*.
+
+        The clock is the sole trigger. An unreachable verifier before the
+        deadline leaves the task in ``VERIFYING``, which is correct: the
+        evaluation can still be retried, and an outage is not a settlement.
+        """
+        if (dup := self._check_duplicate(delivery_id)) is not None:
+            return dup
+        if self.state.is_terminal:
+            return self._rejected(f"task already {self.state.value}")
+        if self.state in (TaskState.VERIFIED_PASS, TaskState.VERIFIED_FAIL):
+            return self._rejected(
+                f"cannot expire from {self.state.value}: a verdict exists and the task "
+                "must settle on it. Expiring a graded task would let a stalled "
+                "settlement refund work that passed"
+            )
+        if now <= self.mandate.deadline:
+            return self._rejected(
+                f"deadline {self.mandate.deadline.isoformat()} has not passed; "
+                "an unreachable verifier is not an expiry"
+            )
+
+        self.state = TaskState.EXPIRED
+        directive = expire_mandate(mandate=self.mandate, now=now)
         return EventOutcome(Outcome.APPLIED, self.state, directive.reason, directive)
 
     def record_settlement_tx(self, tx_hash: str) -> None:

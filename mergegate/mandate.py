@@ -32,6 +32,7 @@ __all__ = [
     "SettlementAction",
     "SettlementDirective",
     "execute_mandate",
+    "expire_mandate",
 ]
 
 MANDATE_SCHEMA_VERSION = "mergegate.mandate/v1"
@@ -197,4 +198,49 @@ def execute_mandate(
         mandate_hash=mandate.mandate_hash,
         contract_hash=mandate.contract_hash,
         submission_sha=submission_sha,
+    )
+
+
+def expire_mandate(*, mandate: PaymentMandate, now: datetime) -> SettlementDirective:
+    """The directive for a mandate whose deadline passed with no verdict at all.
+
+    Separate from :func:`execute_mandate` because there is no manifest to
+    execute against, and faking one would be worse than asking for a different
+    function: ``execute_mandate`` opens by comparing the manifest's contract
+    hash to the mandate's, so a ``None`` would raise ``MandateError`` — an
+    integrity failure of the caller's inputs — rather than producing the refund
+    the situation calls for.
+
+    It lives here rather than in the state machine so that **every settlement
+    directive in the system is still constructed in this module**. A directive
+    assembled inside the state machine would be a second place where a payment
+    decision could be made, which is the property this design spends the most
+    effort protecting.
+
+    Refund is the only possible outcome. The mandate said *PASS before T*; T has
+    passed and no PASS exists, so the condition cannot be met and the buyer's
+    money goes back. There is no argument to have and therefore no verdict to
+    consult.
+    """
+    if now.tzinfo is None:
+        raise MandateError("evaluation time must be timezone-aware")
+    if now <= mandate.deadline:
+        raise MandateError(
+            f"mandate deadline {mandate.deadline.astimezone(UTC).isoformat()} has not "
+            "passed; there is nothing to expire"
+        )
+
+    return SettlementDirective(
+        action=SettlementAction.REFUND,
+        recipient=mandate.buyer_agent,
+        amount_usdc=mandate.amount_usdc,
+        asset=mandate.asset,
+        chain=mandate.chain,
+        reason=(
+            "deadline passed with no verification result: mandate required PASS before "
+            f"{mandate.deadline.astimezone(UTC).isoformat()}"
+        ),
+        mandate_hash=mandate.mandate_hash,
+        contract_hash=mandate.contract_hash,
+        submission_sha="",
     )

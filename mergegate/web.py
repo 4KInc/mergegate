@@ -643,9 +643,28 @@ def contract_view(record: dict[str, Any] | None, views: list[ReceiptView]) -> di
             rows.append((label, str(terms[key])))
     if record:
         rows.append(("contract hash", str(record.get("contract_hash", ""))))
+    # Rendered as its own block rather than another row, because it is the term
+    # that decides what a provider can actually know before committing work.
+    # Buried in a list beside "reward" it would read as metadata.
+    visibility = str(terms.get("terms_visibility", "") or "")
+    visibility_note = {
+        "HASH_ONLY": (
+            "The provider can verify these tests cannot change after submission, "
+            "because the contract commits to their hash. It cannot verify they are "
+            "passable. Those are different guarantees and only the first is provided."
+        ),
+        "PUBLISHED_GRADER": (
+            "The buyer asserts the grader bundle is readable in the base tree. "
+            "MergeGate does not verify that claim; a provider should confirm it can "
+            "read the bundle at the grader paths rather than trusting the label."
+        ),
+    }.get(visibility, "")
+
     return {
         "stored": record is not None,
         "rows": rows,
+        "terms_visibility": visibility,
+        "terms_visibility_note": visibility_note,
         "allowed_paths": terms.get("allowed_source_paths") or [],
         "protected_paths": terms.get("protected_paths") or [],
         "grader_paths": terms.get("grader_paths") or [],

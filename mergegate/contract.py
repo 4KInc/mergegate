@@ -18,6 +18,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,49 @@ CONTRACT_SCHEMA_VERSION = "mergegate.contract/v1"
 
 class ContractError(ValueError):
     """Raised when a task contract is malformed or has been tampered with."""
+
+
+class TermsVisibility(StrEnum):
+    """How much of the acceptance criteria the provider can actually see.
+
+    This exists because the system's sharpest limitation was, until now, only a
+    paragraph in the README. A contract commits to ``grader_hash``, so a
+    provider can verify the tests **cannot change** after submission. It cannot
+    verify they are **passable**. Those are different guarantees and only the
+    first is provided, which is what leaves room for a bad-faith buyer to pin an
+    unpassable test, read the submitted diff, and take the refund.
+
+    Making it a hashed contract term rather than prose means a provider agent
+    can branch on it before accepting work, instead of a human having to find
+    the caveat in documentation and remember it.
+    """
+
+    HASH_ONLY = "HASH_ONLY"
+    """The provider gets the hash and nothing else. What the system does today.
+
+    Honest reading: you can prove the goalposts do not move; you cannot see
+    where they are.
+    """
+
+    PUBLISHED_GRADER = "PUBLISHED_GRADER"
+    """The buyer asserts the grader bundle is readable in the base tree.
+
+    **MergeGate does not verify this**, and the distinction matters enough to
+    state twice: this value records what the buyer claims, not something the
+    evaluator checked. A provider agent should confirm it can actually read the
+    bundle at ``grader_paths`` rather than trusting the label. The field is
+    still worth having, because a buyer who sets it and is lying has written
+    that lie into a signed, immutable contract.
+    """
+
+    THIRD_PARTY_ESCROWED_GRADER = "THIRD_PARTY_ESCROWED_GRADER"
+    """A neutral third party holds the bundle. **Not implemented.**
+
+    Present so the vocabulary is complete and a v2 has a name to use. A contract
+    that claims it is rejected at construction: no such escrow exists, and a
+    term promising a protection the deployment cannot deliver is worse than no
+    term at all.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +114,12 @@ class TaskContract:
     buyer_agent: str
     provider_agent: str
     deadline: datetime
+    terms_visibility: TermsVisibility = TermsVisibility.HASH_ONLY
+    """What the provider can see of the acceptance criteria. A hashed term.
+
+    Defaults to the weakest and most honest value, so a contract that says
+    nothing about disclosure is read as disclosing nothing."""
+
     schema_version: str = CONTRACT_SCHEMA_VERSION
     metadata: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     """Advisory only. Gemini-normalized task prose may land here; nothing in the
@@ -114,6 +164,13 @@ class TaskContract:
             )
         if self.deadline.tzinfo is None:
             raise ContractError("deadline must be timezone-aware")
+        if self.terms_visibility is TermsVisibility.THIRD_PARTY_ESCROWED_GRADER:
+            raise ContractError(
+                "THIRD_PARTY_ESCROWED_GRADER is not implemented: no third party holds "
+                "the bundle in this deployment. A contract may not commit to a "
+                "protection the system cannot deliver, because a provider reading the "
+                "term would take it as a guarantee."
+            )
 
         overlap = set(self.protected_paths) & set(self.allowed_source_paths)
         if overlap:
@@ -151,6 +208,7 @@ class TaskContract:
             "provider_agent": self.provider_agent,
             "deadline": self.deadline.astimezone(UTC).isoformat().replace("+00:00", "Z"),
             "metadata": [list(pair) for pair in sorted(self.metadata)],
+            "terms_visibility": str(self.terms_visibility),
         }
 
     @classmethod
@@ -182,6 +240,9 @@ class TaskContract:
             buyer_agent=str(data["buyer_agent"]),
             provider_agent=str(data["provider_agent"]),
             deadline=datetime.fromisoformat(str(data["deadline"]).replace("Z", "+00:00")),
+            terms_visibility=TermsVisibility(
+                str(data.get("terms_visibility", TermsVisibility.HASH_ONLY))
+            ),
             schema_version=str(data.get("schema_version", CONTRACT_SCHEMA_VERSION)),
             metadata=tuple((str(k), str(v)) for k, v in data.get("metadata", [])),
         )

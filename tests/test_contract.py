@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import dataclasses
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
-from mergegate.contract import ContractError, TaskContract, build_contract
+from mergegate.contract import ContractError, TaskContract, TermsVisibility, build_contract
 from mergegate.hashing import hash_directory
 
 from .conftest import BASE_SHA, IMAGE
@@ -176,3 +177,46 @@ def test_empty_grader_bundle_is_rejected(tmp_path: Path) -> None:
     empty.mkdir()
     with pytest.raises(ValueError, match="empty"):
         hash_directory(empty)
+
+
+# -- terms visibility ---------------------------------------------------------
+#
+# The buyer-griefing limitation used to live only in prose. As a hashed term a
+# provider agent can branch on it before accepting work, rather than a human
+# having to find the caveat in a README and remember it.
+
+
+def test_a_contract_discloses_nothing_unless_it_says_otherwise(contract: TaskContract) -> None:
+    """The default is the weakest claim, not the most flattering one."""
+    assert contract.terms_visibility is TermsVisibility.HASH_ONLY
+
+
+def test_visibility_is_bound_into_the_contract_hash(contract: TaskContract) -> None:
+    """Otherwise a buyer could claim disclosure without committing to it.
+
+    An unhashed field could be edited after funding, which would make the term
+    a display string rather than a promise.
+    """
+    published = replace(contract, terms_visibility=TermsVisibility.PUBLISHED_GRADER)
+    assert published.contract_hash != contract.contract_hash
+    assert "terms_visibility" in contract.to_canonical_dict()
+
+
+def test_visibility_survives_the_round_trip(contract: TaskContract) -> None:
+    published = replace(contract, terms_visibility=TermsVisibility.PUBLISHED_GRADER)
+    restored = TaskContract.from_canonical_dict(published.to_canonical_dict())
+    assert restored.terms_visibility is TermsVisibility.PUBLISHED_GRADER
+    assert restored.contract_hash == published.contract_hash
+
+
+def test_a_contract_may_not_claim_an_unimplemented_protection(contract: TaskContract) -> None:
+    """No third party holds the bundle, so no contract may say one does.
+
+    A provider reading the term would take it as a guarantee. Shipping the
+    vocabulary without the mechanism is how a limitation turns into a false
+    claim, which is the failure this project has already made three times
+    elsewhere.
+    """
+    with pytest.raises(ContractError) as raised:
+        replace(contract, terms_visibility=TermsVisibility.THIRD_PARTY_ESCROWED_GRADER)
+    assert "not implemented" in str(raised.value)

@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from mergegate.mandate import PaymentMandate, SettlementAction
+from mergegate.mandate import MandateError, PaymentMandate, SettlementAction, expire_mandate
 from mergegate.settlement import (
     Outcome,
     SettlementError,
@@ -326,3 +326,126 @@ def test_a_late_pass_refunds(machine: TaskStateMachine) -> None:
     assert expired.state is TaskState.REFUNDED
     assert result.directive is not None
     assert "deadline passed" in result.directive.reason
+
+
+# -- expiry -------------------------------------------------------------------
+#
+# The exit that did not exist. A task the verifier never answered used to sit in
+# VERIFYING forever with escrow funded: "never releases funds incorrectly" was
+# true, "always reaches a terminal state" was not.
+
+
+def _expired_machine() -> TaskStateMachine:
+    return TaskStateMachine(
+        task_id="task-001",
+        contract_hash=CONTRACT_HASH,
+        mandate=_mandate(deadline=datetime.now(UTC) - timedelta(hours=1)),
+    )
+
+
+def test_a_task_that_never_got_a_verdict_expires_and_refunds() -> None:
+    machine = _expired_machine()
+    machine.on_submission(submission_sha=SHA_A, delivery_id="d-sub")
+    machine.on_verification_started(submission_sha=SHA_A, delivery_id="d-start")
+    # No on_verification_completed: this is the sealed job never returning an
+    # acceptable manifest. Read into a local so the checker does not narrow
+    # ``machine.state`` and then flag the post-transition assertion below as
+    # unreachable.
+    before = machine.state
+    assert before is TaskState.VERIFYING
+
+    result = machine.on_deadline(now=datetime.now(UTC), delivery_id="d-expire")
+
+    assert result.applied
+    assert machine.state is TaskState.EXPIRED
+    assert machine.state.is_terminal
+    assert result.directive is not None
+    assert result.directive.action is SettlementAction.REFUND
+    assert result.directive.recipient == "0xBUYER"
+
+
+def test_expiry_before_the_deadline_is_refused() -> None:
+    """An unreachable verifier is not an expiry.
+
+    Before the deadline the evaluation can still be retried, so the task stays
+    in VERIFYING. Treating an outage as an expiry would let infrastructure
+    failure close a task that still had time to succeed.
+    """
+    machine = TaskStateMachine(
+        task_id="task-001",
+        contract_hash=CONTRACT_HASH,
+        mandate=_mandate(deadline=datetime.now(UTC) + timedelta(hours=6)),
+    )
+    machine.on_submission(submission_sha=SHA_A, delivery_id="d-sub")
+
+    result = machine.on_deadline(now=datetime.now(UTC), delivery_id="d-expire")
+
+    assert not result.applied
+    assert machine.state is TaskState.SUBMITTED
+    assert "has not passed" in result.detail
+
+
+def test_a_passing_task_can_never_be_expired() -> None:
+    """The griefing vector this restriction closes.
+
+    ``execute_mandate`` checks the deadline *before* the verdict, so a PASS
+    settled after T refunds. If a graded task could also expire, then anyone
+    able to delay settlement past T could convert a provider's PASS into a
+    refund by doing nothing at all — stalling would become a way to not pay for
+    work that was delivered and graded.
+    """
+    machine = _expired_machine()
+    _drive_to_verified(machine, SHA_A, passing=True)
+    assert machine.state is TaskState.VERIFIED_PASS
+
+    result = machine.on_deadline(now=datetime.now(UTC), delivery_id="d-expire")
+
+    assert not result.applied
+    assert machine.state is TaskState.VERIFIED_PASS, "a graded task must not be expirable"
+    assert "a verdict exists" in result.detail
+
+
+def test_a_failed_task_also_settles_rather_than_expiring() -> None:
+    """Same rule, and it must not depend on the verdict being favourable.
+
+    A FAIL refunds either way, so nothing changes financially. The restriction
+    is kept uniform anyway: "expiry is for tasks with no verdict" is checkable,
+    where "expiry is for tasks whose verdict would not have paid out" invites
+    exactly the reasoning this system exists to keep out of settlement.
+    """
+    machine = _expired_machine()
+    _drive_to_verified(machine, SHA_A, passing=False)
+
+    result = machine.on_deadline(now=datetime.now(UTC), delivery_id="d-expire")
+
+    assert not result.applied
+    assert machine.state is TaskState.VERIFIED_FAIL
+
+
+def test_an_expired_task_accepts_nothing_further() -> None:
+    machine = _expired_machine()
+    machine.on_submission(submission_sha=SHA_A, delivery_id="d-sub")
+    machine.on_deadline(now=datetime.now(UTC), delivery_id="d-expire")
+
+    late = machine.on_verification_completed(manifest=_manifest(SHA_A), delivery_id="d-late")
+    assert not late.applied
+
+    resubmit = machine.on_submission(submission_sha=SHA_B, delivery_id="d-sub-2")
+    assert not resubmit.applied
+    assert machine.state is TaskState.EXPIRED
+
+
+def test_expiring_twice_is_refused() -> None:
+    machine = _expired_machine()
+    machine.on_submission(submission_sha=SHA_A, delivery_id="d-sub")
+    assert machine.on_deadline(now=datetime.now(UTC), delivery_id="d-expire-1").applied
+
+    second = machine.on_deadline(now=datetime.now(UTC), delivery_id="d-expire-2")
+    assert not second.applied, "expiry must be as terminal as settlement"
+
+
+def test_expire_mandate_refuses_a_live_deadline() -> None:
+    """The guard lives in the payment module, not only in the caller."""
+    mandate = _mandate(deadline=datetime.now(UTC) + timedelta(hours=6))
+    with pytest.raises(MandateError):
+        expire_mandate(mandate=mandate, now=datetime.now(UTC))

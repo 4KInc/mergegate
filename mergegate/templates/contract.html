@@ -47,6 +47,19 @@
     {% endfor %}
   </div>
 
+  {% if c.terms_visibility %}
+  <div class="rule my-5"></div>
+  <div>
+    <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">
+      Acceptance criteria visibility
+    </div>
+    <span class="mono text-[11px] px-2 py-1 rounded-md bg-white/[.05] border border-line text-on-muted">{{ c.terms_visibility }}</span>
+    {% if c.terms_visibility_note %}
+    <p class="text-xs text-on-faint mt-3 leading-relaxed max-w-3xl">{{ c.terms_visibility_note }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% if c.protected_paths or c.allowed_paths or c.grader_paths %}
   <div class="rule my-5"></div>
   <div class="grid md:grid-cols-3 gap-5">
