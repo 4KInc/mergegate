@@ -143,26 +143,34 @@ def test_the_sealed_posture_must_be_passed_in_explicitly() -> None:
     assert manifest.to_canonical_dict()["egress_policy"] == EGRESS_DENY_TCP
 
 
-def test_nothing_dispatches_to_cloud_run_yet() -> None:
-    """Pins the gap rather than hiding it.
+def test_the_dispatch_tripwire_watched_the_wrong_door() -> None:
+    """A tripwire is only as good as its guess about how the change will arrive.
 
-    ``build_job_request`` describes a sealed Cloud Run job that no code
-    submits. While that stays true, the docs must not describe grading as
-    happening there. When someone wires it, this test fails and is the prompt
-    to update the claim in the same commit.
+    This test used to be the inverse of itself. It asserted that *nothing*
+    dispatched to Cloud Run, and was meant to fail the moment someone wired
+    dispatch, forcing the egress claim and the docs to be updated in the same
+    commit. It never fired. It watched for the Python SDK — ``JobsClient``,
+    ``run_v2``, ``RunJobRequest`` — and dispatch arrived through the ``gcloud``
+    CLI via ``subprocess``, so the guard sat green across the entire change it
+    existed to catch.
+
+    The lesson is kept as a test rather than a comment because the failure mode
+    generalises: a tripwire keyed to one implementation of a change is not a
+    tripwire, it is a hint. What is asserted now is the property that actually
+    matters and holds regardless of transport — grading is dispatched somewhere
+    this process does not control, and the manifest comes back from there.
     """
-    root = Path(__file__).parent.parent / "mergegate"
-    dispatchers = {"run_v2", "RunJobRequest", "JobsClient", "execute_job"}
-    found: list[str] = []
-    for path in root.rglob("*.py"):
-        tree = ast.parse(path.read_text(), filename=str(path))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Attribute) and node.attr in dispatchers:
-                found.append(f"{path.name}:{node.attr}")
-            elif isinstance(node, ast.Name) and node.id in dispatchers:
-                found.append(f"{path.name}:{node.id}")
+    dispatch = (Path(__file__).parent.parent / "mergegate" / "verifier" / "dispatch.py").read_text()
 
-    assert not found, (
-        "something now dispatches to Cloud Run: "
-        f"{found}. Grading may be sealed for real; update the egress claim and the docs."
+    assert "class CloudRunJob" in dispatch
+    assert "def run_sealed_evaluation" in dispatch
+    # The transport is the CLI. Named explicitly so a future move to the SDK is
+    # a deliberate edit here rather than another silent pass.
+    assert "gcloud" in dispatch
+
+    tree = ast.parse(dispatch)
+    verifies = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+    assert "verify_result" in verifies, (
+        "the orchestrator must re-check what the job returned; without that, "
+        "dispatching is just trusting a different machine"
     )
