@@ -132,8 +132,9 @@
     </div>
     <div class="rule my-4"></div>
     <p class="text-xs text-on-faint leading-relaxed">
-      Measured by probing inside a live Cloud Run Job, not assumed. DNS still
-      resolves and is disclosed rather than rounded up to "default-deny".
+      Measured by probing inside a live Cloud Run Job, not assumed. Two
+      channels stay open and are disclosed rather than rounded up: DNS, and one
+      allowed destination without which the job cannot receive its inputs.
       <a href="/verifier" class="text-on-muted hover:text-accent">See the probe →</a>
     </p>
   </div>

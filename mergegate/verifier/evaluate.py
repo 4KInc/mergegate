@@ -36,11 +36,11 @@ def evaluate(
 
     ``egress_policy`` states what was true of the environment this call runs
     in, and it lands in a signed receipt. It defaults to unrestricted because
-    this function grades in the calling process: ``run_pinned_commands`` uses
-    ``subprocess``, and nothing here dispatches to the Cloud Run job that
-    ``sandbox.build_job_request`` describes. A caller that has genuinely
-    arranged the sealed environment passes its posture in; the default
-    understates isolation rather than asserting one that was never established.
+    *this function* grades wherever it is called: ``run_pinned_commands`` uses
+    ``subprocess``, and it cannot know whether that process is the sealed job or
+    a laptop. When it is the sealed job, ``verifier.job`` is the caller and
+    passes the measured posture in. The default understates isolation rather
+    than asserting one that was never established.
 
     Raises :class:`~mergegate.contract.ContractError` if the contract drifted
     from what was funded, or if the grader bundle on disk is not the one the

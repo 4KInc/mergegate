@@ -118,18 +118,19 @@
     <span class="mono">default-deny</span> while the deployed job could reach
     Cloudflare, and because the manifest writes that field into a signed
     receipt, it would have signed a false statement. The claim is now
-    <span class="mono">{{ egress_claim }}</span>. DNS still resolves and is
-    disclosed as a residual signalling channel rather than rounded up.
+    <span class="mono">{{ egress_claim }}</span>.
   </p>
   <p class="text-xs text-warn mt-3 leading-relaxed max-w-3xl">
-    <strong>What this probe does and does not cover.</strong> It measured the
-    sealed job, and that measurement is real. It is not yet the environment that
-    grades: the job request above is built and pinned, but nothing submits it,
-    and evaluations currently run in the calling process. Receipts issued from
-    such a run say
-    <span class="mono">unrestricted; graded in-process, not in the sealed sandbox</span>
-    rather than borrowing this posture. Saying otherwise would repeat the exact
-    error described above, one level up.
+    <strong>Why one destination is still reachable.</strong> A completely sealed
+    job cannot receive its inputs. They arrive on a Cloud Storage volume, and
+    gcsfuse dials <span class="mono">storage.googleapis.com</span> from inside
+    the same network namespace as the graded code, so a flat deny fails the
+    mount and the job never starts &mdash; which is exactly how the first live
+    sealed run died. Exactly one destination is therefore allowed, Google's
+    restricted API VIP. Graded code can open a socket to it and holds no
+    credentials to use there, but <em>unauthenticated</em> is a weaker claim
+    than <em>unreachable</em>, so it is stated rather than rounded away. DNS
+    likewise still resolves and remains a residual signalling channel.
   </p>
   </div>
 </section>

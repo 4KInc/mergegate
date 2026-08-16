@@ -1,11 +1,16 @@
 """A receipt must not claim isolation the run did not have.
 
 ``VerificationManifest.egress_policy`` is written into a signed receipt, and it
-used to default to the sealed sandbox's posture. Nothing dispatches to that
-sandbox: ``sandbox.build_job_request`` builds a job request no caller submits,
-and grading happens through ``subprocess`` in the calling process. So every
+used to default to the sealed sandbox's posture while nothing dispatched to that
+sandbox: ``sandbox.build_job_request`` built a job request no caller submitted,
+and grading happened through ``subprocess`` in the calling process. So every
 receipt asserted a network posture that was never a property of the environment
-that produced it, and both mainnet receipts carry that overstatement.
+that produced it.
+
+Dispatch exists now, and these tests matter more rather than less. Both modes
+are supported — sealed for real runs, in-process for this suite and for a laptop
+with no GCP project — so the claim and the environment can still diverge. What
+stops them is that a manifest has to be *told* it was sealed.
 
 The whole suite passed while that was true, which is the more useful lesson:
 381 tests covered what the verifier *computes* and none covered whether its

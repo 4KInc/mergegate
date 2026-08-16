@@ -147,10 +147,12 @@ These are all in the written record and a judge may have read it before watching
   do is carry the *task reward*: the 0.25 USDC release and refund are plain
   USDC transfers through Circle agent wallets. x402 carries the 0.05 verifier
   fee. Do not blur the two.
-- The sealed sandbox's egress was **measured**, but that job is not yet what
-  grades. Say "the sandbox spec is pinned and probed", not "the tests ran in a
-  sealed sandbox". Evaluations currently run in the calling process and the
-  receipts say so.
-- Where the sandbox does run, it blocks outbound **TCP**. DNS still resolves.
+- The sealed job **is** what grades now, and its egress was measured inside it.
+  "The tests ran in a sealed sandbox" is fair to say for a run whose receipt
+  carries the sealed posture. It is not fair for an in-process run, which is
+  still supported and says so.
+- Do not say "no network". It blocks outbound TCP to the public internet, and
+  leaves two channels open on purpose: DNS, and one Google API address without
+  which the job cannot receive its inputs. Both are printed on the receipt.
 - The guarantee is verified contract acceptance, not code quality or security.
 - MergeGate holds escrow authority. It is not non-custodial.

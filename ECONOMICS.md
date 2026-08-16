@@ -80,11 +80,11 @@ The API service is Cloud Run, 1 vCPU / 1 GiB, `maxScale=4`, no minimum
 instances, so it scales to zero and costs nothing while idle. At the volumes
 below it stays inside the Cloud Run free tier.
 
-Grading currently runs in the calling process. The sealed Cloud Run job is
-specified at 2 vCPU / 4 GiB with a 600s ceiling but **nothing dispatches to it
-yet**, so its cost is not in this model. When it is wired, a 30-second graded
-run at those resources is roughly $0.0012, which does not change any conclusion
-here.
+Grading now runs in the sealed Cloud Run job, at 2 vCPU / 4 GiB with a 600s
+ceiling. A graded run of about 30 seconds at those resources is roughly $0.0012,
+which does not change any conclusion here — it is two orders of magnitude below
+the gas cost of the settlement it accompanies. Cold start and volume mount add
+wall-clock, not meaningful cost.
 
 Firestore holds settlement state, receipts, funded contracts and advisory
 reports: a handful of small documents per task, comfortably inside the free

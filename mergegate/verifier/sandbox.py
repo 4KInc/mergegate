@@ -50,11 +50,16 @@ EGRESS_UNRESTRICTED = "unrestricted; graded in-process, not in the sealed sandbo
 
 This exists because the alternative was worse. ``VerificationManifest`` used to
 default its ``egress_policy`` to :data:`EGRESS_DENY_TCP`, and that field is
-written into a signed receipt. Nothing in this package dispatches to Cloud Run:
-:func:`build_job_request` builds a job request that no caller submits, and
-grading actually happens through ``runner.run_pinned_commands``, in the calling
-process. So every receipt issued so far asserted a sandbox posture that was not
-a property of the environment that produced it.
+written into a signed receipt. At the time nothing in this package dispatched to
+Cloud Run: :func:`build_job_request` built a job request no caller submitted,
+and grading actually happened through ``runner.run_pinned_commands``, in the
+calling process. So every receipt issued then asserted a sandbox posture that
+was not a property of the environment that produced it.
+
+:mod:`mergegate.verifier.dispatch` now does submit, and a configured run really
+is graded in the sealed job. This constant stays because in-process grading also
+stays: it is what the test suite uses and what runs on a laptop with no GCP
+project. Both modes are legitimate; only one of them may claim the seal.
 
 That is precisely the mistake this module documents having made once already,
 one level up: the first version asserted ``default-deny`` and a probe disproved

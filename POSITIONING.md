@@ -150,8 +150,9 @@ differently from how they would have been written in advance.
   scope where it does not arise. Presenting this as a permissionless labor
   market would be overclaiming.
 
-- **Grading is not yet sealed in execution, and the receipts say so.** This is
-  the boundary that has been wrong twice, in the same way, one level apart.
+- **Grading is sealed now, and the posture has one deliberate exception.** This
+  is the boundary that was wrong twice before it was right, and the third
+  chapter is not a clean win either.
 
   First: the code asserted `default-deny` egress while a probe inside a real
   Cloud Run Job showed the default configuration reaching the open internet. A
@@ -159,19 +160,34 @@ differently from how they would have been written in advance.
   `deny-tcp-egress; dns-resolution-available`, since Cloud Run resolves DNS
   outside the VPC and **DNS remains a residual outbound signalling channel**.
 
-  Second, and only found later: that sealed job is not what grades. Nothing
-  dispatches to it. `build_job_request` constructs a Cloud Run job no caller
-  submits, and evaluation runs in the calling process. The manifest was
+  Second, and only found later: that sealed job was not what graded. Nothing
+  dispatched to it. `build_job_request` constructed a Cloud Run job no caller
+  submitted, and evaluation ran in the calling process. The manifest was
   defaulting its `egress_policy` to the sealed posture regardless, so every
-  receipt asserted an isolation the run did not have. The default is now
-  `unrestricted; graded in-process, not in the sealed sandbox`, and a caller has
-  to *state* the sealed posture to claim it.
+  receipt asserted an isolation the run did not have. The default became
+  `unrestricted; graded in-process, not in the sealed sandbox`, and a caller now
+  has to *state* the sealed posture to claim it.
 
   The whole test suite passed while that was true, which is the useful part: the
   tests covered what the verifier computed and not whether its signed
   description of where it ran was accurate. Network-dependent tests remain out
   of scope regardless, because they are not deterministic and a release
   condition has to be reproducible.
+
+  Third: dispatch now exists, and the first live sealed run failed to start.
+  Inputs arrive on a Cloud Storage volume, gcsfuse dials
+  `storage.googleapis.com` from inside the graded namespace, and a flat deny
+  therefore fails the mount. **"Deny all egress" and "receive inputs" are not
+  simultaneously satisfiable on this platform.** One destination is now allowed,
+  Google's restricted API VIP, and the posture string names it rather than
+  rounding it off:
+  `deny-tcp-egress-except-google-restricted-vip-199.36.153.4/30; dns-resolution-available`.
+
+  So the honest statement is two residual channels, not one. Graded code can
+  open a socket to Google's API front-end — with no credentials to use there,
+  but "unauthenticated" is weaker than "unreachable" — and DNS still resolves.
+  The probe that establishes this is a module rather than a one-off, precisely
+  because the claim has now moved three times.
 
 - **Five receipt fields rest on the signature alone.** `settlement_tx`,
   `verifier_fee_tx`, `reason`, `settlement_asset`, and `settlement_chain` have

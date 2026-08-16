@@ -78,7 +78,9 @@ Five claims broke under testing, and finding them is most of the engineering:
    audit hook loaded outside the workspace.
 2. **The sandbox reached the internet** while the code asserted `default-deny`,
    a field written into a signed receipt. Fixed with a no-NAT VPC and a deny-all
-   egress rule. DNS still resolves and is disclosed rather than rounded up.
+   egress rule — which then broke the job outright, because a sealed job cannot
+   mount the volume its inputs arrive on. One destination is now allowed and
+   named in the posture; DNS and that VIP are both disclosed, not rounded up.
 3. **The webhook returned 422 for every delivery** and never ran signature
    verification, from a lazy FastAPI import breaking annotation resolution. Only
    a real HTTP request revealed it.
@@ -138,9 +140,10 @@ Stated here rather than left for a reviewer to find:
 - **Trusted-buyer scope**: private repos, approved providers.
 - **The guarantee is verified contract acceptance**, not code quality, security
   or mergeworthiness.
-- **Grading is not yet sealed in execution.** The Cloud Run job is built and
-  its egress measured, but nothing submits it, so evaluations run in the calling
-  process. Receipts record `unrestricted; graded in-process` instead of claiming
-  isolation they did not have. The two mainnet receipts predate that fix and
-  overstate it.
+- **Grading is sealed, with one deliberate exception.** Evaluations run in the
+  Cloud Run job and the receipt carries the posture measured inside it. That
+  posture is not a flat deny: a sealed job cannot mount the volume its inputs
+  arrive on, so one destination (Google's restricted API VIP) stays reachable
+  and is named in the receipt rather than rounded off. In-process grading is
+  still supported for tests and records `unrestricted; graded in-process`.
 - **MergeGate holds escrow authority.** This is not described as non-custodial.

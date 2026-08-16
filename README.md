@@ -206,10 +206,16 @@ Two workloads with deliberately opposite network postures:
 | **Verifier job** (Cloud Run *job*, specified and probed) | no TCP egress | grading must be deterministic and un-influenceable |
 
 Sealing the API too would silently break settlement, which is why the deny-all
-VPC is attached to the job alone. **That job is not yet what grades**:
-`sandbox.build_job_request` builds it and the egress probe measured it, but
-nothing submits it, so evaluation currently runs in the calling process and the
-receipts say so.
+VPC is attached to the job alone. **That job is now what grades.**
+`verifier/dispatch.py` submits to it, `verifier/job.py` runs inside it, and the
+orchestrator re-checks the returned manifest against the request that asked for
+it — refusing on any mismatch rather than degrading to a FAIL, since an
+orchestrator that could turn "I could not reach the verifier" into "the work is
+rejected" would be a way to refuse payment by breaking infrastructure.
+
+In-process grading remains supported and still reports the weaker posture. It is
+what the test suite uses and what runs on a laptop with no GCP project; a run
+only claims the seal when it was actually sealed.
 
 ### Modules
 
@@ -248,7 +254,7 @@ rows below now do.
 | --- | --- | --- |
 | P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Done on mainnet**: the buyer agent funds escrow and seals the contract with no human step ([funding tx](https://basescan.org/tx/0xaf13670e060dfa86cd1fddd5da3171525e7934c1e76317769035a5485fa4c27d)) |
 | P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done**: `mergegate/contract.py`, tested |
-| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic), not yet sealed in execution**: `mergegate/verifier/`, attacks tested end to end, verifier image built and pinned by real digest. Grading currently runs in the calling process: `sandbox.build_job_request` builds a Cloud Run job that nothing submits. Receipts state the environment they actually ran in rather than borrowing the sandbox's posture |
+| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done, sealed in execution**: `mergegate/verifier/`, attacks tested end to end, verifier image built and pinned by real digest. `dispatch.py` submits to the sealed Cloud Run job and `job.py` runs inside it; the returned manifest is re-checked against the request and a mismatch raises rather than becoming a FAIL. In-process grading is still supported for tests and laptops, and receipts state the environment they actually ran in rather than borrowing the sandbox's posture |
 | P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done**: a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
 | P0.5 idempotent settlement | One contract → one settlement action | **Done**: `mergegate/settlement.py`; replayed and out-of-order event sequences settle exactly once |
 | P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Done**: `mergegate/mandate.py`; the executor receives a decision, it does not make one |
@@ -741,25 +747,47 @@ guarantee at all.
 
 The fix is a custom VPC (`mergegate-sealed`) with no Cloud NAT plus an explicit
 deny-all egress firewall rule, attached to the verifier job with
-`--vpc-egress=all-traffic`. Re-probing gave:
+`--vpc-egress=all-traffic`. That produced a flat deny — and then broke the job
+entirely, for a reason worth stating plainly.
 
-| Probe | Before | After |
+**A totally sealed job cannot receive its inputs.** Inputs arrive on a Cloud
+Storage volume, and gcsfuse dials `storage.googleapis.com` from inside the same
+network namespace as the graded code. The first live sealed run never started:
+`volume (type: gcs, name: eval): mount operation failed`, after
+`dial tcp 172.253.155.207:443: i/o timeout`. "Deny all egress" and "mount a
+bucket" cannot both hold.
+
+So exactly one destination is allowed: Google's restricted API VIP,
+`199.36.153.4/30`, reached through Private Google Access and a private DNS zone.
+Re-probing inside the sealed job, on the pinned image
+([`egress_probe.py`](mergegate/verifier/egress_probe.py)):
+
+| Probe | Before | Now |
 | --- | --- | --- |
-| loopback | works | works |
-| TCP to three public addresses | **reachable** | blocked |
+| loopback (control) | works | works |
+| `1.1.1.1:443` | **reachable** | blocked |
+| `142.250.72.46:443` (a Google *public* address) | blocked | blocked |
+| `199.36.153.4:443` (restricted API VIP) | reachable | **still reachable, deliberately** |
 | DNS resolution | works | **still works** |
 
-So the claim is `deny-tcp-egress; dns-resolution-available`. A graded run
-cannot fetch anything, and cannot reach an external model API, but DNS remains a
-residual outbound signalling channel. That is disclosed in the constant, in the
-receipt, and here, rather than rounded up to "default-deny".
+Exit code 17 → 25. That difference is the cost of having an input path, and it
+is left visible rather than smoothed over.
 
-What DNS is worth to an attacker is now much smaller than it was. The obvious
+So the claim is
+`deny-tcp-egress-except-google-restricted-vip-199.36.153.4/30; dns-resolution-available`.
+Two residual channels, not one:
+
+- **The restricted VIP.** Graded code can open a socket to Google's API
+  front-end. It holds no cloud credentials with which to do anything there, but
+  "unauthenticated" is a weaker claim than "unreachable" and is stated as such.
+- **DNS**, a low-bandwidth outbound signalling channel.
+
+What either is worth to an attacker is much smaller than it looks. The obvious
 target would be the buyer's grader, and provider code can no longer read it (see
 the runtime guard above). The environment carries no secrets and no cloud
-identity to leak. What remains is a low-bandwidth channel for exfiltrating
-something the provider already possesses, which is its own submission. That is a
-real limit and worth stating, but it is not a route to gaming the grade.
+identity to leak. What remains is a channel for exfiltrating something the
+provider already possesses, which is its own submission. That is a real limit
+and worth stating, but it is not a route to gaming the grade.
 
 Note this applies to the **verifier job only**. The API service needs outbound
 access to reach Circle and GitHub; applying the sealed VPC to it would silently
