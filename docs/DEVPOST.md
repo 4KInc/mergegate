@@ -55,9 +55,10 @@ because it also edited a protected CI file, and the refund names the exact term:
 
 ## How we built it
 
-Circle agent wallets for programmable escrow, driven by the `circle` CLI.
-Verifier on Cloud Run Jobs under gVisor on a sealed VPC. API, dashboard and
-webhook on Cloud Run. Firestore for settlement state, receipts and funded
+Circle agent wallets for programmable escrow, driven by the `circle` CLI. API,
+dashboard and webhook on Cloud Run. The verifier's sealed Cloud Run job is
+specified, pinned by image digest and probed, but grading still runs in the
+calling process; receipts say so rather than borrowing the sandbox's posture. Firestore for settlement state, receipts and funded
 contracts. Secret Manager for the signing key, webhook secret and CLI session.
 Receipt signing, canonical JSON (RFC 8785) and Merkle hashing come from a shared
 engine rather than being rebuilt.
@@ -137,4 +138,9 @@ Stated here rather than left for a reviewer to find:
 - **Trusted-buyer scope**: private repos, approved providers.
 - **The guarantee is verified contract acceptance**, not code quality, security
   or mergeworthiness.
+- **Grading is not yet sealed in execution.** The Cloud Run job is built and
+  its egress measured, but nothing submits it, so evaluations run in the calling
+  process. Receipts record `unrestricted; graded in-process` instead of claiming
+  isolation they did not have. The two mainnet receipts predate that fix and
+  overstate it.
 - **MergeGate holds escrow authority.** This is not described as non-custodial.

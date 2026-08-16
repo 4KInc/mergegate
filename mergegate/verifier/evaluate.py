@@ -16,6 +16,7 @@ from ..submission import Submission
 from .guard import write_guard
 from .manifest import VerificationManifest
 from .runner import DEFAULT_TIMEOUT_SECONDS, run_pinned_commands
+from .sandbox import EGRESS_UNRESTRICTED
 from .workspace import WorkspaceRejectedError, assemble_workspace
 
 __all__ = ["evaluate"]
@@ -29,8 +30,17 @@ def evaluate(
     grader_bundle: Path,
     destination: Path,
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    egress_policy: str = EGRESS_UNRESTRICTED,
 ) -> VerificationManifest:
     """Evaluate one submission against one funded contract.
+
+    ``egress_policy`` states what was true of the environment this call runs
+    in, and it lands in a signed receipt. It defaults to unrestricted because
+    this function grades in the calling process: ``run_pinned_commands`` uses
+    ``subprocess``, and nothing here dispatches to the Cloud Run job that
+    ``sandbox.build_job_request`` describes. A caller that has genuinely
+    arranged the sealed environment passes its posture in; the default
+    understates isolation rather than asserting one that was never established.
 
     Raises :class:`~mergegate.contract.ContractError` if the contract drifted
     from what was funded, or if the grader bundle on disk is not the one the
@@ -71,6 +81,7 @@ def evaluate(
             commands=(),
             failed_terms=rejection.report.failed_terms,
             rejection_reason=rejection.report.summary(),
+            egress_policy=egress_policy,
         )
 
     # The guard lives beside the workspace, never inside it: the provider's diff
@@ -99,4 +110,5 @@ def evaluate(
         commands=results,
         tamper_signals=workspace.tamper_signals,
         git_stripped=workspace.git_stripped,
+        egress_policy=egress_policy,
     )

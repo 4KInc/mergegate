@@ -121,6 +121,16 @@
     <span class="mono">{{ egress_claim }}</span>. DNS still resolves and is
     disclosed as a residual signalling channel rather than rounded up.
   </p>
+  <p class="text-xs text-warn mt-3 leading-relaxed max-w-3xl">
+    <strong>What this probe does and does not cover.</strong> It measured the
+    sealed job, and that measurement is real. It is not yet the environment that
+    grades: the job request above is built and pinned, but nothing submits it,
+    and evaluations currently run in the calling process. Receipts issued from
+    such a run say
+    <span class="mono">unrestricted; graded in-process, not in the sealed sandbox</span>
+    rather than borrowing this posture. Saying otherwise would repeat the exact
+    error described above, one level up.
+  </p>
   </div>
 </section>
 

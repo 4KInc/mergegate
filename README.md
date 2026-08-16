@@ -11,7 +11,7 @@ approving anything.
 
 MergeGate answers it differently. A buyer agent funds USDC escrow against a
 signed, immutable task contract whose acceptance test is fixed and hashed before
-any work begins. A provider agent submits a commit. A sealed sandbox runs the
+any work begins. A provider agent submits a commit. A neutral verifier runs the
 **buyer-pinned** grader against that diff, in an environment the provider cannot
 influence. Escrow releases on PASS or refunds on FAIL, and one receipt binds
 contract, grader, artifact, environment, decision and settlement transaction
@@ -209,7 +209,7 @@ rows below now do.
 | --- | --- | --- |
 | P0.1 agent-funded escrow | Buyer agent funds and signs the mandate; no human checkout | **Done on mainnet**: the buyer agent funds escrow and seals the contract with no human step ([funding tx](https://basescan.org/tx/0xaf13670e060dfa86cd1fddd5da3171525e7934c1e76317769035a5485fa4c27d)) |
 | P0.2 immutable contract + pinned grader | Terms and grader hash fixed before submission | **Done**: `mergegate/contract.py`, tested |
-| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic)**: `mergegate/verifier/`, attacks tested end to end; verifier image built and pinned by real digest |
+| P0.3 neutral sandbox verifier | Provider cannot influence the effective grader | **Done (logic), not yet sealed in execution**: `mergegate/verifier/`, attacks tested end to end, verifier image built and pinned by real digest. Grading currently runs in the calling process: `sandbox.build_job_request` builds a Cloud Run job that nothing submits. Receipts state the environment they actually ran in rather than borrowing the sandbox's posture |
 | P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done**: a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
 | P0.5 idempotent settlement | One contract → one settlement action | **Done**: `mergegate/settlement.py`; replayed and out-of-order event sequences settle exactly once |
 | P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Done**: `mergegate/mandate.py`; the executor receives a decision, it does not make one |
@@ -218,7 +218,7 @@ rows below now do.
 | P1.1b grader confidentiality | Provider code cannot read the graded tests at run time | **Done**: a submission that implemented nothing passed by scraping expected values out of the test file; a startup audit hook outside the workspace now blocks it |
 | P1.2 `.git` history leakage | No reading reference solutions from git history | **Done**: `git archive` never creates `.git`; a run that tries to read the gold patch fails |
 | P1.3 protected / graded path enforcement | Path violations reject regardless of test results | **Done**: `mergegate/paths.py`, tested |
-| P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Done (measured)**: probed inside a real Cloud Run Job: all outbound TCP blocked, DNS still resolves (disclosed, not hidden) |
+| P1.4 sandbox isolation | No outbound TCP, no secrets, resource limits | **Measured, not yet applied to grading**: probed inside a real Cloud Run Job, all outbound TCP blocked, DNS still resolves (disclosed, not hidden). That job is not the one that grades yet, so receipts record `unrestricted` instead of claiming this |
 | P1.5 env-sniffing / tamper detection | Harness-tampering attempts recorded in the receipt | **Partial**: quarantined hooks and purged grader files are recorded as tamper signals; no dedicated env-sniffing probe |
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet**: both run live with real USDC, txs confirmed on-chain (see below) |
 | P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Done on mainnet**: the fee settles as a plain USDC transfer bound into the receipt, **and** `/x402/verify` now completes a full x402 payment. A live `circle services pay` from a Circle Agent Wallet verifies (including the ERC-1271 signature of a smart contract account) and settles on Base: [`0xb40552f2`](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) block 50018597 |

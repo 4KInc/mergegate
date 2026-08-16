@@ -37,6 +37,26 @@ __all__ = [
     "EGRESS_PROBE",
 ]
 
+EGRESS_UNRESTRICTED = "unrestricted; graded in-process, not in the sealed sandbox"
+"""What is true when the grader runs wherever the caller runs.
+
+This exists because the alternative was worse. ``VerificationManifest`` used to
+default its ``egress_policy`` to :data:`EGRESS_DENY_TCP`, and that field is
+written into a signed receipt. Nothing in this package dispatches to Cloud Run:
+:func:`build_job_request` builds a job request that no caller submits, and
+grading actually happens through ``runner.run_pinned_commands``, in the calling
+process. So every receipt issued so far asserted a sandbox posture that was not
+a property of the environment that produced it.
+
+That is precisely the mistake this module documents having made once already,
+one level up: the first version asserted ``default-deny`` and a probe disproved
+it. Asserting a posture for a sandbox that never ran is the same error wearing
+the fix as a costume.
+
+A manifest now has to be *told* it was sealed. The default states the weaker
+truth, so a receipt understates its isolation rather than overstating it.
+"""
+
 EGRESS_DENY_TCP = "deny-tcp-egress; dns-resolution-available"
 """The network posture that was **measured**, not the one we wanted to claim.
 

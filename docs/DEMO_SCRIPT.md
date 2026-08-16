@@ -92,8 +92,8 @@ If you have a spare beat, add the line that lands hardest with engineers:
 > "Escrow and settlement run on Circle agent wallets. The verifier is sold as
 > an x402 service, and Circle's own command line pays it: five cents of USDC,
 > settled on Base, agent to agent.
-> The sandbox is a Cloud Run job on a sealed VPC with no outbound TCP, measured
-> rather than assumed. All of it on Google Cloud. No LLM is called anywhere in
+> The verifier's sandbox is a Cloud Run job on a sealed VPC whose no-outbound-TCP
+> posture we measured rather than assumed. All of it on Google Cloud. No LLM is called anywhere in
 > contract creation, evaluation, settlement, or receipt issuance, because the
 > release condition is a reproducible test contract, not an opinion."
 
@@ -144,6 +144,10 @@ These are all in the written record and a judge may have read it before watching
   do is carry the *task reward*: the 0.25 USDC release and refund are plain
   USDC transfers through Circle agent wallets. x402 carries the 0.05 verifier
   fee. Do not blur the two.
-- The sandbox blocks outbound **TCP**. DNS still resolves.
+- The sealed sandbox's egress was **measured**, but that job is not yet what
+  grades. Say "the sandbox spec is pinned and probed", not "the tests ran in a
+  sealed sandbox". Evaluations currently run in the calling process and the
+  receipts say so.
+- Where the sandbox does run, it blocks outbound **TCP**. DNS still resolves.
 - The guarantee is verified contract acceptance, not code quality or security.
 - MergeGate holds escrow authority. It is not non-custodial.
