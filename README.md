@@ -22,6 +22,14 @@ into a single object anyone can verify offline.
 > discretionary approval. No model is called at any point in contract creation,
 > evaluation, settlement, or receipt issuance.
 
+Gemini **is** here, on the other side of that line. It screens the provider's
+diff for malicious code and test gaming, and explains a FAIL so the provider
+agent knows whether retrying is worth it. It cannot change a verdict, move
+escrow, or enter a receipt, and that is enforced by tests rather than by
+convention. See [Gemini, and where it is not](#gemini-and-where-it-is-not),
+including the false positive it produced on our own honest submission, which is
+the argument for the arrangement rather than an embarrassment to it.
+
 This is the deterministic *evaluator* of the ERC-8183 agent-job pattern for
 GitHub code, running on Base mainnet.
 
@@ -175,29 +183,57 @@ buyer agent ──signs mandate──> escrow (USDC, Base mainnet)
      │                              │
      │  pins contract + grader      │  releases / refunds
      ▼                              ▼
-task contract ──> sealed sandbox verifier ──> bound receipt
-  (immutable)      (Cloud Run Job, gVisor)     (offline-verifiable)
-                            ▲                        │
-provider agent ──diff───────┘                        ▼
-                                              dashboard + API
-                                              (Cloud Run service)
+task contract ────> verifier ─────────> bound receipt
+  (immutable)     (deterministic)        (offline-verifiable)
+                       ▲                        │
+provider agent ─diff───┘                        ▼
+                       │                 dashboard + API
+                       └─ Gemini ─┐      (Cloud Run service)
+                        (advisory) │             │
+                                   └─> advisory report, stored beside
+                                       the receipt and never inside it
 ```
+
+Gemini branches off the diff, not the verdict. Nothing on that branch rejoins
+the settlement path, which is the property `tests/test_gemini_boundary.py`
+exists to enforce.
 
 Two workloads with deliberately opposite network postures:
 
 | | Outbound network | Why |
 | --- | --- | --- |
 | **API / dashboard** (Cloud Run *service*) | allowed | must reach Circle to settle and GitHub to read submissions |
-| **Verifier** (Cloud Run *job*) | no TCP egress | grading must be deterministic and un-influenceable |
+| **Verifier job** (Cloud Run *job*, specified and probed) | no TCP egress | grading must be deterministic and un-influenceable |
 
 Sealing the API too would silently break settlement, which is why the deny-all
-VPC is attached to the job alone.
+VPC is attached to the job alone. **That job is not yet what grades**:
+`sandbox.build_job_request` builds it and the egress probe measured it, but
+nothing submits it, so evaluation currently runs in the calling process and the
+receipts say so.
+
+### Modules
+
+| | |
+| --- | --- |
+| `contract.py`, `paths.py`, `submission.py` | the terms, and what a diff may touch |
+| `verifier/` | workspace assembly, the runtime grader guard, the sandbox spec |
+| `mandate.py`, `settlement.py`, `receipt.py` | execute the mandate, bind the result |
+| `payments/circle_cli.py` | the Circle agent-wallet rail |
+| `x402.py`, `x402_settle.py` | the verifier sold as a paid service, challenge and settlement |
+| `gemini.py`, `screening.py`, `forensics.py` | advisory only, imported by none of the above |
+| `cli.py`, `mcp.py` | how a third party verifies, and how an agent asks |
+| `web.py`, `app.py`, `store.py` | dashboard, API, Firestore |
 
 State lives in Firestore: `mergegate_tasks` (settlement state machines),
 `mergegate_receipts` (issued receipts), `mergegate_contracts` (funded contract
-terms and their funding transaction). Secrets (the receipt signing key, the
-GitHub webhook secret, the Circle CLI session) live in Secret Manager and are
-mounted, never baked into the image or passed as plain environment variables.
+terms and their funding transaction), and `mergegate_advisory` (Gemini's
+reports, deliberately a separate collection so they cannot drift into a signed
+payload).
+
+Secrets live in Secret Manager and are mounted, never baked into the image: the
+receipt signing key, the GitHub webhook secret, the Circle CLI session, the
+Gemini API key, and the x402 relayer key. The relayer holds only ETH for gas and
+never USDC, so the blast radius of that one hot key is a few dollars.
 
 ---
 
@@ -226,6 +262,7 @@ rows below now do.
 | P2.1 two mainnet demo flows | PASS→release and protected-path FAIL→refund | **Done on mainnet**: both run live with real USDC, txs confirmed on-chain (see below) |
 | P2.2 verifier fee | Verifier-fee tx bound into the receipt | **Done on mainnet**: the fee settles as a plain USDC transfer bound into the receipt, **and** `/x402/verify` now completes a full x402 payment. A live `circle services pay` from a Circle Agent Wallet verifies (including the ERC-1271 signature of a smart contract account) and settles on Base: [`0xb40552f2`](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) block 50018597 |
 | P2.3 third-party verification | Anyone can check a receipt without trusting MergeGate | **Done**: `mergegate verify` re-derives the chain offline, and an MCP server exposes the read side to agents. Verified against a live mainnet receipt: 17 of 17 checks, exit 0; redirecting `settlement_recipient` drops it to exit 1 |
+| P2.4 advisory intelligence | Gemini adds reasoning around the settlement path, never inside it | **Done**: screening before grading and forensics after a FAIL, run automatically on every demo flow and shown on the evaluation page. The boundary is enforced by tests, not convention: settlement modules are parsed and asserted not to import it, settlement is byte-identical for hostile model output, and a diff that steers the screening still refunds correctly |
 
 ---
 
