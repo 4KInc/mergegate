@@ -150,6 +150,22 @@ differently from how they would have been written in advance.
   scope where it does not arise. Presenting this as a permissionless labor
   market would be overclaiming.
 
+  The limitation is now a **contract term** rather than only this paragraph.
+  `terms_visibility` is hashed into the contract and defaults to `HASH_ONLY`,
+  so a provider agent can branch on what it is actually able to know before
+  accepting work. `PUBLISHED_GRADER` records a buyer assertion that MergeGate
+  does not verify, and says so. `THIRD_PARTY_ESCROWED_GRADER` is in the
+  vocabulary and **rejected at construction**: no such escrow exists here, and
+  a contract may not commit to a protection the deployment cannot deliver,
+  because a provider reading the term would take it as a guarantee.
+
+- **A retry costs the buyer a second verifier fee.** The loop is closed — a
+  refused submission is remediated and resubmitted automatically — but a retry
+  is a *new contract*, funded again, because the buyer's mandate authorized
+  exactly one payment decision. Nothing about this is free to the buyer, which
+  is why `RetryBudget` bounds attempts and respects the deadline. A loop with no
+  per-attempt cost would have no reason to terminate.
+
 - **Grading is sealed now, and the posture has one deliberate exception.** This
   is the boundary that was wrong twice before it was right, and the third
   chapter is not a clean win either.

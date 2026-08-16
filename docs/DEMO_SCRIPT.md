@@ -9,7 +9,7 @@ screen without editing anything.
 - Browser at 125% zoom, dark theme, no bookmarks bar showing personal tabs.
 - Terminal at a large font, in `~/Projects/mergegate`.
 - Open these four tabs in order, so you never wait on a page load on camera:
-  1. `https://mergegate-api-1031148889398.us-central1.run.app`
+  1. `https://mergegate-api-1031148889398.us-central1.run.app/judge`
   2. `https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565`
   3. `https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-e6bd8ffbc565`
   4. `https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25`
@@ -122,6 +122,24 @@ It prints, in about five seconds:
 
 Open that hash on Basescan and the USDC transfer is there. Costs 0.05 USDC of
 real money per take, so decide how many takes you want before you start.
+
+## The closed loop, in one command
+
+The plan's "best demo" is now a single command, and it is the strongest thing
+on camera after the refusal itself:
+
+```bash
+.venv/bin/python -m mergegate.demo retry --env .env.mainnet
+```
+
+It funds escrow, submits correct code that also edits a protected file, gets
+refused and refunded, reverts exactly what the contract's guard rejects,
+resubmits under a **new** contract linked by `retry_of`, and gets paid. Roughly
+0.60 USDC and about 90 seconds.
+
+Say plainly that the buyer pays two verifier fees across the retry. It is the
+honest cost, a judge will work it out from the transactions anyway, and saying
+it first is worth more than being caught not saying it.
 
 ## If you want a live terminal moment
 

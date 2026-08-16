@@ -37,6 +37,7 @@ GitHub code, running on Base mainnet.
 
 | | |
 | --- | --- |
+| **Start here** | [the one-page case](https://mergegate-api-1031148889398.us-central1.run.app/judge) |
 | **Dashboard** | [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app) |
 | **PASS flow** (0.25 USDC released to the provider) | [settlement tx](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae) · block 50060061 |
 | **FAIL flow** (0.25 USDC refunded to the buyer) | [refund tx](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25) · block 50060179 |
@@ -745,6 +746,67 @@ Both entry points are now asserted to resolve, every documented endpoint is
 checked against the served OpenAPI schema, and the `/integrate` page derives its
 tool list from the MCP server and its sample receipt id from what the deployment
 actually holds, so it cannot drift into documenting something that is not there.
+
+## The retry loop, closed
+
+A refund closes an attempt, not the task. `python -m mergegate.demo retry` runs
+the whole loop: correct code bundled with a protected-path edit is refused and
+refunded, the agent reverts exactly what the contract's guard rejects, and a
+**new** contract on identical terms is funded, submitted, passed and paid.
+
+Three things about it are worth stating plainly.
+
+**The repair is not a model output.** Gemini explains why a submission failed;
+`retry.files_to_revert` computes what to undo from the contract's own
+`PathGuard`. What the agent does about a failure decides what gets resubmitted
+and therefore what gets paid for, so it has to be reproducible. Reverting is the
+whole remedy here precisely because the failure is a *term violation* rather
+than a wrong answer — the code was correct. A submission that failed its tests
+has nothing to revert and says so instead of guessing.
+
+**A retry is a new contract.** The settled task is terminal and the state
+machine refuses every later event, because the buyer's mandate authorized
+exactly one payment decision. The second attempt carries `retry_of` in contract
+metadata: hashed, so the link is immutable, but never read by the evaluator, so
+no verdict can depend on provenance.
+
+**The buyer pays two verifier fees.** That is the honest cost of a retry, and
+the reason `RetryBudget` bounds attempts and respects the deadline. A loop that
+cost the buyer nothing per attempt would have no reason to terminate.
+
+## Before accepting: what a provider agent can know
+
+`mergegate_assess_contract` assesses a contract before any work begins —
+feasibility, an implementation sketch, the files it expects to touch, and
+`ACCEPT` / `REQUEST_CLARIFICATION` / `DECLINE`. The path check runs the
+contract's own guard, so a plan that would edit a protected path is refused
+*before* the attempt rather than after it.
+
+The interesting constraint is what it is not allowed to claim. Under
+`HASH_ONLY` — the default — the acceptance tests are a hash and the model cannot
+see them. It can still sketch a useful implementation, but it cannot know
+whether the hidden tests are satisfiable, and a confident `ACCEPT` on criteria
+nobody can read is exactly the kind of claim this project avoids. So the
+certainty is capped **deterministically after the model speaks**: `HIGH` becomes
+`MEDIUM` and a caveat is attached, derived from the contract's own
+`terms_visibility` rather than from a flag a caller might forget.
+
+`ACCEPT` survives the cap, because declining every hidden contract would refuse
+the only mode the deployment offers.
+
+## What a provider can see: `terms_visibility`
+
+The sharpest limitation used to be a paragraph. It is now a hashed contract
+term, so a provider agent can branch on it:
+
+| Value | Meaning |
+| --- | --- |
+| `HASH_ONLY` | The default. You can prove the goalposts do not move; you cannot see where they are |
+| `PUBLISHED_GRADER` | The buyer *asserts* the bundle is readable in the base tree. **MergeGate does not verify this** — confirm you can actually read it |
+| `THIRD_PARTY_ESCROWED_GRADER` | **Rejected at construction.** No such escrow exists here, and a contract may not commit to a protection the deployment cannot deliver |
+
+The default is the weakest value, so a contract that says nothing about
+disclosure is read as disclosing nothing.
 
 ## Sandbox network posture: measured, not assumed
 
