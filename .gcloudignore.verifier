@@ -1,0 +1,54 @@
+# Build context for the sealed verifier image.
+#
+# A second ignore file exists because the API's .gcloudignore excludes
+# "/verifier/", which is correct for that image and fatal for this one: the
+# first build of this Dockerfile failed with "lstat /workspace/verifier: no such
+# file or directory" because its own build instructions had been filtered out of
+# its own context.
+#
+# The rule here is narrower than "ship less". This image grades attacker-
+# influenced code with no egress, so anything that can reach a network or hold a
+# credential must not be inside it, whether or not the entry point imports it.
+
+.venv/
+.git/
+.env
+.env.*
+!.env.example
+design/
+docs/
+demo/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+tests/
+
+# The API service, the payment rails and the advisory layer. None is imported by
+# the job, and each of them either speaks to a network or reads a secret.
+mergegate/app.py
+mergegate/web.py
+mergegate/store.py
+mergegate/webhook.py
+mergegate/settlement.py
+mergegate/mandate.py
+mergegate/receipt.py
+mergegate/cli.py
+mergegate/mcp.py
+mergegate/demo.py
+mergegate/gemini.py
+mergegate/screening.py
+mergegate/forensics.py
+mergegate/drafting.py
+mergegate/retry.py
+mergegate/x402.py
+mergegate/x402_settle.py
+mergegate/payments/
+mergegate/templates/
+
+# The shared engine, minus everything except the canonicalisation and hashing
+# the evaluator actually calls.
+engine/.git
+engine/tests/
+engine/docs/

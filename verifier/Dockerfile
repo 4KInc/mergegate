@@ -10,7 +10,13 @@
 # graded run would fail anyway; not shipping one removes the temptation and the
 # attack surface both.
 
-FROM python:3.12-slim-bookworm@sha256:034724ef64585eeb0e82385e9aabcbeabfe5f7cae2c2dcedb1da95114372b6d7
+# The tag and the digest must agree, and once did not. The digest previously
+# pinned here resolved to python 3.10.18 while the tag said 3.12, and Docker
+# honours the digest. Nothing noticed, because the image had no MergeGate code
+# in it to fail: the evaluator uses StrEnum and datetime.UTC, both 3.11+, so
+# this image could never have graded anything. Resolved from the registry and
+# checked by running the image, not by trusting the label.
+FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134
 
 # git is needed to materialize the pinned base tree; nothing else is.
 RUN apt-get update \
