@@ -65,6 +65,9 @@ agent-initiated.
 
 ## Economics
 
+Measured unit economics, including what a single evaluation actually costs in
+gas and Gemini tokens, are in [ECONOMICS.md](ECONOMICS.md).
+
 Three parties, two payments, one of which is ours.
 
 | Payment | From | To | Why |
