@@ -5,10 +5,10 @@
 A buyer agent signs a conditional payment mandate (*pay exactly X USDC to
 provider Y if and only if contract C evaluates PASS before deadline T*) and
 funds escrow against a task contract whose every term is fixed and hashed before
-the provider is allowed to submit. The provider submits a commit. A sealed
-container checks out the buyer's pinned base SHA, applies the provider's diff to
-allowed source paths only, **overwrites the test tree with the buyer's grader
-bundle**, and runs only the buyer's pinned commands. Escrow releases or refunds
+the provider is allowed to submit. The provider submits a commit. The verifier
+checks out the buyer's pinned base SHA, applies the provider's diff to allowed
+source paths only, **overwrites the test tree with the buyer's grader bundle**,
+and runs only the buyer's pinned commands. Escrow releases or refunds
 on the result. One receipt binds the whole chain and can be re-verified offline
 by anyone holding it.
 
@@ -22,8 +22,14 @@ response.
 
 | Flow | Settlement | Verifier fee |
 | --- | --- | --- |
-| PASS → release, 0.25 USDC to provider | [`0xb8a45ef2…`](https://basescan.org/tx/0xb8a45ef2bb14bff0ce99f5058b5a40be368424bc1e99f053993b84e9f12fe827), block 49945815 | [`0xeb5c1603…`](https://basescan.org/tx/0xeb5c16037349ad081168f3dcea99f912366013b45a754c39cce74b22714c0723) |
-| FAIL → refund, 0.25 USDC to buyer | [`0x4581edf6…`](https://basescan.org/tx/0x4581edf6e7ab61e0f776ce52655ad77e0d7c99e85fcd235f5a53013cce895b1e), block 49946711 | [`0x75ca88ed…`](https://basescan.org/tx/0x75ca88edadcf72225b0baddaf7c036449c9952f667b3242cac6df4c3bb928280) |
+| PASS → release, 0.25 USDC to provider | [`0x35209073…`](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c), block 50032399 | [`0x8881750b…`](https://basescan.org/tx/0x8881750be74f7e699ce2cdc85bf1dd97439eb019c8fb23b24cae848f6031183b) |
+| FAIL → refund, 0.25 USDC to buyer | [`0x46f5c75d…`](https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2), block 50032315 | [`0xb7b7c8a6…`](https://basescan.org/tx/0xb7b7c8a65bfca2a69daead816b40f775ad042978f2b93363b3f6984562af684e) |
+
+Separately, the verifier is sold as an x402 service and Circle's own CLI pays
+it: `circle services pay` verifies the buyer's EIP-3009 authorization, including
+the ERC-1271 signature of a Circle Agent Wallet, and settles 0.05 USDC on Base
+([`0xb40552f2…`](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7),
+block 50018597).
 
 The FAIL flow is the one that carries the argument. Its code was *correct*: it
 would have passed the buyer's pinned tests, but it also edited a protected
@@ -108,6 +114,10 @@ the bound receipt**:
    carries, so editing any of them fails verification **even for an attacker
    holding the signing key**, proven by re-signing each tampered variant.
 
+Measured unit economics, including what a single evaluation costs in gas and
+Gemini tokens and why the demo fee rate is indefensible, are in
+[ECONOMICS.md](ECONOMICS.md).
+
 The threat model comes from documented reality, not imagination: the SWE-bench
 and coding-agent literature records agents passing benchmarks by editing tests,
 reading gold patches out of `.git` history, and leaving files that survive repo
@@ -140,18 +150,28 @@ differently from how they would have been written in advance.
   scope where it does not arise. Presenting this as a permissionless labor
   market would be overclaiming.
 
-- **The sandbox blocks outbound TCP; DNS still resolves.** This is measured, not
-  assumed, and the measurement corrected an earlier false claim. A probe run
-  inside a real Cloud Run Job showed that the default configuration reaches the
-  open internet (Cloud Run grants egress by default) while the code was
-  asserting `default-deny`. Since that field is written into a *signed receipt*,
-  it would have signed a false statement. A custom VPC with no Cloud NAT and an
-  explicit deny-all egress rule now blocks all outbound TCP, but DNS resolution
-  survives because Cloud Run resolves outside the VPC. So a graded run cannot
-  fetch anything, and **DNS remains a residual outbound signalling channel**.
-  The claim is `deny-tcp-egress; dns-resolution-available`, no more. Network-
-  dependent tests remain out of scope regardless, because they are not
-  deterministic and a release condition has to be reproducible.
+- **Grading is not yet sealed in execution, and the receipts say so.** This is
+  the boundary that has been wrong twice, in the same way, one level apart.
+
+  First: the code asserted `default-deny` egress while a probe inside a real
+  Cloud Run Job showed the default configuration reaching the open internet. A
+  custom VPC with no Cloud NAT and a deny-all rule fixed that, leaving
+  `deny-tcp-egress; dns-resolution-available`, since Cloud Run resolves DNS
+  outside the VPC and **DNS remains a residual outbound signalling channel**.
+
+  Second, and only found later: that sealed job is not what grades. Nothing
+  dispatches to it. `build_job_request` constructs a Cloud Run job no caller
+  submits, and evaluation runs in the calling process. The manifest was
+  defaulting its `egress_policy` to the sealed posture regardless, so every
+  receipt asserted an isolation the run did not have. The default is now
+  `unrestricted; graded in-process, not in the sealed sandbox`, and a caller has
+  to *state* the sealed posture to claim it.
+
+  The whole test suite passed while that was true, which is the useful part: the
+  tests covered what the verifier computed and not whether its signed
+  description of where it ran was accurate. Network-dependent tests remain out
+  of scope regardless, because they are not deterministic and a release
+  condition has to be reproducible.
 
 - **Five receipt fields rest on the signature alone.** `settlement_tx`,
   `verifier_fee_tx`, `reason`, `settlement_asset`, and `settlement_chain` have
@@ -160,19 +180,29 @@ differently from how they would have been written in advance.
   receipt proves the decision was the deterministic result of the mandate and
   the verdict; confirming the money moved requires looking at Base.
 
-- **There is no LLM anywhere in the system.** Not merely absent from the
-  payment-authority path, absent entirely. No model is called at any point in
-  contract creation, evaluation, settlement, or receipt issuance. An earlier
-  draft of this document said Gemini "may normalize task prose into a proposed
-  contract"; that capability was never built, and describing it here would have
-  been claiming a feature that does not exist.
+- **There is now an LLM, and it decides nothing.** Earlier versions of this
+  document said there was no LLM anywhere. Gemini has since been added in two
+  advisory roles: it screens the provider's diff for malicious code and test
+  gaming before grading, and explains a FAIL afterwards. It is still absent from
+  contract creation, evaluation, settlement and receipt issuance, and that
+  boundary is enforced by tests rather than convention. The settlement modules
+  are parsed and asserted not to import it, settlement is byte-identical for
+  hostile model output, and a diff that successfully steers the screening still
+  refunds correctly. Prompt injection is not prevented; it is made worthless.
 
-- **The verifier fee is a plain USDC transfer, not x402.** Escrow does pay the
-  verifier a per-run fee as a distinct on-chain transaction bound into the
-  receipt, which is the substance of making the payment rail central in two
-  places. But it is an ordinary transfer, not the x402 protocol or Circle
-  Gateway. Anyone reading "x402" and expecting the protocol should read this
-  instead.
+  The screening also produced a false positive on the very first honest
+  submission it saw, flagging a comment the provider *deleted* as evidence the
+  provider had read the grader, and scored that same wrong finding 40/100 on one
+  run and 10/100 on another. That is the argument for the architecture rather
+  than an embarrassment to it: had the screening carried gating power, correct
+  work would have been refused, and whether it was refused would depend on which
+  run you got.
+
+- **x402 carries the verifier fee, not the task reward.** The endpoint now
+  verifies and settles a real payment from a Circle Agent Wallet. What it does
+  not carry is the reward: the 0.25 release and refund are ordinary USDC
+  transfers through Circle agent wallets, and those are what the receipt binds.
+  Circle Gateway nanopayments are still not used.
 
 - **Tamper detection is partial.** Quarantined provider hooks and purged grader
   files are recorded in the manifest as tamper signals and surface in the

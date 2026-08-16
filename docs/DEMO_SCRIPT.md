@@ -89,13 +89,16 @@ If you have a spare beat, add the line that lands hardest with engineers:
 
 ## 1:40 to 2:00: the stack
 
-> "Escrow and settlement run on Circle agent wallets. The verifier is sold as
-> an x402 service, and Circle's own command line pays it: five cents of USDC,
-> settled on Base, agent to agent.
-> The verifier's sandbox is a Cloud Run job on a sealed VPC whose no-outbound-TCP
-> posture we measured rather than assumed. All of it on Google Cloud. No LLM is called anywhere in
-> contract creation, evaluation, settlement, or receipt issuance, because the
-> release condition is a reproducible test contract, not an opinion."
+> "Escrow and settlement run on Circle agent wallets, on Google Cloud. The
+> verifier is sold as an x402 service and Circle's own command line pays it:
+> five cents of USDC, settled on Base, agent to agent.
+>
+> Gemini is in here too, and where it sits is the point. It screens the diff for
+> malicious code before grading, and explains failures afterwards. It cannot
+> change a verdict, move escrow, or enter a receipt. On our own honest
+> submission it raised a false flag, and scored that same false flag four times
+> higher on one run than another. That is why it decides nothing. Intelligence
+> informs; rules decide."
 
 *Final frame:* the dashboard, or the repository URL.
 
