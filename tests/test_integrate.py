@@ -192,8 +192,16 @@ def test_navigation_survives_a_narrow_viewport(client: Any) -> None:
     text = client.get("/").text
     assert "md:hidden" in text, "no small-viewport header"
     header = text.split('class="md:hidden', 1)[1].split("</header>", 1)[0]
-    for href in ("/receipts", "/verifier", "/integrate"):
-        assert href in header, f"{href} unreachable on a narrow viewport"
+
+    # Every destination the small header offers must actually serve a page.
+    # Asserting literal paths let a rename to /docs pass while that path was
+    # still FastAPI's Swagger UI, so the nav sent readers to the API explorer.
+    hrefs = re.findall(r'href="(/[^"]*)"', header)
+    assert len(hrefs) >= 4, f"small header offers too few destinations: {hrefs}"
+    for href in hrefs:
+        response = client.get(href)
+        assert response.status_code == 200, f"{href} is linked but returns {response.status_code}"
+        assert "swagger" not in response.text.lower(), f"{href} lands on the API explorer"
 
 
 def test_receipts_summary_is_computed_not_asserted(client: Any) -> None:

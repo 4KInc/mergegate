@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 from ..engine import canonicalize
 from ..hashing import OUTPUT_DOMAIN, RESULT_DOMAIN, digest, hash_object
@@ -151,6 +152,48 @@ class VerificationManifest:
             "egress_policy": self.egress_policy,
             "verdict": self.verdict.value,
         }
+
+    @classmethod
+    def from_canonical_dict(cls, data: dict[str, Any]) -> VerificationManifest:
+        """Rebuild a manifest a sealed job produced.
+
+        The inverse of :meth:`to_canonical_dict`, needed because grading now
+        happens in another process and the result crosses back as JSON. The
+        round trip has to preserve ``result_digest`` exactly: that digest is
+        what the receipt binds, so a manifest that changed while being read
+        would bind a run that never happened.
+
+        ``verdict`` is deliberately dropped rather than restored. It is a
+        computed property of the failed terms and command results, and
+        accepting it from the wire would let a job assert a verdict its own
+        recorded evidence does not support.
+        """
+        commands = tuple(
+            CommandResult(
+                argv=tuple(c["argv"]),
+                exit_code=int(c["exit_code"]),
+                stdout_digest=str(c["stdout_digest"]),
+                stderr_digest=str(c["stderr_digest"]),
+                duration_ms=int(c.get("duration_ms", 0)),
+                timed_out=bool(c.get("timed_out", False)),
+            )
+            for c in data.get("commands", [])
+        )
+        return cls(
+            task_id=str(data["task_id"]),
+            contract_hash=str(data["contract_hash"]),
+            grader_hash=str(data["grader_hash"]),
+            base_sha=str(data["base_sha"]),
+            submission_sha=str(data["submission_sha"]),
+            tree_hash=str(data["tree_hash"]),
+            verifier_image_digest=str(data["verifier_image_digest"]),
+            commands=commands,
+            failed_terms=tuple(data.get("failed_terms", [])),
+            rejection_reason=str(data.get("rejection_reason", "")),
+            tamper_signals=tuple(data.get("tamper_signals", [])),
+            git_stripped=bool(data.get("git_stripped", True)),
+            egress_policy=str(data.get("egress_policy", EGRESS_UNRESTRICTED)),
+        )
 
     @property
     def result_digest(self) -> str:

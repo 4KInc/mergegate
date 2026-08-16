@@ -115,6 +115,12 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
     from fastapi import FastAPI
 
     app = FastAPI(
+        # Swagger moves aside so /docs can be the human-readable integration
+        # page the nav points at. FastAPI registers its own /docs at app
+        # creation, before any router, so it wins the match and the nav link
+        # silently landed on the API explorer instead.
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
         title="MergeGate",
         description=(
             "Deterministic evaluator and conditional USDC settlement for "

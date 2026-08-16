@@ -19,6 +19,7 @@ import re
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from .hashing import CONTRACT_DOMAIN, hash_directory, hash_object
 
@@ -151,6 +152,39 @@ class TaskContract:
             "deadline": self.deadline.astimezone(UTC).isoformat().replace("+00:00", "Z"),
             "metadata": [list(pair) for pair in sorted(self.metadata)],
         }
+
+    @classmethod
+    def from_canonical_dict(cls, data: dict[str, Any]) -> TaskContract:
+        """The exact inverse of :meth:`to_canonical_dict`.
+
+        Exists so a contract can cross a process boundary, which it now has to:
+        grading happens in a sealed Cloud Run job that receives the terms as
+        JSON on a mounted volume. The round trip has to preserve
+        ``contract_hash`` exactly or the job would grade against terms whose
+        hash no longer matches what the buyer funded, so a test asserts that
+        rather than assuming it.
+
+        Tuples, not lists: ``to_canonical_dict`` sorts the path collections, and
+        rebuilding them as lists would leave the dataclass unhashable and
+        mutable in a type the rest of the module treats as frozen.
+        """
+        return cls(
+            task_id=str(data["task_id"]),
+            repository=str(data["repository"]),
+            base_sha=str(data["base_sha"]),
+            grader_hash=str(data["grader_hash"]),
+            verifier_image_digest=str(data["verifier_image_digest"]),
+            required_commands=tuple(tuple(c) for c in data["required_commands"]),
+            allowed_source_paths=tuple(data["allowed_source_paths"]),
+            protected_paths=tuple(data["protected_paths"]),
+            grader_paths=tuple(data["grader_paths"]),
+            reward_usdc=str(data["reward_usdc"]),
+            buyer_agent=str(data["buyer_agent"]),
+            provider_agent=str(data["provider_agent"]),
+            deadline=datetime.fromisoformat(str(data["deadline"]).replace("Z", "+00:00")),
+            schema_version=str(data.get("schema_version", CONTRACT_SCHEMA_VERSION)),
+            metadata=tuple((str(k), str(v)) for k, v in data.get("metadata", [])),
+        )
 
     @property
     def contract_hash(self) -> str:
