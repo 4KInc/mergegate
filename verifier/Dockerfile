@@ -25,8 +25,34 @@ RUN pip install --no-cache-dir pytest==8.3.4
 # non-root requirement for gVisor sandboxed workloads.
 RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin verifier
 
-# Workspace is the only writable location the run gets.
-RUN mkdir -p /workspace && chown verifier:verifier /workspace
+# cryptography is the only library the grading code needs beyond the standard
+# library: the job imports the contract, hashing and workspace modules, and
+# nothing that reaches a network. Verified by importing the job entry point and
+# checking that fastapi, web3, google-cloud and friends stay unloaded.
+RUN pip install --no-cache-dir cryptography==44.0.0
+
+# The evaluator itself. Until this was here the image held python, git and
+# pytest and no MergeGate code at all, which is why the sealed job was
+# specified but never the thing that graded: there was nothing in it to run.
+#
+# Only what the job imports. Shipping the API service, the payment rails or the
+# Gemini modules into a sealed grader would put code that talks to networks and
+# holds credentials inside the one container built to do neither.
+COPY mergegate/__init__.py            /opt/mergegate/mergegate/__init__.py
+COPY mergegate/contract.py            /opt/mergegate/mergegate/contract.py
+COPY mergegate/hashing.py             /opt/mergegate/mergegate/hashing.py
+COPY mergegate/engine.py              /opt/mergegate/mergegate/engine.py
+COPY mergegate/paths.py               /opt/mergegate/mergegate/paths.py
+COPY mergegate/submission.py          /opt/mergegate/mergegate/submission.py
+COPY mergegate/verifier/              /opt/mergegate/mergegate/verifier/
+COPY engine/gateway/                  /opt/mergegate/gateway/
+
+ENV PYTHONPATH=/opt/mergegate
+
+# Workspace is the only writable location the run gets. /mnt/eval is where the
+# platform mounts the evaluation volume; the job reads its inputs and writes its
+# manifest there, which is how anything crosses a boundary with no egress.
+RUN mkdir -p /workspace /mnt/eval && chown verifier:verifier /workspace /mnt/eval
 
 USER verifier
 WORKDIR /workspace
@@ -36,8 +62,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONNOUSERSITE=1 \
     PIP_NO_INDEX=1
 
-# No ENTRYPOINT that runs anything on its own. The job is handed the pinned
-# argv from the contract; there is no default command a submission could
-# influence into running.
+# The job entry point. Note what it is not: the *pinned commands* still come
+# from the contract and are run by the evaluator inside this process, so a
+# submission cannot influence what executes by changing the image's command.
+#
+# CMD stays /bin/false so an image started without an explicit command does
+# nothing rather than grading something by accident.
 ENTRYPOINT []
 CMD ["/bin/false"]

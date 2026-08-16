@@ -27,7 +27,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -81,6 +80,17 @@ class DemoConfig:
     verifier_image: str
     circle_cli: str
     deadline_hours: int = 6
+
+    verifier_python: str = "python"
+    """The interpreter the contract pins for the graded run.
+
+    Defaults to what exists in the verifier image, not to whatever built the
+    contract. Pinning ``sys.executable`` put an absolute virtualenv path from
+    the operator's laptop into the terms, which the sealed image cannot resolve:
+    every graded run would exit 127 and FAIL a correct submission. Overridable
+    so an in-process run can name an interpreter that exists locally, which is
+    the only reason this is a knob rather than a constant.
+    """
 
     @property
     def explorer_base(self) -> str:
@@ -207,7 +217,18 @@ class DemoRunner:
             repository=self.config.repo,
             base_sha=base_sha,
             verifier_image_digest=self.config.verifier_image,
-            required_commands=((sys.executable, "-m", "pytest", "-q"),),
+            # "python", not sys.executable. The contract commits to grading in
+            # the pinned verifier image, and sys.executable is a path on
+            # whatever machine built the contract. The mainnet receipts issued
+            # before the sealed job existed record
+            # "/Users/.../.venv/bin/python", which does not exist in the image:
+            # once the job is the executor, every one of those would exit 127,
+            # command not found, and FAIL a correct submission.
+            #
+            # The runner sets PATH to the container's own directories, so this
+            # resolves deterministically inside the image and cannot be
+            # redirected by the surrounding environment.
+            required_commands=((self.config.verifier_python, "-m", "pytest", "-q"),),
             allowed_source_paths=("src/**",),
             protected_paths=(".github/**",),
             grader_paths=("tests/**", "conftest.py"),

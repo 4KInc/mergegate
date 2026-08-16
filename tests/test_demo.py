@@ -14,6 +14,7 @@ tests run and escrow returns to the buyer.
 from __future__ import annotations
 
 import subprocess
+import sys
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,9 @@ def config() -> DemoConfig:
         usdc_address="0xUSDC",
         verifier_image=IMAGE,
         circle_cli="",
+        # These tests grade in-process, so they pin an interpreter that exists
+        # here. Production pins "python", which is what the sealed image has.
+        verifier_python=sys.executable,
     )
 
 

@@ -284,3 +284,33 @@ def test_dispatch_cannot_produce_a_verdict() -> None:
             imported.add(node.module.split(".")[-1])
 
     assert "evaluate" not in imported, "the orchestrator can reach the evaluator directly"
+
+
+def test_the_demo_pins_a_command_the_sealed_image_can_run() -> None:
+    """The bug this catches would have failed every submission.
+
+    The demo pinned ``sys.executable``, which on the machine that built the
+    contract is an absolute path into a local virtualenv. The mainnet receipts
+    record exactly that. Inside the verifier image that path does not exist, so
+    once the sealed job became the executor every graded run would exit 127,
+    command not found, and a correct submission would FAIL.
+
+    Found by staging the image's file list and running a real evaluation against
+    it before deploying anything.
+    """
+    import ast
+
+    source = (Path(__file__).parent.parent / "mergegate" / "demo.py").read_text()
+    tree = ast.parse(source)
+
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.keyword) and node.arg == "required_commands"):
+            continue
+        pinned = ast.unparse(node.value)
+        assert "sys.executable" not in pinned, (
+            "the demo pins the building machine's interpreter; the sealed image "
+            f"has no such path: {pinned}"
+        )
+        assert not any(part.startswith("/") for part in pinned.split("'")), (
+            f"the demo pins an absolute host path: {pinned}"
+        )
