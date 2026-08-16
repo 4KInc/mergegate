@@ -33,6 +33,7 @@ import base64
 import json
 import sys
 import tarfile
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -158,32 +159,40 @@ def run_job(mount: Path) -> int:
         from .evaluate import evaluate
         from .sandbox import EGRESS_DENY_TCP
 
-        base_tree = _extract(inputs / "base_tree.tar", mount / "work" / "base")
-        grader = _extract(inputs / "grader.tar", mount / "work" / "grader")
+        # The graded tree is built on local disk, never on the mounted bucket.
+        # The mount is a Cloud Storage volume, and object storage has no file
+        # permissions to copy: the first live run died in ``shutil.copytree``
+        # with "[Errno 1] Operation not permitted" on every file, because
+        # ``copystat`` cannot set a mode or an mtime on an object. The bucket
+        # carries the request in and the manifest out. Grading happens here.
+        with tempfile.TemporaryDirectory(prefix="mergegate-") as tmp:
+            scratch = Path(tmp)
+            base_tree = _extract(inputs / "base_tree.tar", scratch / "base")
+            grader = _extract(inputs / "grader.tar", scratch / "grader")
 
-        # Recomputed, never trusted from the request. A grader swapped on the
-        # volume after the request was written would otherwise grade a
-        # submission against tests nobody committed to.
-        actual = hash_directory(grader)
-        if actual != request.grader_hash:
-            return fail(
-                f"grader bundle on the volume hashes to {actual}, "
-                f"request pinned {request.grader_hash}"
+            # Recomputed, never trusted from the request. A grader swapped on
+            # the volume after the request was written would otherwise grade a
+            # submission against tests nobody committed to.
+            actual = hash_directory(grader)
+            if actual != request.grader_hash:
+                return fail(
+                    f"grader bundle on the volume hashes to {actual}, "
+                    f"request pinned {request.grader_hash}"
+                )
+
+            sealed = _sealed(request)
+            manifest = evaluate(
+                sealed=sealed,
+                submission=_submission(request),
+                base_tree=base_tree,
+                grader_bundle=grader,
+                destination=scratch / "workspace",
+                timeout_seconds=request.timeout_seconds,
+                # Stated because it is true here: this code is running inside
+                # the sealed job whose posture was probed. That is the whole
+                # reason this module exists.
+                egress_policy=EGRESS_DENY_TCP,
             )
-
-        sealed = _sealed(request)
-        manifest = evaluate(
-            sealed=sealed,
-            submission=_submission(request),
-            base_tree=base_tree,
-            grader_bundle=grader,
-            destination=mount / "work" / "workspace",
-            timeout_seconds=request.timeout_seconds,
-            # Stated because it is true here: this code is running inside the
-            # sealed job whose posture was probed. That is the whole reason
-            # this module exists.
-            egress_policy=EGRESS_DENY_TCP,
-        )
     except Exception as exc:  # noqa: BLE001 - reported, never a silent PASS
         return fail(f"evaluation failed: {type(exc).__name__}: {exc}")
 

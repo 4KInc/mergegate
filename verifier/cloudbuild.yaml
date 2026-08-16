@@ -1,0 +1,33 @@
+# Build for the sealed verifier image.
+#
+# A config file exists rather than a bare `gcloud builds submit --tag` because
+# this Dockerfile lives in `verifier/` while its build context is the repository
+# root: the image has to COPY the evaluator and the shared engine, and neither
+# is reachable from a context rooted at `verifier/`. `builds submit` has no flag
+# for that combination, so the Dockerfile path is named here instead.
+#
+# Pair this with `.gcloudignore.verifier`, which decides what may enter the
+# context at all. This image grades attacker-influenced code, so that file is
+# the security boundary and this one is only the plumbing.
+#
+#   cp .gcloudignore.verifier .gcloudignore   # then restore the API's afterwards
+#   gcloud builds submit --config verifier/cloudbuild.yaml \
+#     --substitutions _TAG=latest --region us-central1
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=verifier/Dockerfile
+      - --tag=${_IMAGE}:${_TAG}
+      - .
+
+images:
+  - ${_IMAGE}:${_TAG}
+
+substitutions:
+  _IMAGE: us-central1-docker.pkg.dev/quick-catcher-470218-b0/mergegate/verifier
+  _TAG: latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY

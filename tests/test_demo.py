@@ -22,7 +22,13 @@ from typing import Any
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from mergegate.demo import PASS_PATCH, PROTECTED_PATCH, DemoConfig, DemoRunner
+from mergegate.demo import (
+    PASS_PATCH,
+    PROTECTED_PATCH,
+    DemoConfig,
+    DemoRunner,
+    _sealed_job,
+)
 from mergegate.payments import FakeRail
 from mergegate.receipt import verify_receipt
 from mergegate.settlement import TaskState
@@ -233,3 +239,51 @@ def test_a_replayed_settlement_pays_once(runner: DemoRunner) -> None:
         # Terminal state refuses a second settlement outright.
         runner.settle(manifest, mandate, delivery_prefix="second")
     assert runner.rail.balances[PROVIDER] == before  # type: ignore[attr-defined]
+
+
+class TestSealedJobConfiguration:
+    """Whether a run is sealed must never be decided by accident.
+
+    These exist because the first version of :func:`_sealed_job` counted its
+    settings with ``locals()``, which also counted the ``values`` argument. All
+    four settings present looked like five, ``missing`` came out empty, and the
+    function raised "half-configured; missing " with nothing after it — on the
+    fully configured path. The half-configured path it was written to catch was
+    the one path it could not reach.
+    """
+
+    FULL = {
+        "VERIFIER_JOB_NAME": "mergegate-verifier",
+        "VERIFIER_JOB_REGION": "us-central1",
+        "GOOGLE_CLOUD_PROJECT": "some-project",
+        "EVIDENCE_BUCKET": "some-bucket",
+    }
+
+    def test_all_four_settings_build_a_job(self) -> None:
+        job = _sealed_job(dict(self.FULL))
+        assert job is not None
+        assert (job.name, job.region, job.project, job.bucket) == (
+            "mergegate-verifier",
+            "us-central1",
+            "some-project",
+            "some-bucket",
+        )
+
+    def test_no_settings_at_all_means_grade_in_process(self) -> None:
+        """Absence is a choice; it is the laptop-reproducible mode."""
+        assert _sealed_job({}) is None
+
+    @pytest.mark.parametrize("omitted", sorted(FULL))
+    def test_any_single_missing_setting_refuses_rather_than_unseals(self, omitted: str) -> None:
+        values = {k: v for k, v in self.FULL.items() if k != omitted}
+        with pytest.raises(RuntimeError) as raised:
+            _sealed_job(values)
+        # The name of what is missing must appear. An operator who reads
+        # "half-configured" with an empty list learns nothing and is likely to
+        # conclude the sealed path is broken and drop back to in-process.
+        assert omitted in str(raised.value)
+
+    def test_the_refusal_never_reports_an_empty_list_of_missing_settings(self) -> None:
+        with pytest.raises(RuntimeError) as raised:
+            _sealed_job({"VERIFIER_JOB_NAME": "mergegate-verifier"})
+        assert "missing ." not in str(raised.value)

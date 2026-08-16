@@ -20,8 +20,16 @@ statement.
 
 The fix was a custom VPC with no Cloud NAT plus an explicit deny-all egress
 firewall rule, attached with ``--vpc-egress=all-traffic``. Re-probing then
-showed all outbound TCP blocked and DNS still resolving, which is exactly what
-:data:`EGRESS_DENY_TCP` now claims: no more, no less.
+showed all outbound TCP blocked and DNS still resolving.
+
+**That posture then had to be widened by one destination, on purpose.** A
+totally sealed network cannot mount the Cloud Storage volume the job receives
+its inputs on, because gcsfuse dials ``storage.googleapis.com`` from inside the
+graded namespace; the first live run failed at mount with an i/o timeout. One
+egress rule to Google's restricted API VIP restores the input path, and
+:data:`EGRESS_DENY_TCP` names that exception rather than rounding it off. The
+probe is :mod:`mergegate.verifier.egress_probe`, kept re-runnable precisely
+because this claim has now changed twice.
 """
 
 from __future__ import annotations
@@ -57,47 +65,75 @@ A manifest now has to be *told* it was sealed. The default states the weaker
 truth, so a receipt understates its isolation rather than overstating it.
 """
 
-EGRESS_DENY_TCP = "deny-tcp-egress; dns-resolution-available"
+EGRESS_DENY_TCP = (
+    "deny-tcp-egress-except-google-restricted-vip-199.36.153.4/30; dns-resolution-available"
+)
 """The network posture that was **measured**, not the one we wanted to claim.
 
-Verified by executing a probe inside a real Cloud Run Job on the sealed VPC:
-outbound TCP to three separate public addresses all failed while loopback
-succeeded, so a graded run cannot fetch anything. DNS resolution still
-succeeds: Cloud Run resolves through the platform rather than through the VPC,
-so the deny-all egress firewall does not reach it.
+Verified by :mod:`mergegate.verifier.egress_probe` executing inside the real
+sealed Cloud Run Job. Outbound TCP to the public internet fails — both to an
+unrelated address and to a Google *public* address — while loopback succeeds,
+so a graded run cannot fetch from the open network.
 
-DNS is therefore a residual side channel: a submission cannot retrieve data over
-it, but it could signal outward through crafted lookups. That is a stated limit
-of v1, disclosed here and in the receipt, rather than a gap papered over by
-calling this "default-deny".
+**Why this is not a flat deny, and what that costs.** An earlier version of this
+string was ``deny-tcp-egress``, and it was briefly true. It stopped being true
+the moment the job started receiving its inputs on a Cloud Storage volume:
+gcsfuse dials ``storage.googleapis.com`` from inside the same network namespace
+as the graded code, so a flat deny fails the mount and the job never starts.
+"Deny all egress" and "mount a bucket" cannot both hold. The mount was restored
+by allowing exactly one destination, Google's restricted API VIP, and this
+string names that destination rather than rounding it away.
+
+So the honest statement of the residual surface is two channels, not one:
+
+* **The restricted VIP.** Graded code can open a socket to Google's API
+  front-end. It has no cloud credentials with which to do anything there, but
+  "unauthenticated" is a weaker claim than "unreachable" and is stated as such.
+* **DNS.** Cloud Run resolves through the platform rather than through the VPC,
+  so the firewall does not reach it. A submission cannot retrieve data over it,
+  but it could signal outward through crafted lookups.
+
+Both are disclosed here and carried into the signed receipt, because this field
+is signed and a posture that flatters itself is the one failure this module
+exists to prevent.
 """
 
 
 EGRESS_PROBE = {
-    "job": "mergegate-egress-probe",
+    "job": "mergegate-verifier",
     "method": (
-        "A probe executed inside a real Cloud Run Job, encoding each result as a "
-        "bit of its exit code. Cloud Run surfaced neither stdout nor stderr, so the "
-        "exit code was the only channel; a loopback control bit was included so a "
-        "broken probe reports itself instead of masquerading as a passing guarantee."
+        "mergegate.verifier.egress_probe, executed inside the same sealed Cloud Run "
+        "Job that grades submissions, on the same pinned image. Each result is a bit "
+        "of the exit code as well as structured stdout: an early configuration "
+        "surfaced no output at all, so the exit status is kept as the channel that "
+        "survives logging breaking. A loopback control bit is included so a broken "
+        "probe reports itself instead of masquerading as a perfect seal."
     ),
-    # Destination -> (reachable before the sealed VPC, reachable after)
+    # Destination -> (reachable before the sealed VPC, reachable now)
     "results": [
         ("loopback (control)", True, True),
         ("1.1.1.1:443", True, False),
         ("142.250.72.46:443", False, False),
-        ("93.184.216.34:80", False, False),
+        ("199.36.153.4:443 (restricted Google API VIP)", True, True),
         ("DNS resolution", True, True),
     ],
     "before_exit_code": 21,
-    "after_exit_code": 17,
+    "after_exit_code": 25,
 }
 """What the egress probe actually returned, before and after the sealed VPC.
 
 Recorded here rather than retyped into a template so the page cannot drift from
-what was measured. The first configuration reached the public internet: Cloud
-Run grants egress by default, which is why an earlier version of this module
-asserting "default-deny" would have signed a false claim.
+what was measured. Two measurements are worth reading in order.
+
+The first configuration reached the public internet, because Cloud Run grants
+egress by default — which is why an earlier version of this module asserting
+"default-deny" would have signed a false claim.
+
+The second is the row that is *deliberately* still reachable. Sealing the VPC
+completely broke the Cloud Storage volume the job receives its inputs on, so
+one destination is allowed: Google's restricted API VIP. The exit code moved
+from 17 to 25 when that rule was added, and that difference is the honest cost
+of the input path, left visible here instead of being smoothed over.
 """
 
 

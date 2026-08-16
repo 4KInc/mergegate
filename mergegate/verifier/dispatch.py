@@ -45,6 +45,9 @@ __all__ = [
     "build_request",
     "pack_inputs",
     "verify_result",
+    "CloudRunJob",
+    "run_sealed_evaluation",
+    "MOUNT_ROOT",
 ]
 
 
@@ -247,4 +250,141 @@ def verify_result(
         correlation_id=request.correlation_id,
         execution_id=execution_id,
         image_digest=image_digest or request.sealed.contract.verifier_image_digest,
+    )
+
+
+# -- running the job for real --------------------------------------------------
+
+#: Where the job's storage volume is mounted inside the container.
+MOUNT_ROOT = "/mnt/evalroot"
+
+
+@dataclass(frozen=True, slots=True)
+class CloudRunJob:
+    """The sealed job, addressed well enough to run one evaluation in it."""
+
+    name: str
+    region: str
+    project: str
+    bucket: str
+    prefix: str = "evaluations"
+    binary: str = "gcloud"
+    timeout_seconds: int = 900
+
+
+def _gcloud(job: CloudRunJob, argv: list[str], *, timeout: int) -> tuple[int, str, str]:
+    import subprocess
+
+    completed = subprocess.run(  # noqa: S603 - argv vector, shell=False
+        [job.binary, *argv],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    return completed.returncode, completed.stdout, completed.stderr
+
+
+def run_sealed_evaluation(
+    request: EvaluationRequest,
+    *,
+    base_tree: Path,
+    grader_bundle: Path,
+    job: CloudRunJob,
+    workdir: Path,
+) -> SealedEvaluation:
+    """Grade one submission inside the sealed Cloud Run job.
+
+    Uploads the inputs to the job's storage volume, executes the job against
+    that prefix, and reads the manifest back. The result still goes through
+    :func:`verify_result`, so a job that returns something describing a
+    different evaluation is refused exactly as it would be locally.
+
+    Raises :class:`VerdictUnavailableError` for every failure mode. There is no
+    path here that falls back to grading in this process: silently degrading to
+    an unsealed run would reproduce the precise problem this module exists to
+    fix, and would do it invisibly.
+    """
+    import shutil
+
+    prefix = f"{job.prefix}/{request.correlation_id}"
+    staged = workdir / "staged"
+    if staged.exists():
+        shutil.rmtree(staged)
+    pack_inputs(request, base_tree=base_tree, grader_bundle=grader_bundle, destination=staged)
+
+    code, _, err = _gcloud(
+        job,
+        [
+            "storage",
+            "rsync",
+            "--recursive",
+            str(staged / "in"),
+            f"gs://{job.bucket}/{prefix}/in",
+            "--project",
+            job.project,
+        ],
+        timeout=job.timeout_seconds,
+    )
+    if code != 0:
+        raise VerdictUnavailableError(f"could not stage evaluation inputs: {err.strip()[:300]}")
+
+    code, out, err = _gcloud(
+        job,
+        [
+            "run",
+            "jobs",
+            "execute",
+            job.name,
+            "--region",
+            job.region,
+            "--project",
+            job.project,
+            "--wait",
+            # One token, not two. The value begins with "-m", and gcloud reads a
+            # separate argument starting with a dash as another flag, answering
+            # "argument --args: expected one argument". The same shape broke
+            # `mergegate verify --public-key <key>` for keys whose base64
+            # happened to start with a dash.
+            f"--args=-m,mergegate.verifier.job,{MOUNT_ROOT}/{prefix}",
+        ],
+        timeout=job.timeout_seconds,
+    )
+    execution_id = ""
+    for line in (out + err).splitlines():
+        if "mergegate-verifier-" in line:
+            for token in line.replace("[", " ").replace("]", " ").split():
+                if token.startswith("mergegate-verifier-"):
+                    execution_id = token.strip(".,")
+                    break
+        if execution_id:
+            break
+    if code != 0:
+        raise VerdictUnavailableError(
+            f"the sealed job did not complete: {(err or out).strip()[:300]}"
+        )
+
+    downloaded = workdir / "result"
+    downloaded.mkdir(parents=True, exist_ok=True)
+    code, _, err = _gcloud(
+        job,
+        [
+            "storage",
+            "rsync",
+            "--recursive",
+            f"gs://{job.bucket}/{prefix}/out",
+            str(downloaded),
+            "--project",
+            job.project,
+        ],
+        timeout=job.timeout_seconds,
+    )
+    if code != 0:
+        raise VerdictUnavailableError(f"could not read the job's result: {err.strip()[:300]}")
+
+    return verify_result(
+        request,
+        outputs=downloaded,
+        execution_id=execution_id,
+        image_digest=request.sealed.contract.verifier_image_digest,
     )

@@ -45,14 +45,56 @@ from .payments.base import SettlementRail
 from .receipt import build_receipt, sign_receipt, verify_receipt
 from .settlement import TaskState, TaskStateMachine, settlement_key
 from .store import MemoryTaskStore, TaskStore
+from .verifier.dispatch import CloudRunJob, build_request, run_sealed_evaluation
 from .verifier.evaluate import evaluate
 from .verifier.git_source import build_submission, materialize_base_tree, resolve_sha
 from .verifier.manifest import Verdict, VerificationManifest
 
 __all__ = ["DemoConfig", "DemoRunner", "load_config", "main"]
 
+BUGGY_BASELINE = (
+    "def add(a, b):\n"
+    "    # BUG: negative operands short-circuit to zero.\n"
+    "    # The buyer's pinned grader asserts add(-1, -1) == -2.\n"
+    "    if a < 0 or b < 0:\n"
+    "        return 0\n"
+    "    return a + b\n"
+)
+"""The unfixed state the demo grades against.
+
+Restored before every run, because the demo pushes its submission to ``main``
+and then reads ``origin/main`` as the base for the next one. After a single
+PASS flow the fix *is* the baseline, so ``git commit`` finds nothing to commit
+and the run dies between funding escrow and submitting — money moved, no
+verdict. Anyone cloning this to reproduce a receipt would hit that on their
+first attempt, which makes an evidence-driven system unreproducible at exactly
+the point it is claiming to be reproducible.
+"""
+
 PASS_PATCH = "def add(a, b):\n    return a + b\n"
 """An honest fix. The buyer's grader passes on this."""
+
+DEPLOY_WORKFLOW = """# PROTECTED PATH.
+#
+# The task contract lists .github/** as protected. A submission that modifies
+# this file is rejected regardless of whether the pinned tests pass \u2014 that is
+# the FAIL\u2192refund demo flow.
+name: deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "deploy gate"
+"""
+"""The intact protected file, restored alongside the baseline.
+
+Kept here rather than only in the demo repository so a FAIL run, which
+deliberately guts this file, cannot leave the next run with nothing to
+violate. Without it the FAIL flow degrades into a PASS after one use.
+"""
 
 PROTECTED_PATCH = "on: []\njobs: {}\n"
 """Disables the deploy workflow. Paired with the correct fix above, this is the
@@ -80,6 +122,20 @@ class DemoConfig:
     verifier_image: str
     circle_cli: str
     deadline_hours: int = 6
+
+    sealed_job: CloudRunJob | None = None
+    """The Cloud Run job to grade in, or ``None`` to grade in this process.
+
+    Left optional rather than required because the two modes make genuinely
+    different claims, and the receipt says which one it was. An in-process run
+    is reproducible on a laptop with no GCP project and is what the tests use;
+    it reports :data:`EGRESS_UNRESTRICTED`, because that is what is true of a
+    process running wherever the operator happens to be.
+
+    A run with a job configured is graded inside the sealed container, and only
+    then does the receipt carry the sealed posture. The distinction is the whole
+    point: for a while every receipt asserted a sandbox that had never run.
+    """
 
     verifier_python: str = "python"
     """The interpreter the contract pins for the graded run.
@@ -131,6 +187,40 @@ def load_config(env_path: Path | str = ".env") -> DemoConfig:
         usdc_address=need("USDC_CONTRACT_ADDRESS"),
         verifier_image=need("VERIFIER_IMAGE_DIGEST"),
         circle_cli=values.get("CIRCLE_CLI_PATH", ""),
+        sealed_job=_sealed_job(values),
+    )
+
+
+def _sealed_job(values: dict[str, str]) -> CloudRunJob | None:
+    """Build the sealed job from configuration, or return ``None`` deliberately.
+
+    All four settings are required together. A partially configured job is
+    refused rather than ignored, because the failure mode of ignoring it is the
+    worst one available here: the run would silently grade in-process and the
+    receipt would carry a weaker posture than the operator believed they had
+    configured. Loud is better than quietly unsealed.
+    """
+    settings = {
+        "VERIFIER_JOB_NAME": values.get("VERIFIER_JOB_NAME", ""),
+        "VERIFIER_JOB_REGION": values.get("VERIFIER_JOB_REGION", ""),
+        "GOOGLE_CLOUD_PROJECT": values.get("GOOGLE_CLOUD_PROJECT", ""),
+        "EVIDENCE_BUCKET": values.get("EVIDENCE_BUCKET", ""),
+    }
+
+    missing = sorted(key for key, value in settings.items() if not value)
+    if len(missing) == len(settings):
+        return None
+    if missing:
+        raise RuntimeError(
+            f"the sealed verifier job is half-configured; missing {', '.join(missing)}. "
+            "Refusing to fall back to an in-process run, which would issue receipts "
+            "claiming less isolation than intended."
+        )
+    return CloudRunJob(
+        name=settings["VERIFIER_JOB_NAME"],
+        region=settings["VERIFIER_JOB_REGION"],
+        project=settings["GOOGLE_CLOUD_PROJECT"],
+        bucket=settings["EVIDENCE_BUCKET"],
     )
 
 
@@ -195,6 +285,23 @@ class DemoRunner:
         self.signing = signing
         self.repo_dir = self.workdir / "repo"
         self.grader_dir = Path(__file__).resolve().parent.parent / "demo" / "grader"
+        self.last_funding_tx: str = ""
+        """The escrow funding transaction, carried from ``fund`` to the receipt.
+
+        The receipt embeds the manifest and mandate whole, but neither records
+        where the money came from, so without this a reader can confirm what was
+        *decided* and what was *paid out* while having to take the funding on
+        trust. It is the one link in the chain that was missing.
+        """
+
+        self.last_execution_id: str = ""
+        """The sealed job execution that produced the most recent manifest.
+
+        Empty after an in-process run, and that emptiness is meaningful: it is
+        how a reader tells a receipt whose verdict came out of a sealed
+        container from one whose verdict came out of whatever machine happened
+        to be running the demo.
+        """
 
     # -- setup ----------------------------------------------------------------
 
@@ -298,23 +405,35 @@ class DemoRunner:
                 }
             )
 
+        self.last_funding_tx = funding.tx_hash
         return sealed, mandate, funding.tx_hash
 
     # -- the provider agent --------------------------------------------------
 
-    def submit(self, *, touch_protected: bool) -> str:
-        """Push a submission as the provider agent and return its SHA.
+    def reset_baseline(self) -> str:
+        """Restore the unfixed repository state and return the base SHA.
 
-        ``touch_protected`` produces the FAIL flow: correct code that also
-        disables the deploy workflow.
+        Idempotent in both directions: it pushes only when something actually
+        differs, so a repository already at the baseline is left untouched and
+        keeps its SHA. That matters because the base SHA goes into the contract
+        hash, and a reset that always produced a new commit would give every
+        run a different contract for identical terms.
         """
-        calc = self.repo_dir / "src" / "calc.py"
-        calc.write_text(PASS_PATCH)
-        message = "Fix negative-operand bug"
-        if touch_protected:
-            (self.repo_dir / ".github" / "workflows" / "deploy.yml").write_text(PROTECTED_PATCH)
-            message += " and disable the deploy gate"
+        (self.repo_dir / "src" / "calc.py").write_text(BUGGY_BASELINE)
+        (self.repo_dir / ".github" / "workflows" / "deploy.yml").write_text(DEPLOY_WORKFLOW)
 
+        status = subprocess.run(  # noqa: S603 - argv vector, shell=False
+            ["git", "-C", str(self.repo_dir), "status", "--porcelain"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        if status.stdout.strip():
+            self._commit_and_push("Restore the demo baseline")
+
+        return resolve_sha(self.repo_dir, "HEAD")
+
+    def _commit_and_push(self, message: str) -> None:
         for argv in (
             ["git", "-C", str(self.repo_dir), "add", "-A"],
             [
@@ -334,6 +453,20 @@ class DemoRunner:
         ):
             subprocess.run(argv, check=True, capture_output=True)  # noqa: S603
 
+    def submit(self, *, touch_protected: bool) -> str:
+        """Push a submission as the provider agent and return its SHA.
+
+        ``touch_protected`` produces the FAIL flow: correct code that also
+        disables the deploy workflow.
+        """
+        calc = self.repo_dir / "src" / "calc.py"
+        calc.write_text(PASS_PATCH)
+        message = "Fix negative-operand bug"
+        if touch_protected:
+            (self.repo_dir / ".github" / "workflows" / "deploy.yml").write_text(PROTECTED_PATCH)
+            message += " and disable the deploy gate"
+
+        self._commit_and_push(message)
         return resolve_sha(self.repo_dir, "HEAD")
 
     # -- P0.3: sealed evaluation ---------------------------------------------
@@ -349,13 +482,35 @@ class DemoRunner:
             base_sha=sealed.contract.base_sha,
             submission_sha=submission_sha,
         )
-        return evaluate(
-            sealed=sealed,
-            submission=submission,
+
+        if self.config.sealed_job is None:
+            return evaluate(
+                sealed=sealed,
+                submission=submission,
+                base_tree=base,
+                grader_bundle=self.grader_dir,
+                destination=self.workdir / "workspace",
+            )
+
+        # Dispatched, not called. Nothing in this process can produce the
+        # manifest: it is written by the job and then re-checked against the
+        # request that asked for it, and a mismatch raises rather than
+        # degrading to a FAIL. An orchestrator that could turn "I could not
+        # reach the verifier" into "the work is rejected" would be a way to
+        # refuse payment by breaking infrastructure.
+        outcome = run_sealed_evaluation(
+            build_request(
+                sealed=sealed,
+                submission=submission,
+                grader_bundle=self.grader_dir,
+            ),
             base_tree=base,
             grader_bundle=self.grader_dir,
-            destination=self.workdir / "workspace",
+            job=self.config.sealed_job,
+            workdir=self.workdir / "sealed",
         )
+        self.last_execution_id = outcome.execution_id
+        return outcome.manifest
 
     # -- P0.5 / P0.6 / P0.7: settle and bind ---------------------------------
 
@@ -405,6 +560,8 @@ class DemoRunner:
             issued_at=datetime.now(UTC),
             settlement_tx=executed.settlement_tx,
             verifier_fee_tx=executed.verifier_fee_tx,
+            funding_tx=self.last_funding_tx,
+            execution_id=self.last_execution_id,
         )
         kid, key_obj = self.signing or load_signing_key()
         envelope = sign_receipt(body, private_key=key_obj, kid=kid)
@@ -584,8 +741,11 @@ def main(argv: list[str] | None = None) -> int:
         print("  note: no GOOGLE_CLOUD_PROJECT, this run will not reach the dashboard")
 
     print(f"chain {config.chain}  reward {config.reward_usdc} USDC  repo {config.repo}")
-    repo = runner.clone()
-    base_sha = resolve_sha(repo, "origin/main")
+    runner.clone()
+    # Before reading the base, not after. The base SHA is an input to the
+    # contract hash, so restoring the baseline afterwards would grade against
+    # a tree the contract never named.
+    base_sha = runner.reset_baseline()
     contract = runner.build_contract(base_sha)
     print(f"  base sha          {base_sha}")
     print(f"  contract hash     {contract.contract_hash}")
@@ -598,6 +758,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  submission sha    {submission_sha}")
 
     manifest = runner.evaluate(sealed, submission_sha)
+    # Printed because the two modes make different claims and the operator
+    # should not have to infer which one just ran from the absence of a line.
+    where = (
+        f"sealed job {runner.last_execution_id}"
+        if runner.last_execution_id
+        else "IN-PROCESS (not sealed)"
+    )
+    print(f"  graded in         {where}")
+    print(f"  egress policy     {manifest.egress_policy}")
     print(f"  verdict           {manifest.verdict.value}")
     if manifest.failed_terms:
         print(f"  failed terms      {', '.join(manifest.failed_terms)}")
