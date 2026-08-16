@@ -680,6 +680,63 @@ def contract_view(record: dict[str, Any] | None, views: list[ReceiptView]) -> di
     }
 
 
+def judge_view(views: list[ReceiptView], *, network: str) -> dict[str, Any]:
+    """Assemble the one-page case from live receipts rather than a written list.
+
+    The evidence for this project already existed and was spread across six
+    pages, which asked a reader to assemble the argument themselves. This puts
+    it on one page.
+
+    **Derived, not transcribed.** Every transaction, amount and decision here
+    comes from the receipts the deployment actually holds. A hardcoded summary
+    would be easier and would drift the first time a flow was re-run — which
+    has already happened once in the documentation, where link text still named
+    a superseded transaction while the href pointed at the new one. A page that
+    is wrong about its own evidence is worse than no page.
+
+    The PASS and FAIL shown are the most recent of each. If a decision has no
+    receipt yet, its slot is absent and the template omits the section instead
+    of rendering an empty promise.
+    """
+    latest: dict[str, ReceiptView] = {}
+    for view in views:
+        decision = view.decision.upper()
+        if decision in {"PASS", "FAIL"} and decision not in latest:
+            latest[decision] = view
+
+    def summarize(view: ReceiptView) -> dict[str, Any]:
+        binding = view.binding
+        return {
+            "id": view.id,
+            "decision": view.decision,
+            "action": view.action,
+            "amount": view.amount,
+            "recipient": short(str(binding.get("settlement_recipient", "")), 10, 4),
+            "reason": view.reason,
+            "failed_terms": view.failed_terms,
+            "settlement_tx": view.settlement_tx,
+            "settlement_explorer": view.settlement_explorer,
+            "fee_tx": view.fee_tx,
+            "fee_explorer": view.fee_explorer,
+            "fee_amount": view.fee_amount,
+            "execution_id": str(binding.get("execution_id", "")),
+            "funding_tx": str(binding.get("funding_tx", "")),
+            "funding_explorer": explorer_url(view.chain, str(binding.get("funding_tx", ""))),
+            "contract_hash": str(binding.get("contract_hash", "")),
+            "submission_sha": str(binding.get("submission_sha", "")),
+            "egress_policy": str(view.manifest.get("egress_policy", "")),
+            "commands_run": len(view.manifest.get("commands") or []),
+        }
+
+    return {
+        "pass_run": summarize(latest["PASS"]) if "PASS" in latest else None,
+        "fail_run": summarize(latest["FAIL"]) if "FAIL" in latest else None,
+        "network": network,
+        "egress_claim": EGRESS_DENY_TCP,
+        "total_receipts": len(views),
+    }
+
+
 def build_web_router(
     bundle: ReceiptBundle,
     *,
@@ -921,6 +978,19 @@ def build_web_router(
                 "c": contract_view(record, related),
                 "network": (record or {}).get("chain") or network,
                 "active": "Contracts",
+            },
+        )
+
+    @router.get("/judge", response_class=HTMLResponse)
+    def judge(request: Request) -> Any:
+        """The whole case on one page, built from the receipts on record."""
+        return templates.TemplateResponse(
+            request,
+            "judge.html",
+            {
+                "j": judge_view(bundle.all(), network=", ".join(bundle.networks()) or network),
+                "network": ", ".join(bundle.networks()) or network,
+                "active": "Judge",
             },
         )
 

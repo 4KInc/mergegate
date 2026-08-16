@@ -1,0 +1,232 @@
+{# The one-page case.
+
+   Everything here already existed across /, /verifier, /wallets, /contracts and
+   /receipts, which asked a reader to assemble the argument themselves. The
+   ordering is the argument: what it is, then the refusal that proves it is a
+   control layer rather than a test runner, then the payment, then what it does
+   NOT claim. The limits are on the same page as the proof deliberately, not on
+   a page someone has to go looking for. #}
+{% extends "base.html" %}
+{% block title %}MergeGate — the case{% endblock %}
+
+{% block content %}
+
+<section class="mb-10">
+  <div class="text-[10px] uppercase tracking-widest text-accent mb-3">Live on {{ j.network }}</div>
+  <h1 class="font-display font-bold tracking-tight text-3xl md:text-4xl leading-tight max-w-3xl">
+    An AI agent can write code. It cannot get paid for it
+    <span class="text-on-muted">without a human approving the payment.</span>
+  </h1>
+  <p class="text-on-muted mt-5 max-w-2xl leading-relaxed">
+    MergeGate settles that payment on a test the seller cannot touch. A buyer
+    agent pins the acceptance criteria and funds USDC escrow before any work
+    begins; a deterministic evaluator decides; escrow releases or refunds. No
+    model is consulted at any point in the payment path.
+  </p>
+</section>
+
+{% if j.fail_run %}
+{# The FAIL leads, not the PASS. A payment succeeding is unremarkable. A payment
+   refused for a reason the reader can check is the entire product. #}
+<section class="mb-10">
+  <div class="text-[10px] uppercase tracking-widest text-on-faint mb-3">The proof</div>
+  <div class="card p-6">
+    <h2 class="font-display font-semibold text-xl mb-3">
+      This submission's code was correct. It was refused anyway.
+    </h2>
+    <p class="text-sm text-on-muted leading-relaxed max-w-3xl">
+      It fixed the bug and would have passed the buyer's tests. It also edited a
+      file the contract protected, so the pinned commands
+      <strong class="text-on-surface">never ran</strong>
+      ({{ j.fail_run.commands_run }} executed) and escrow returned to the buyer.
+      That is the difference between a control layer and CI wired to a transfer.
+    </p>
+
+    <div class="mono text-xs bg-white/[.04] border border-line rounded-lg p-4 mt-5 text-on-muted leading-relaxed">
+      {{ j.fail_run.reason }}
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-4 mt-5">
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-on-faint mb-1.5">Refunded</div>
+        <div class="text-sm">{{ j.fail_run.amount }} USDC &rarr; {{ j.fail_run.recipient }}</div>
+      </div>
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-on-faint mb-1.5">Verifier fee</div>
+        <div class="text-sm">{{ j.fail_run.fee_amount }} USDC, charged either way</div>
+      </div>
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-on-faint mb-1.5">Graded in</div>
+        <div class="mono text-xs text-on-muted">{{ j.fail_run.execution_id or "in-process" }}</div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-5">
+      {% if j.fail_run.settlement_explorer %}
+      <a href="{{ j.fail_run.settlement_explorer }}" class="text-xs px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/25 text-accent hover:border-accent/50 transition-colors">Refund on-chain &rarr;</a>
+      {% endif %}
+      {% if j.fail_run.fee_explorer %}
+      <a href="{{ j.fail_run.fee_explorer }}" class="text-xs px-3 py-1.5 rounded-lg border border-line text-on-muted hover:text-on-surface transition-colors">Verifier fee &rarr;</a>
+      {% endif %}
+      <a href="/evaluations/{{ j.fail_run.id }}" class="text-xs px-3 py-1.5 rounded-lg border border-line text-on-muted hover:text-on-surface transition-colors">How it was graded &rarr;</a>
+      <a href="/receipts/{{ j.fail_run.id }}" class="text-xs px-3 py-1.5 rounded-lg border border-line text-on-muted hover:text-on-surface transition-colors">Verify the receipt &rarr;</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if j.pass_run %}
+<section class="mb-10">
+  <div class="text-[10px] uppercase tracking-widest text-on-faint mb-3">And when it passes</div>
+  <div class="card p-6">
+    <p class="text-sm text-on-muted leading-relaxed max-w-3xl">
+      The same task, submitted without touching the protected file, released
+      <strong class="text-on-surface">{{ j.pass_run.amount }} USDC</strong> to
+      the provider agent automatically. No human approved it.
+    </p>
+    <div class="flex flex-wrap gap-2 mt-4">
+      {% if j.pass_run.funding_explorer %}
+      <a href="{{ j.pass_run.funding_explorer }}" class="text-xs px-3 py-1.5 rounded-lg border border-line text-on-muted hover:text-on-surface transition-colors">1. Escrow funded &rarr;</a>
+      {% endif %}
+      {% if j.pass_run.settlement_explorer %}
+      <a href="{{ j.pass_run.settlement_explorer }}" class="text-xs px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/25 text-accent hover:border-accent/50 transition-colors">2. Released &rarr;</a>
+      {% endif %}
+      {% if j.pass_run.fee_explorer %}
+      <a href="{{ j.pass_run.fee_explorer }}" class="text-xs px-3 py-1.5 rounded-lg border border-line text-on-muted hover:text-on-surface transition-colors">3. Verifier fee &rarr;</a>
+      {% endif %}
+      <a href="/receipts/{{ j.pass_run.id }}" class="text-xs px-3 py-1.5 rounded-lg border border-line text-on-muted hover:text-on-surface transition-colors">Receipt &rarr;</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="mb-10">
+  <div class="text-[10px] uppercase tracking-widest text-on-faint mb-3">How the decision is made</div>
+  <div class="grid md:grid-cols-3 gap-4">
+    <div class="card p-5">
+      <div class="text-accent text-[11px] mono mb-2">1 &middot; Gemini</div>
+      <h3 class="font-display font-semibold text-[15px] mb-2">Proposes</h3>
+      <p class="text-xs text-on-faint leading-relaxed">
+        Drafts contract terms from a plain request, screens the diff for
+        malicious code, explains failures, and plans a retry. It cannot change a
+        verdict, move escrow, or enter a receipt.
+      </p>
+    </div>
+    <div class="card p-5">
+      <div class="text-accent text-[11px] mono mb-2">2 &middot; Evaluator</div>
+      <h3 class="font-display font-semibold text-[15px] mb-2">Decides</h3>
+      <p class="text-xs text-on-faint leading-relaxed">
+        Runs the buyer's pinned tests in a sealed Cloud Run job the provider
+        cannot influence. The grader bundle is injected <em>after</em> the
+        provider's diff, overwriting anything left there.
+      </p>
+    </div>
+    <div class="card p-5">
+      <div class="text-accent text-[11px] mono mb-2">3 &middot; Circle</div>
+      <h3 class="font-display font-semibold text-[15px] mb-2">Settles</h3>
+      <p class="text-xs text-on-faint leading-relaxed">
+        The buyer's pre-signed mandate is <em>executed</em>, not re-decided.
+        Agent wallets move the USDC under spending policies read live from
+        Circle.
+      </p>
+    </div>
+  </div>
+  <p class="text-xs text-on-faint mt-4 leading-relaxed max-w-3xl">
+    Intelligence informs; rules decide. That boundary is enforced by tests
+    rather than by convention &mdash; the settlement is byte-identical for
+    hostile model output, and a diff that successfully steers the screening
+    still refunds correctly.
+  </p>
+</section>
+
+<section class="mb-10">
+  <div class="text-[10px] uppercase tracking-widest text-on-faint mb-3">Where it ran</div>
+  <div class="card p-6">
+    <p class="text-sm text-on-muted leading-relaxed max-w-3xl">
+      Grading happens inside a sealed Cloud Run job on a VPC with no Cloud NAT.
+      The posture below was <strong class="text-on-surface">measured from inside
+      that job</strong>, on the pinned image, and is written into the signed
+      receipt.
+    </p>
+    <div class="mono text-xs bg-white/[.04] border border-line rounded-lg p-4 mt-4 text-on-muted hash">
+      {{ j.egress_claim }}
+    </div>
+    <p class="text-xs text-on-faint mt-4 leading-relaxed max-w-3xl">
+      Not a flat deny, and the reason is worth stating: a completely sealed job
+      cannot mount the volume its inputs arrive on. One destination is allowed
+      &mdash; Google's restricted API VIP &mdash; and the posture names it
+      rather than rounding it off. DNS also still resolves. Both are disclosed
+      here, in the constant, and on the receipt.
+      <a href="/verifier" class="text-on-muted hover:text-accent">See the probe &rarr;</a>
+    </p>
+  </div>
+</section>
+
+<section class="mb-10">
+  <div class="text-[10px] uppercase tracking-widest text-on-faint mb-3">What this does not claim</div>
+  <div class="card p-6">
+    <ul class="space-y-3 text-sm text-on-muted leading-relaxed">
+      <li class="flex gap-3">
+        <span class="text-warn shrink-0">&mdash;</span>
+        <span><strong class="text-on-surface">Verified contract acceptance is not code quality.</strong>
+        A PASS means the submission satisfied the buyer's pinned tests. It does not
+        mean the code is good, secure, or mergeable.</span>
+      </li>
+      <li class="flex gap-3">
+        <span class="text-warn shrink-0">&mdash;</span>
+        <span><strong class="text-on-surface">Buyer griefing is unsolved.</strong>
+        A provider can verify the tests <em>cannot change</em>, not that they are
+        <em>passable</em>, because the contract publishes the grader hash rather
+        than the bundle. Scope is trusted buyers and approved providers.</span>
+      </li>
+      <li class="flex gap-3">
+        <span class="text-warn shrink-0">&mdash;</span>
+        <span><strong class="text-on-surface">MergeGate holds escrow authority.</strong>
+        This is programmable escrow with policy-bound settlement. It is not
+        non-custodial and it is not trustless.</span>
+      </li>
+      <li class="flex gap-3">
+        <span class="text-warn shrink-0">&mdash;</span>
+        <span><strong class="text-on-surface">x402 carries the verifier fee, not the reward.</strong>
+        The task reward is a plain USDC transfer through Circle agent wallets.</span>
+      </li>
+      <li class="flex gap-3">
+        <span class="text-warn shrink-0">&mdash;</span>
+        <span><strong class="text-on-surface">Gemini has been wrong here, publicly.</strong>
+        It flagged our own honest submission for knowing the grader &mdash; over a
+        comment that lives in the buyer's base tree and which the provider
+        <em>deleted</em> &mdash; and scored that same wrong finding 40, then 10,
+        then 25 out of 100 across three runs on equivalent input. That is the
+        argument for keeping it out of the payment path.</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="text-[10px] uppercase tracking-widest text-on-faint mb-3">Check it yourself</div>
+  <div class="grid sm:grid-cols-3 gap-4">
+    <a href="/receipts" class="card card-hover p-5 block">
+      <h3 class="font-display font-semibold text-[15px] mb-1.5">In the browser</h3>
+      <p class="text-xs text-on-faint leading-relaxed">
+        {{ j.total_receipts }} receipts, each re-verified on load rather than
+        trusting a stored flag.
+      </p>
+    </a>
+    <div class="card p-5">
+      <h3 class="font-display font-semibold text-[15px] mb-1.5">On your machine</h3>
+      <p class="text-xs text-on-faint leading-relaxed mono">mergegate verify receipt.json</p>
+      <p class="text-xs text-on-faint leading-relaxed mt-2">
+        Exit 0 verified, 1 failed, 2 could not check. Offline, no MergeGate access.
+      </p>
+    </div>
+    <a href="/integrate" class="card card-hover p-5 block">
+      <h3 class="font-display font-semibold text-[15px] mb-1.5">From your agent</h3>
+      <p class="text-xs text-on-faint leading-relaxed">
+        MCP server, read-only by design. There is deliberately no funding tool.
+      </p>
+    </a>
+  </div>
+</section>
+
+{% endblock %}

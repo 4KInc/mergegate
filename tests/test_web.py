@@ -607,3 +607,69 @@ def test_x402_does_not_claim_a_payment_it_cannot_verify(
     assert body["verified"] is True
     assert "not settled" in body["error"]
     assert "no relayer configured" in body["detail"]
+
+
+# -- the judge page -----------------------------------------------------------
+#
+# The evidence for this project already existed across six pages. This one
+# assembles it. What matters in these tests is that it assembles it from the
+# receipts on record rather than from a written summary, because a hardcoded
+# summary drifts the first time a flow is re-run -- which has already happened
+# once in the documentation.
+
+
+def test_the_judge_page_renders_both_outcomes(bundle_dir: Path, key: Ed25519PrivateKey) -> None:
+    html = _client(bundle_dir, key).get("/judge").text
+    assert "code was correct. It was refused anyway" in html
+    assert "released" in html.lower()
+
+
+def test_the_judge_page_reads_its_figures_from_the_receipts(
+    bundle_dir: Path, key: Ed25519PrivateKey
+) -> None:
+    """Derived, not transcribed.
+
+    Proven by changing what the receipts say and watching the page follow. A
+    page that kept rendering 0.25 after the receipts said 0.99 would be a
+    written claim wearing the costume of evidence.
+    """
+    for path in bundle_dir.rglob("*.json"):
+        envelope = json.loads(path.read_text())
+        envelope["body"]["binding"]["settlement_amount_usdc"] = "0.99"
+        path.write_text(json.dumps(envelope))
+
+    html = _client(bundle_dir, key).get("/judge").text
+    assert "0.99 USDC" in html
+
+
+def test_the_judge_page_states_the_limits_alongside_the_proof(
+    bundle_dir: Path, key: Ed25519PrivateKey
+) -> None:
+    """The limitations are on the same page as the evidence, not one click away.
+
+    A reader who sees only the proof has been given half the picture, and the
+    half that flatters us.
+    """
+    html = _client(bundle_dir, key).get("/judge").text
+    assert "not code quality" in html
+    assert "Buyer griefing is unsolved" in html
+    assert "holds escrow authority" in html
+    assert "not the reward" in html
+    # Including the one that is least comfortable to publish.
+    assert "wrong here, publicly" in html
+
+
+def test_the_judge_page_survives_an_empty_deployment(tmp_path: Path) -> None:
+    """No receipts must render an honest page, not a broken one.
+
+    A fresh deployment has nothing to show. The sections that depend on a run
+    are omitted rather than rendered with blank figures, which would read as a
+    settlement of zero rather than as an absence.
+    """
+    empty = tmp_path / "none"
+    empty.mkdir()
+    response = _client(empty, None).get("/judge")
+    assert response.status_code == 200
+    assert "It was refused anyway" not in response.text
+    # The claim and the limits do not depend on there being a run.
+    assert "Buyer griefing is unsolved" in response.text
