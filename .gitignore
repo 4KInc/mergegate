@@ -19,3 +19,11 @@ service-account*.json
 
 # Local Claude Code settings (machine-specific, not shared)
 .claude/settings.local.json
+
+# Local submission notes & media
+DEVPOST_ADDITIONAL_INFO.md
+DEVPOST_SUBMISSION.md
+docs/DEVPOST_SUBMISSION.md
+*.mp4
+.DS_Store
+
