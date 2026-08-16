@@ -135,6 +135,26 @@ TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "mergegate_assess_contract",
+        "description": (
+            "Before accepting work: assess a contract's feasibility, sketch an "
+            "implementation, and check the files it expects to touch against the "
+            "contract's path policy. Returns ACCEPT / REQUEST_CLARIFICATION / "
+            "DECLINE. Advisory only, and under HASH_ONLY terms the acceptance tests "
+            "were not readable, so feasibility is inferred rather than verified."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "contract_hash": {"type": "string"},
+                "task": {"type": "string"},
+                "tree": {"type": "string"},
+                "fee_usdc": {"type": "string"},
+            },
+            "required": ["contract_hash"],
+        },
+    },
+    {
         "name": "mergegate_inspect_contract",
         "description": (
             "The pinned terms behind a receipt: writable paths, protected paths, "
@@ -316,6 +336,74 @@ def _tool_get_retry_plan(args: dict[str, Any]) -> dict[str, Any]:
     return plan
 
 
+def _tool_assess_contract(args: dict[str, Any]) -> dict[str, Any]:
+    """Assess a live contract before the provider agent commits to it.
+
+    Fetches the pinned terms from the service and assesses them, rather than
+    accepting terms from the caller. An agent that could pass in its own terms
+    would be assessing a contract that may not exist, and any conclusion it drew
+    would be about the wrong one.
+
+    Like the retry plan, the assessment and the path check travel together. The
+    check is the part with teeth: it uses the contract's own guard, so a plan
+    expecting to edit a protected path is refused here — before any work — where
+    it costs nothing.
+    """
+    from .contract import TaskContract
+    from .feasibility import assess_contract, check_assessment
+
+    contract_hash = str(args.get("contract_hash", "")).strip()
+    if not contract_hash:
+        raise CliError("contract_hash is required")
+
+    record = _get(f"{_service()}/api/contracts/{contract_hash}")
+    terms = (record or {}).get("terms") or {}
+    if not terms:
+        return {
+            "available": False,
+            "error": f"no pinned terms stored for {contract_hash}",
+        }
+
+    contract = TaskContract.from_canonical_dict(terms)
+    assessment = assess_contract(
+        contract,
+        task=str(args.get("task", "")),
+        repo_tree=str(args.get("tree", "")),
+        fee_usdc=str(args.get("fee_usdc", "0.05")),
+    )
+    check = check_assessment(assessment, contract)
+
+    return {
+        "assessment": {
+            "summary": assessment.summary,
+            "implementation_plan": list(assessment.implementation_plan),
+            "files_likely_to_change": list(assessment.files_likely_to_change),
+            "warnings": list(assessment.warnings),
+            "open_questions": list(assessment.open_questions),
+            "feasibility": assessment.feasibility,
+            "attempt_risk": assessment.attempt_risk,
+            "recommendation": assessment.recommendation,
+            "estimated_attempt_cost_usdc": assessment.estimated_attempt_cost_usdc,
+            "criteria_visible": assessment.criteria_visible,
+            "available": assessment.available,
+            "error": assessment.error,
+            "advisory": True,
+        },
+        "path_check": {
+            "ok": check.ok,
+            "reasons": list(check.reasons),
+            "disallowed_files": list(check.disallowed_files),
+        },
+        "terms_visibility": str(contract.terms_visibility),
+        "note": (
+            "Advisory. Nothing here accepts the contract or moves funds, and under "
+            "HASH_ONLY the acceptance tests were not readable: feasibility is "
+            "inferred from the task and repository, not from the criteria that will "
+            "decide payment."
+        ),
+    }
+
+
 def _tool_inspect_contract(args: dict[str, Any]) -> dict[str, Any]:
     contract_hash = args.get("contract_hash")
     if not contract_hash:
@@ -333,6 +421,7 @@ _IMPLEMENTATIONS = {
     "mergegate_get_receipt": _tool_get_receipt,
     "mergegate_draft_task": _tool_draft_task,
     "mergegate_get_retry_plan": _tool_get_retry_plan,
+    "mergegate_assess_contract": _tool_assess_contract,
     "mergegate_inspect_contract": _tool_inspect_contract,
     "mergegate_wallet_policies": _tool_wallet_policies,
     "mergegate_verify_receipt": _tool_verify_receipt,
