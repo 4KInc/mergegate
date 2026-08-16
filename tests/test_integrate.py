@@ -296,3 +296,42 @@ def test_env_var_names_on_the_page_are_the_ones_actually_read(client: Any) -> No
     assert mcp.PUBLIC_KEY_VAR in text
     assert "MERGEGATE_SERVICE" in text
     assert os.environ.get("MERGEGATE_RECEIPT_PUBLIC_KEY", "x") in text
+
+
+# -- wallet policies -----------------------------------------------------------
+
+
+def test_wallets_page_renders_without_the_circle_cli(client: Any) -> None:
+    """The page must render in an environment with no Circle CLI, because the
+    test suite and CI are exactly that environment."""
+    response = client.get("/wallets")
+    assert response.status_code == 200
+    assert "spend limit exceeded" in response.text
+
+
+def test_an_unreadable_policy_is_not_shown_as_unlimited(client: Any) -> None:
+    """A failed read and an uncapped wallet must not look the same. Rendering a
+    CLI timeout as an empty limits table would present a wallet with unknown
+    bounds as one with none."""
+    text = client.get("/wallets").text
+    assert "not the same as" in text
+    assert "as permission" in text
+
+
+def test_wallet_policy_reading_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mergegate.payments.policy import read_policy
+
+    monkeypatch.setenv("CIRCLE_CLI_PATH", "/nonexistent/circle")
+    policy = read_policy("0xabc", chain="BASE")
+
+    assert policy.available is False
+    assert policy.error
+    assert policy.limits == ()
+
+
+def test_an_absent_address_is_reported_not_guessed() -> None:
+    from mergegate.payments.policy import read_policy
+
+    policy = read_policy("", chain="BASE")
+    assert policy.available is False
+    assert "no address" in policy.error

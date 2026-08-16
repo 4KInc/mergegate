@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}MergeGate: Wallets{% endblock %}
+{% block content %}
+
+<header class="mb-10">
+  <span class="pill mb-5">
+    <span class="dot dot-live"></span>
+    <span class="mono text-[10px] uppercase tracking-widest text-accent">Bounded autonomy</span>
+  </span>
+  <h1 class="font-display text-3xl md:text-[38px] leading-tight font-semibold tracking-tight">Wallets</h1>
+  <p class="text-sm text-on-muted mt-4 max-w-2xl leading-relaxed">
+    Four agent wallets, each able to do one thing. "Agents move money on their
+    own" is only reassuring if the autonomy is bounded, so every limit below is
+    read live from Circle rather than described here.
+  </p>
+</header>
+
+{# The refusal comes first. A table of limits is a claim; a rejected transfer
+   is the claim being exercised. #}
+<section class="card p-6 mb-4 border-warn/25">
+  <div class="flex items-center gap-3 mb-1">
+    <span class="w-8 h-8 rounded-lg bg-warn/10 border border-warn/25 grid place-items-center text-warn font-display font-bold text-sm">!</span>
+    <h2 class="font-display text-lg font-semibold tracking-tight">A transfer the policy refused</h2>
+  </div>
+  <p class="text-xs text-on-faint mb-4 ml-11 max-w-3xl leading-relaxed">
+    Run against the live mainnet wallet. The point is not that it failed, but
+    <em>where</em> it failed.
+  </p>
+  <div class="rounded-xl bg-black/30 border border-line p-5 mono text-[11px] leading-relaxed overflow-x-auto">
+<pre class="text-on-muted">$ {{ refusal.command }}
+<span class="text-danger">{{ refusal.result }}</span></pre>
+  </div>
+  <p class="text-xs text-on-faint mt-4 leading-relaxed max-w-3xl ml-11">
+    {{ refusal.explanation }} The wallet holds roughly one dollar, so this could
+    never have succeeded on funds either. What makes it evidence is the order:
+    the spending policy refused it before the balance was ever consulted, and
+    MergeGate has no way to raise that limit. Widening it needs a human one-time
+    passcode, which is the correct design, because a limit an agent can raise is
+    not a limit.
+  </p>
+</section>
+
+<section class="mb-4 flex items-baseline justify-between gap-4">
+  <h2 class="font-display text-lg font-semibold tracking-tight">What each wallet may do</h2>
+  <span class="mono text-xs text-on-faint">{{ network }}</span>
+</section>
+
+<div class="space-y-4">
+  {% for role, policy in rows %}
+  <div class="card card-hover p-6">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-4">
+      <div>
+        <h3 class="font-display font-semibold text-[15px]">{{ role.name }}</h3>
+        <p class="text-xs text-on-faint mt-1 max-w-xl leading-snug">{{ role.purpose }}</p>
+      </div>
+      <span class="mono text-[11px] text-on-muted break-all">{{ role.address or "not configured" }}</span>
+    </div>
+
+    <div class="rounded-lg bg-black/20 border border-line px-4 py-3 mb-4">
+      <div class="text-[10px] uppercase tracking-widest text-on-faint mb-1">Cannot</div>
+      <p class="text-xs text-on-muted leading-snug">{{ role.constraint }}</p>
+    </div>
+
+    {% if policy and policy.available %}
+      {% if policy.limits %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs min-w-[520px]">
+          <thead>
+            <tr class="text-[10px] uppercase tracking-widest text-on-faint border-b border-line">
+              <th class="text-left font-medium py-2">Policy</th>
+              <th class="text-right font-medium py-2">Per tx</th>
+              <th class="text-right font-medium py-2">Daily</th>
+              <th class="text-right font-medium py-2">Weekly</th>
+              <th class="text-right font-medium py-2">Monthly</th>
+              <th class="text-right font-medium py-2">Origin</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for limit in policy.limits %}
+            <tr class="border-b border-line last:border-0">
+              <td class="py-2 mono text-[11px] text-on-muted">{{ limit.policy_type }}</td>
+              <td class="py-2 text-right figure text-[11px]">{{ limit.per_tx }}</td>
+              <td class="py-2 text-right figure text-[11px]">{{ limit.daily }}</td>
+              <td class="py-2 text-right figure text-[11px]">{{ limit.weekly }}</td>
+              <td class="py-2 text-right figure text-[11px] text-accent">{{ limit.monthly }}</td>
+              <td class="py-2 text-right text-[10px] text-on-faint">{{ limit.origin }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-xs text-warn">Circle reports no spending policy on this wallet.</p>
+      {% endif %}
+    {% else %}
+      {# Absent is not "unlimited". Rendering a failed read as an empty table
+         would turn a CLI timeout into an apparently uncapped wallet. #}
+      <p class="text-xs text-on-faint leading-relaxed">
+        Policy could not be read{% if policy and policy.error %}: <span class="mono">{{ policy.error }}</span>{% endif %}.
+        This is not the same as "no limits", and is shown as unknown rather than
+        as permission.
+      </p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<p class="text-[11px] text-on-faint mt-6 max-w-3xl leading-relaxed">
+  MergeGate holds escrow authority, so this is programmable USDC escrow with
+  policy-bound conditional settlement, not a non-custodial arrangement. The
+  limits above constrain what that authority can do; they do not remove it.
+</p>
+
+{% endblock %}

@@ -335,6 +335,24 @@ def _advisory_for(store: Any, receipt_id: str) -> dict[str, Any]:
         return {}
 
 
+WALLET_CHAIN = os.environ.get("CIRCLE_BLOCKCHAIN", "BASE")
+
+#: A real refusal, kept verbatim. The buyer wallet holds about 1 USDC, so this
+#: transfer could never have succeeded on funds; what makes it evidence is that
+#: Circle refused it at the *policy* layer first, before balance was consulted.
+POLICY_REFUSAL = {
+    "command": (
+        "circle wallet transfer 0xe36b612b… --amount 250 "
+        "--address 0x5c34e3e0… --chain BASE --token 0x833589fC…"
+    ),
+    "result": "Error: Service returned error 400: spend limit exceeded",
+    "explanation": (
+        "250 USDC is above the wallet's 100 USDC monthly policy. The refusal "
+        "came from the policy, not from the balance, and no funds moved."
+    ),
+}
+
+
 def public_request_url(request: Request) -> str:
     """The full URL of this request, with the scheme the caller actually used.
 
@@ -824,6 +842,32 @@ def build_web_router(
                 "egress_claim": EGRESS_DENY_TCP,
                 "network": ", ".join(bundle.networks()) or network,
                 "active": "Verifier",
+            },
+        )
+
+    @router.get("/wallets", response_class=HTMLResponse)
+    def wallets(request: Request) -> Any:
+        """The spending policy each agent wallet runs under.
+
+        Read live from Circle rather than described, because "agents move money
+        autonomously" is only reassuring if the autonomy is bounded, and a
+        bound nobody can check is a promise rather than a control.
+        """
+        from .payments.policy import read_policy, wallet_roles
+
+        roles = wallet_roles()
+        rows = [
+            (role, read_policy(role.address, chain=WALLET_CHAIN) if role.address else None)
+            for role in roles
+        ]
+        return templates.TemplateResponse(
+            request,
+            "wallets.html",
+            {
+                "rows": rows,
+                "refusal": POLICY_REFUSAL,
+                "network": network,
+                "active": "Wallets",
             },
         )
 
