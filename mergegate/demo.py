@@ -43,6 +43,7 @@ from .mandate import PaymentMandate
 from .payments import CircleCliRail, SettlementExecutor
 from .payments.base import SettlementRail
 from .receipt import build_receipt, sign_receipt, verify_receipt
+from .retry import files_to_revert
 from .settlement import TaskState, TaskStateMachine, settlement_key
 from .store import MemoryTaskStore, TaskStore
 from .verifier.dispatch import CloudRunJob, build_request, run_sealed_evaluation
@@ -316,9 +317,16 @@ class DemoRunner:
         )
         return self.repo_dir
 
-    def build_contract(self, base_sha: str) -> TaskContract:
-        """Pin every term the evaluator will consult, before any submission."""
+    def build_contract(self, base_sha: str, *, retry_of: str = "") -> TaskContract:
+        """Pin every term the evaluator will consult, before any submission.
+
+        ``retry_of`` links a second attempt to the contract it follows. It goes
+        in ``metadata``, which is hashed but never read by the evaluator: the
+        link is provenance, so an auditor can follow a retry back to the failure
+        that prompted it, and it must not be something a verdict could depend on.
+        """
         return build_contract(
+            metadata=(("retry_of", retry_of),) if retry_of else (),
             grader_bundle=self.grader_dir,
             task_id=self.config.repo,
             repository=self.config.repo,
@@ -452,6 +460,49 @@ class DemoRunner:
             ["git", "-C", str(self.repo_dir), "push", "-q", "origin", "HEAD:main"],
         ):
             subprocess.run(argv, check=True, capture_output=True)  # noqa: S603
+
+    def remediate(self, contract: TaskContract, base_sha: str) -> tuple[str, tuple[str, ...]]:
+        """Undo the term violation, keep the work, and push the result.
+
+        This is the step that closes the loop, and what it does *not* do is the
+        point. It does not ask a model to write code. Gemini explains why the
+        submission failed; the repair is computed by
+        :func:`~mergegate.retry.files_to_revert` from the contract's own path
+        guard, so the same failure always produces the same remediation.
+
+        Reverting is the whole remedy here because the failure is a term
+        violation rather than a wrong answer: the submission's code was correct
+        and would have passed. Restoring the protected file to the base commit
+        leaves exactly the work behind. A submission that failed because the
+        tests genuinely did not pass has nothing to revert, and this returns an
+        empty tuple rather than pretending otherwise.
+
+        Returns the new submission SHA and the files it restored.
+        """
+        changed = tuple(
+            line.strip()
+            for line in subprocess.run(  # noqa: S603 - argv vector, shell=False
+                ["git", "-C", str(self.repo_dir), "diff", "--name-only", f"{base_sha}..HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.splitlines()
+            if line.strip()
+        )
+
+        reverted = files_to_revert(changed, contract)
+        if not reverted:
+            return "", ()
+
+        for path in reverted:
+            subprocess.run(  # noqa: S603 - argv vector, shell=False
+                ["git", "-C", str(self.repo_dir), "checkout", base_sha, "--", path],
+                check=True,
+                capture_output=True,
+            )
+
+        self._commit_and_push("Remove the protected-path change and keep the fix")
+        return resolve_sha(self.repo_dir, "HEAD"), reverted
 
     def submit(self, *, touch_protected: bool) -> str:
         """Push a submission as the provider agent and return its SHA.
@@ -722,7 +773,12 @@ def _print_flow(title: str, config: DemoConfig, result: dict[str, Any]) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the MergeGate demo flows.")
     parser.add_argument(
-        "flow", choices=["pass", "fail"], help="pass -> release; fail -> protected-path refund"
+        "flow",
+        choices=["pass", "fail", "retry"],
+        help=(
+            "pass -> release; fail -> protected-path refund; "
+            "retry -> fail, remediate, then a linked second contract that passes"
+        ),
     )
     parser.add_argument("--env", default=".env")
     args = parser.parse_args(argv)
@@ -754,7 +810,7 @@ def main(argv: list[str] | None = None) -> int:
     sealed, mandate, funding_tx = runner.fund(contract)
     print(f"  escrow funded     {config.explorer_base}{funding_tx}")
 
-    submission_sha = runner.submit(touch_protected=args.flow == "fail")
+    submission_sha = runner.submit(touch_protected=args.flow in ("fail", "retry"))
     print(f"  submission sha    {submission_sha}")
 
     manifest = runner.evaluate(sealed, submission_sha)
@@ -785,6 +841,66 @@ def main(argv: list[str] | None = None) -> int:
     runner.advise(contract, manifest, submission_sha)
 
     out = Path(f"receipt-{args.flow}.json")
+    out.write_text(json.dumps(result["receipt"], indent=2))
+    print(f"\n  receipt written   {out}")
+
+    if args.flow == "retry":
+        return _retry_flow(runner, config, contract, base_sha, manifest)
+    return 0
+
+
+def _retry_flow(
+    runner: DemoRunner,
+    config: DemoConfig,
+    failed_contract: TaskContract,
+    base_sha: str,
+    failed_manifest: VerificationManifest,
+) -> int:
+    """The second half of the loop: remediate, refund already done, try again.
+
+    A retry is a **new contract**, not a second attempt at the old one. The
+    settled task is terminal and the state machine refuses every later event,
+    because the buyer's mandate authorized exactly one payment decision. So this
+    funds fresh escrow on the same terms, linked to its predecessor by
+    ``retry_of``.
+
+    That link is the honest cost of the design, and it is worth reading twice:
+    **the buyer pays a second verifier fee.** A retry is not free to anyone. It
+    is why :class:`~mergegate.retry.RetryBudget` exists and why the plan is
+    policy-checked before an attempt rather than after.
+    """
+    if failed_manifest.verdict is not Verdict.FAIL:
+        print("\n  retry             skipped: the first attempt passed")
+        return 0
+
+    print("\n=== retry: remediate and resubmit ===")
+    new_sha, reverted = runner.remediate(failed_contract, base_sha)
+    if not new_sha:
+        print("  remediation       nothing to revert; this failure is not fixable that way")
+        return 0
+    print(f"  reverted          {', '.join(reverted)}")
+    print(f"  submission sha    {new_sha}")
+
+    retry_contract = runner.build_contract(base_sha, retry_of=failed_contract.contract_hash)
+    print(f"  contract hash     {retry_contract.contract_hash}")
+    print(f"  retry of          {failed_contract.contract_hash}")
+
+    sealed, mandate, funding_tx = runner.fund(retry_contract)
+    print(f"  escrow funded     {config.explorer_base}{funding_tx}")
+
+    manifest = runner.evaluate(sealed, new_sha)
+    print(f"  graded in         sealed job {runner.last_execution_id or 'IN-PROCESS'}")
+    print(f"  verdict           {manifest.verdict.value}")
+
+    result = runner.settle(manifest, mandate, delivery_prefix="retry")
+    _print_flow(
+        "RETRY PASS -> release" if manifest.verdict is Verdict.PASS else "RETRY FAIL -> refund",
+        config,
+        result,
+    )
+    runner.advise(retry_contract, manifest, new_sha)
+
+    out = Path("receipt-retry.json")
     out.write_text(json.dumps(result["receipt"], indent=2))
     print(f"\n  receipt written   {out}")
     return 0

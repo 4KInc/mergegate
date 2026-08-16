@@ -18,8 +18,15 @@ respects the contract deadline, so a provider agent cannot spin against a task
 it will never satisfy, and a buyer's escrow is not consumed by an unbounded
 sequence of verifier fees.
 
-Nothing here changes a verdict or moves money. A retry is a new submission
-against the same contract and settles on its own evidence.
+Nothing here changes a verdict or moves money.
+
+**A retry is a new contract, not a second go at the old one**, and the wording
+here used to say otherwise. Once a task settles, the state machine treats it as
+terminal and refuses every later event including a fresh submission, because the
+buyer's mandate authorized exactly one payment decision. So the loop is: FAIL,
+refund, then a *new* contract funded on the same terms, carrying a
+``retry_of`` link to its predecessor. Nothing about the failed attempt is
+reopened; the link is provenance, not a reference the evaluator consults.
 """
 
 from __future__ import annotations
@@ -40,6 +47,7 @@ __all__ = [
     "RetryBudget",
     "plan_retry",
     "check_plan",
+    "files_to_revert",
     "RETRY_SCHEMA",
 ]
 
@@ -253,3 +261,25 @@ def check_plan(plan: RetryPlan, contract: TaskContract) -> PlanCheck:
         )
 
     return PlanCheck(not reasons, tuple(reasons), disallowed)
+
+
+def files_to_revert(changed_files: tuple[str, ...], contract: TaskContract) -> tuple[str, ...]:
+    """Which of a failed submission's files must be undone to comply.
+
+    The remediation the closed loop actually applies, and it is deliberately
+    **not** a model output. Gemini explains *why* a submission failed; what a
+    provider agent then does about it must be reproducible, because it decides
+    what gets resubmitted and therefore what gets paid for.
+
+    The rule is the narrow one that generalises: revert everything the
+    contract's own guard rejects, keep everything it permits. That undoes the
+    term violation without touching the work, which is exactly the FAIL case
+    this system is built around — a correct fix bundled with a prohibited edit.
+
+    It does not write code, and it cannot repair a submission that failed
+    because the tests genuinely did not pass. A caller reaching for it in that
+    case gets an empty tuple, which correctly means "nothing here is fixable by
+    reverting".
+    """
+    guard = PathGuard.from_contract(contract)
+    return tuple(sorted(path for path in changed_files if guard.classify(path) is not None))

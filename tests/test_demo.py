@@ -287,3 +287,119 @@ class TestSealedJobConfiguration:
         with pytest.raises(RuntimeError) as raised:
             _sealed_job({"VERIFIER_JOB_NAME": "mergegate-verifier"})
         assert "missing ." not in str(raised.value)
+
+
+# -- the closed retry loop ----------------------------------------------------
+
+
+def test_remediation_reverts_only_what_the_contract_forbids(runner: DemoRunner) -> None:
+    """The repair is computed from the guard, not proposed by a model.
+
+    Gemini explains why the submission failed; what the provider agent then
+    does about it decides what gets resubmitted and therefore what gets paid
+    for, so it has to be reproducible.
+    """
+    base_sha = resolve_sha(runner.repo_dir, "HEAD")
+    contract = runner.build_contract(base_sha)
+    runner.submit(touch_protected=True)
+
+    new_sha, reverted = runner.remediate(contract, base_sha)
+
+    assert new_sha, "remediation should produce a new submission"
+    assert reverted == (".github/workflows/deploy.yml",)
+
+    # The work survives. This is the whole point: the code was correct and only
+    # the term violation is undone.
+    calc = (runner.repo_dir / "src" / "calc.py").read_text()
+    assert calc == PASS_PATCH
+
+    # Compared against what the base commit actually held, not against a
+    # hardcoded string. The invariant is "restored to base"; pinning the
+    # content would pass only for one repository and would have to be edited
+    # whenever the fixture changed, which is how a test stops testing anything.
+    at_base = _git(runner.repo_dir, "show", f"{base_sha}:.github/workflows/deploy.yml")
+    workflow = (runner.repo_dir / ".github" / "workflows" / "deploy.yml").read_text()
+    assert workflow == at_base, "the protected file must be back to its base state"
+
+
+def test_remediation_declines_when_there_is_nothing_to_revert(runner: DemoRunner) -> None:
+    """A submission that failed its tests is not repairable by reverting.
+
+    Returning an empty result rather than an optimistic one matters: a caller
+    that treated "nothing to revert" as "fixed" would fund a second contract
+    and resubmit an identical failing tree.
+    """
+    base_sha = resolve_sha(runner.repo_dir, "HEAD")
+    contract = runner.build_contract(base_sha)
+    runner.submit(touch_protected=False)
+
+    new_sha, reverted = runner.remediate(contract, base_sha)
+
+    assert new_sha == ""
+    assert reverted == ()
+
+
+def test_a_retry_is_a_new_contract_linked_to_its_predecessor(runner: DemoRunner) -> None:
+    """Terminal means terminal, so a retry cannot reuse the settled contract.
+
+    The buyer's mandate authorized exactly one payment decision. The link is
+    provenance in ``metadata``, which is hashed but never read by the
+    evaluator: an auditor can follow a retry back to the failure that prompted
+    it, and no verdict can depend on it.
+    """
+    base_sha = resolve_sha(runner.repo_dir, "HEAD")
+    contract = runner.build_contract(base_sha)
+
+    retry = runner.build_contract(base_sha, retry_of=contract.contract_hash)
+
+    assert ("retry_of", contract.contract_hash) in retry.metadata
+    assert retry.contract_hash != contract.contract_hash
+    # Same terms otherwise: a retry must not quietly move the goalposts.
+    assert retry.allowed_source_paths == contract.allowed_source_paths
+    assert retry.protected_paths == contract.protected_paths
+    assert retry.grader_hash == contract.grader_hash
+
+
+def test_the_full_loop_fails_then_pays_after_remediation(runner: DemoRunner) -> None:
+    """The claim the closed loop makes, end to end, with money moving both ways.
+
+    Attempt one is correct code plus a protected-path edit: refused, buyer
+    refunded. The agent reverts what the guard rejects and resubmits under a
+    new contract. Attempt two passes and the provider is paid.
+
+    The buyer pays **two** verifier fees across this. That is the honest cost of
+    a retry and the reason RetryBudget exists: a loop that costs the buyer
+    nothing per attempt would have no reason to terminate.
+    """
+    base_sha = resolve_sha(runner.repo_dir, "HEAD")
+
+    first = runner.build_contract(base_sha)
+    sealed, mandate, _ = runner.fund(first)
+    runner.submit(touch_protected=True)
+    failed = runner.evaluate(sealed, resolve_sha(runner.repo_dir, "HEAD"))
+    attempt_one = runner.settle(failed, mandate)
+
+    assert failed.verdict is Verdict.FAIL
+    assert attempt_one["state"] == TaskState.REFUNDED.value
+    # .get, because the rail only creates an entry when money actually moves:
+    # "no balance" and "a zero balance" both mean the provider was not paid.
+    assert runner.rail.balances.get(PROVIDER, Decimal("0")) == Decimal("0")  # type: ignore[attr-defined]
+
+    new_sha, reverted = runner.remediate(first, base_sha)
+    assert reverted, "the protected-path edit should be revertible"
+
+    second = runner.build_contract(base_sha, retry_of=first.contract_hash)
+    sealed2, mandate2, _ = runner.fund(second)
+    passed = runner.evaluate(sealed2, new_sha)
+    attempt_two = runner.settle(passed, mandate2, delivery_prefix="retry")
+
+    assert passed.verdict is Verdict.PASS
+    assert attempt_two["state"] == TaskState.SETTLED.value
+    assert runner.rail.balances[PROVIDER] == Decimal("0.25")  # type: ignore[attr-defined]
+
+    # Two separate receipts, and the second names the first.
+    assert (
+        attempt_two["receipt"]["body"]["binding"]["contract_hash"]
+        != attempt_one["receipt"]["body"]["binding"]["contract_hash"]
+    )
+    assert ("retry_of", first.contract_hash) in second.metadata
