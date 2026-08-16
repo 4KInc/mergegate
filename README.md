@@ -337,6 +337,36 @@ event tests, the second against real Circle infrastructure on Base Sepolia:
 sending twice with one key moved 0.25 USDC exactly once and returned the same
 transaction hash both times.
 
+### How a funded task ends
+
+Four terminal states. The fourth exists because the other three did not cover
+everything:
+
+| State | Reached when |
+| --- | --- |
+| `SETTLED` | PASS before the deadline; the provider is paid |
+| `REFUNDED` | FAIL, or a PASS that arrived after the deadline |
+| `EXPIRED` | The deadline passed and **no verdict ever existed** |
+
+`VerdictUnavailableError` is deliberately not a FAIL — an infrastructure outage
+must not be able to spend the buyer's money — but before `EXPIRED` a task the
+verifier never answered simply stayed in `VERIFYING` with escrow funded and
+nothing able to close it. "Never releases funds incorrectly" was true; "always
+reaches a terminal state" was not.
+
+**A task with a verdict may never expire**, and that restriction is the point.
+`execute_mandate` checks the deadline *before* the verdict, so a PASS settled
+after `T` refunds. If a graded task could also expire, anyone able to delay
+settlement past `T` could convert a provider's PASS into a refund by doing
+nothing at all — stalling would become a way to avoid paying for delivered work.
+Only tasks with nothing to pay for can expire. Both guards are covered by tests
+that were checked by removing the guard and watching them fail.
+
+The expiry directive is built by `mandate.expire_mandate`, not by the state
+machine, so **every settlement directive in the system is still constructed in
+one module**. A directive assembled inside the state machine would be a second
+place where a payment decision could be made.
+
 Circle requires idempotency keys to be **UUIDs** and rejects a bare
 `sha256:<hex>` with `400 Invalid request body`. The rail derives a UUIDv5 from
 the settlement key over a fixed namespace, so the mapping stays deterministic:
@@ -718,10 +748,22 @@ be pinned by some route other than asking the signer.
           "MERGEGATE_RECEIPT_PUBLIC_KEY": "bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U"}}}}
 ```
 
-`mergegate_status`, `mergegate_list_receipts`, `mergegate_get_receipt`,
-`mergegate_verify_receipt`. An agent that cannot query the settlement layer needs
-a human to read the dashboard for it, which puts the human back in the loop this
-project exists to remove.
+Nine tools, split by who needs them:
+
+| Tool | For |
+| --- | --- |
+| `mergegate_status` | Anyone. What this deployment attests, and what it does not |
+| `mergegate_draft_task` | Buyers. Terms from a plain request, **plus the policy verdict** — a draft that fails cannot be funded |
+| `mergegate_inspect_contract` | Providers. The pinned terms, including `terms_visibility` |
+| `mergegate_assess_contract` | Providers, before accepting. Feasibility, a plan, and a path check against the contract's own guard |
+| `mergegate_get_retry_plan` | Providers, after a FAIL. A plan and whether it is actionable |
+| `mergegate_list_receipts` · `mergegate_get_receipt` | Either. Did I get paid, and against what |
+| `mergegate_verify_receipt` | Either. Re-verify against a **pinned** key |
+| `mergegate_wallet_policies` | Counterparties. What these wallets can and cannot spend |
+
+An agent that cannot query the settlement layer needs a human to read the
+dashboard for it, which puts the human back in the loop this project exists to
+remove.
 
 **Read only, deliberately.** Nothing on it funds escrow, signs a mandate or moves
 USDC. An MCP server is driven by whatever the model decides to call, so a funding

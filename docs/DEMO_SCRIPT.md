@@ -172,5 +172,14 @@ These are all in the written record and a judge may have read it before watching
 - Do not say "no network". It blocks outbound TCP to the public internet, and
   leaves two channels open on purpose: DNS, and one Google API address without
   which the job cannot receive its inputs. Both are printed on the receipt.
+- **Do not say Gemini fixed it.** In the retry beat, Gemini explains the
+  failure; the repair is computed from the contract's own path guard and is the
+  same every time. Saying the model wrote the fix would be the one overclaim
+  this whole design exists to avoid, and the code says otherwise if a judge
+  looks.
+- **Say the buyer pays twice.** A retry is a new contract with a second verifier
+  fee. A judge will work it out from the transactions, so say it first.
+- **`PUBLISHED_GRADER` is a claim, not a proof.** If the visibility field comes
+  up, it records what the buyer asserts. MergeGate does not verify it.
 - The guarantee is verified contract acceptance, not code quality or security.
 - MergeGate holds escrow authority. It is not non-custodial.

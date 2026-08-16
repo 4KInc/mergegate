@@ -41,9 +41,14 @@ receipt names the term:
 
 That is the difference between a control layer and "CI plus a transfer".
 
-Both receipts re-verify offline against the published signing key. The
-dashboard at
-[mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app)
+Both were graded **inside the sealed Cloud Run job** — executions
+`mergegate-verifier-5rbrl` and `mergegate-verifier-mc5bj` — and the receipts
+carry the network posture measured from inside it.
+
+Both re-verify offline against the published signing key. The
+[one-page case](https://mergegate-api-1031148889398.us-central1.run.app/judge)
+assembles all of this from the receipts the deployment actually holds, and the
+[dashboard](https://mergegate-api-1031148889398.us-central1.run.app)
 re-verifies them on every request rather than trusting a stored flag.
 
 ## Where this sits relative to ERC-8183
@@ -213,9 +218,15 @@ differently from how they would have been written in advance.
   the verdict; confirming the money moved requires looking at Base.
 
 - **There is now an LLM, and it decides nothing.** Earlier versions of this
-  document said there was no LLM anywhere. Gemini has since been added in two
-  advisory roles: it screens the provider's diff for malicious code and test
-  gaming before grading, and explains a FAIL afterwards. It is still absent from
+  document said there was no LLM anywhere, then that there were two advisory
+  roles. There are now four: Gemini drafts contract terms from a plain request,
+  assesses a contract before a provider accepts it, screens the provider's diff
+  for malicious code and test gaming, and explains a FAIL into a policy-checked
+  retry plan. Each of the four is bounded by deterministic code that decides
+  what may be *acted on* — a draft that fails policy cannot be funded, a plan or
+  an assessment naming a protected path is refused, and an assessment made
+  without sight of the acceptance criteria has its confidence capped whatever
+  the model claimed. It is still absent from
   contract creation, evaluation, settlement and receipt issuance, and that
   boundary is enforced by tests rather than convention. The settlement modules
   are parsed and asserted not to import it, settlement is byte-identical for

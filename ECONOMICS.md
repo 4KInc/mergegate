@@ -105,6 +105,63 @@ Gemini call. Both are dominated by that one line item.
 
 ---
 
+## What a retry costs, and who pays it
+
+The loop is closed: a refused submission is remediated and resubmitted
+automatically. That is a feature with a price attached, and the price falls on
+the buyer.
+
+A retry is a **new contract**, funded again, because the settled task is
+terminal — the buyer's mandate authorized exactly one payment decision. So a
+task that takes two attempts costs the buyer two verifier fees:
+
+| Attempts | Buyer pays in fees | Provider receives | MergeGate revenue |
+| --- | --- | --- | --- |
+| 1 (PASS) | 0.05 | 0.25 | 0.05 |
+| 2 (FAIL then PASS) | 0.10 | 0.25 | 0.10 |
+| 3 (two failures then PASS) | 0.15 | 0.25 | 0.15 |
+
+At the demo's 0.25 reward, a third attempt means the buyer has spent 0.40 to
+obtain 0.25 of work. That is unreasonable, and it is unreasonable because the
+demo reward is tiny rather than because the fee is: at a $50 task, three
+attempts is $0.15 of fees, which is noise.
+
+**The incentive here points the wrong way and is worth naming.** MergeGate earns
+per evaluation, so more failed attempts mean more revenue. Nothing in the system
+resists that today. What limits it is `RetryBudget`, which bounds attempts and
+respects the deadline, and the fact that a plan proposing a prohibited change is
+refused *before* an attempt is spent rather than after. Both reduce wasted
+attempts; neither removes the incentive. A flat fee charged per *task* rather
+than per *evaluation* would, at the cost of making pathological retry loops free
+to the provider.
+
+---
+
+## An expired task, and a fee question that is not settled
+
+The state machine has a terminal `EXPIRED` state: the deadline passed and no
+verdict ever existed, so escrow returns to the buyer. It exists because a task
+the verifier never answered used to stay open forever.
+
+**Whether MergeGate should charge its fee in that case is an open question, and
+the code does not currently answer it.** No path wires expiry to the settlement
+executor yet, so nothing is charged today. But `SettlementExecutor.execute`
+charges the fee for whatever directive it is handed, so wiring expiry naively
+would bill the buyer 0.05 for an evaluation that produced no result.
+
+That would be charging for our own outage, and it is worth saying plainly that
+it is the *wrong* default rather than discovering it later. The argument for
+charging is that the compute was attempted and consumed; the argument against is
+that the product is a verdict and no verdict was delivered. The second is
+stronger. An expiry is the one outcome where the failure is on MergeGate's side,
+and a neutral evaluator that profits from its own unavailability has an
+incentive nobody should have to reason about.
+
+Stated here rather than quietly implemented either way, because it changes who
+pays for a failure and that is a pricing decision, not an implementation detail.
+
+---
+
 ## The fee rate is a demo figure, and 20% is indefensible
 
 0.05 on a 0.25 reward is 20%. Anyone dividing those two numbers should know we

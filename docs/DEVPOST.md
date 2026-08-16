@@ -13,7 +13,8 @@ following `base_sha` out of a receipt reaches the demo repo.
 
 > **Live on Base mainnet · Built on the Circle agent stack · Hosted on Google Cloud**
 >
-> **2-minute demo:** [VIDEO LINK]
+> **3-minute demo:** [VIDEO LINK]
+> **Start here:** https://mergegate-api-1031148889398.us-central1.run.app/judge
 > **Live app:** https://mergegate-api-1031148889398.us-central1.run.app
 > **Code:** https://github.com/4KInc/mergegate
 >
@@ -53,6 +54,16 @@ because it also edited a protected CI file, and the refund names the exact term:
 > contract evaluated FAIL: `.github/workflows/deploy.yml` modifies a
 > contract-protected path (pattern: `.github/**`)
 
+**Then the loop closes.** Gemini explains the failure; the provider agent
+reverts exactly what the contract's path guard rejects — computed from the
+contract, not written by a model — and resubmits under a *new* contract linked
+by `retry_of`. That one passes and the provider is paid. `python -m
+mergegate.demo retry` runs the whole thing.
+
+A retry is a new contract because the settled task is terminal: the buyer's
+mandate authorized exactly one payment decision. So **the buyer pays a second
+verifier fee**, which is the honest cost and the reason retries are budgeted.
+
 ## How we built it
 
 Circle agent wallets for programmable escrow, driven by the `circle` CLI. API,
@@ -66,6 +77,15 @@ contracts. Secret Manager for the signing key, webhook secret and CLI session.
 Receipt signing, canonical JSON (RFC 8785) and Merkle hashing come from a shared
 engine rather than being rebuilt.
 
+Gemini sits on four surfaces, all on the advisory side of the line. It drafts
+contract terms from a plain request (a deterministic policy validates them and
+refuses to fund what fails); it assesses a contract *before* a provider accepts,
+returning ACCEPT / REQUEST_CLARIFICATION / DECLINE; it screens the diff for
+malicious code; and it explains failures into a policy-checked retry plan. The
+assessment's confidence is capped deterministically when the acceptance criteria
+are hidden, because a confident ACCEPT on tests nobody can read is a guess
+dressed as a finding.
+
 The verifier is also sold as an **x402 service**, and Circle's own CLI pays it.
 `circle services pay` against `/x402/verify` verifies the buyer's EIP-3009
 authorization, including the ERC-1271 signature of a Circle Agent Wallet, and
@@ -73,7 +93,7 @@ settles 0.05 USDC on Base. Agent to agent, no human, no dashboard.
 
 ## Challenges
 
-Five claims broke under testing, and finding them is most of the engineering:
+Six claims broke under testing, and finding them is most of the engineering:
 
 1. **A submission implementing nothing passed.** It read the buyer's tests at
    runtime and answered from a lookup table. Every defense stopped the provider
@@ -90,7 +110,14 @@ Five claims broke under testing, and finding them is most of the engineering:
 4. **Settlement de-duplication lived in memory** on a platform that cold-starts.
    True in tests, false in production. Now Firestore-backed with a per-task
    transaction.
-5. **Every real Circle x402 payment failed, and the logs could not say why.**
+5. **Two guards were green while failing.** A tripwire written to fail the
+   moment grading was wired to Cloud Run watched for the Python SDK; dispatch
+   arrived through the `gcloud` CLI, so it sat green across the exact change it
+   existed to catch. Separately, the judge page claimed to show "the most recent
+   run" while the stores sort receipts by id — alphabetical, unrelated to time —
+   so it rendered a superseded run and an empty execution id. Both were found by
+   checking output against reality rather than re-reading code.
+6. **Every real Circle x402 payment failed, and the logs could not say why.**
    x402 specifies the payment header as `X-PAYMENT`; Circle's CLI sends
    `payment-signature`. A genuine payment arrived indistinguishable from an
    unpaid request, so the server returned the challenge and the CLI reported a
@@ -104,7 +131,9 @@ Five claims broke under testing, and finding them is most of the engineering:
 ## Accomplishments
 
 Both task flows settled on Base mainnet with real USDC, and the verifier fee
-settles over x402 driven by Circle's own CLI. Every transaction was confirmed
+settles over x402 driven by Circle's own CLI. The loop closes end to end: a
+refused submission is remediated and resubmitted automatically under a linked
+contract, and paid. Every transaction was confirmed
 on-chain independently of the payment provider's own response. Double-payment
 has two independent guards: the settlement state machine, and the settlement key
 passed to Circle as an idempotency UUID, verified by sending the same key twice
@@ -140,6 +169,12 @@ Stated here rather than left for a reviewer to find:
   not that they are passable, because the contract publishes the grader hash
   rather than the bundle.
 - **The 20% demo fee rate** is a demo figure, not a business model.
+- **A retry costs the buyer a second verifier fee**, because it is a new
+  contract. Nothing about the closed loop is free.
+- **`terms_visibility` records a claim, not a proof.** `PUBLISHED_GRADER` is a
+  buyer assertion MergeGate does not verify;
+  `THIRD_PARTY_ESCROWED_GRADER` is rejected outright because no such escrow
+  exists here.
 - **Trusted-buyer scope**: private repos, approved providers.
 - **The guarantee is verified contract acceptance**, not code quality, security
   or mergeworthiness.
@@ -150,3 +185,7 @@ Stated here rather than left for a reviewer to find:
   and is named in the receipt rather than rounded off. In-process grading is
   still supported for tests and records `unrestricted; graded in-process`.
 - **MergeGate holds escrow authority.** This is not described as non-custodial.
+- **`EXPIRED` returns escrow when no verdict ever existed**, so an outage cannot
+  strand a funded task. Whether MergeGate should charge its fee in that case is
+  deliberately unresolved and written down as unresolved: charging for an
+  evaluation that produced no result would be charging for our own failure.
