@@ -24,6 +24,8 @@ service-account*.json
 DEVPOST_ADDITIONAL_INFO.md
 DEVPOST_SUBMISSION.md
 docs/DEVPOST_SUBMISSION.md
+docs/DEVPOST.md
+docs/DEMO_SCRIPT.md
 *.mp4
 .DS_Store
 
