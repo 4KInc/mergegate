@@ -82,7 +82,7 @@ below it stays inside the Cloud Run free tier.
 
 Grading now runs in the sealed Cloud Run job, at 2 vCPU / 4 GiB with a 600s
 ceiling. A graded run of about 30 seconds at those resources is roughly $0.0012,
-which does not change any conclusion here — it is two orders of magnitude below
+which does not change any conclusion here, being two orders of magnitude below
 the gas cost of the settlement it accompanies. Cold start and volume mount add
 wall-clock, not meaningful cost.
 
@@ -112,7 +112,7 @@ automatically. That is a feature with a price attached, and the price falls on
 the buyer.
 
 A retry is a **new contract**, funded again, because the settled task is
-terminal — the buyer's mandate authorized exactly one payment decision. So a
+terminal: the buyer's mandate authorized exactly one payment decision. So a
 task that takes two attempts costs the buyer two verifier fees:
 
 | Attempts | Buyer pays in fees | Provider receives | MergeGate revenue |

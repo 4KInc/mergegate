@@ -69,12 +69,12 @@ Four terminal states, and the fourth is the one worth planning for:
 | `SETTLED` | PASS before the deadline. The provider was paid |
 | `REFUNDED` | FAIL, or a PASS that arrived after the deadline. Your money came back |
 | `EXPIRED` | The deadline passed and **no verdict ever existed**. Your money comes back |
-| — | Anything else means the task is still open |
+| *(none)* | Anything else means the task is still open |
 
 `EXPIRED` is not a failure of the work; it means the verifier never produced a
 result this deployment would accept. That is deliberately not treated as a FAIL,
-because an infrastructure outage must not be able to spend your money — but it
-is also not left open forever, which is what used to happen.
+because an infrastructure outage must not be able to spend your money. It is
+also not left open forever, which is what used to happen.
 
 A task that already has a verdict **cannot** expire. It settles on that verdict.
 Otherwise anyone able to delay settlement past your deadline could turn a
@@ -113,7 +113,7 @@ mergegate_assess_contract(contract_hash="sha256:...", task="...", tree="...")
 ```
 
 Returns an implementation sketch, the files it expects to touch, warnings, open
-questions, and `ACCEPT` / `REQUEST_CLARIFICATION` / `DECLINE` — plus a
+questions, and `ACCEPT` / `REQUEST_CLARIFICATION` / `DECLINE`, plus a
 `path_check` run against the contract's own guard. **A plan that would edit a
 protected path is refused here**, before you have written anything, rather than
 after an attempt you paid for.
@@ -141,8 +141,8 @@ mergegate_get_retry_plan(receipt_id="...")
 
 Returns a structured plan **and** whether you may act on it:
 
-- `actionable: true` — the proposed files are within your writable paths
-- `actionable: false` — with `refusal_reasons` and `disallowed_files`
+- `actionable: true`: the proposed files are within your writable paths
+- `actionable: false`: with `refusal_reasons` and `disallowed_files`
 
 A plan naming a protected path is refused here rather than after another paid
 attempt. Every attempt costs the buyer a verifier fee whichever way it goes, so
@@ -150,7 +150,7 @@ weigh `estimated_retry_cost_usdc` against what is left of the reward.
 
 **A retry is a new contract, not a second go at the old one.** Once a task
 settles it is terminal, and the state machine refuses every later event
-including a fresh submission — the buyer's mandate authorized exactly one
+including a fresh submission, because the buyer's mandate authorized exactly one
 payment decision. So a retry needs the buyer to fund again, and the new contract
 carries `retry_of` pointing at the one that failed. Read the plan as *advice to
 put to the buyer*, not as permission you already have.
@@ -166,7 +166,7 @@ mergegate_list_receipts(task_id="owner/repo")
 ```
 
 `source_error` is carried through rather than hidden. **"No receipts" and "the
-datastore is unreachable" are different facts** — if you treat the second as the
+datastore is unreachable" are different facts**. If you treat the second as the
 first, you will conclude you were never paid.
 
 ---
@@ -191,7 +191,7 @@ mergegate verify receipt.json
 ```
 
 Exit `0` verified, `1` failed verification, `2` could not check. **Do not treat
-2 as 1** — that is a fraud alarm raised over your own missing key.
+2 as 1**: that is a fraud alarm raised over your own missing key.
 
 ---
 
@@ -204,8 +204,8 @@ Exit `0` verified, `1` failed verification, `2` could not check. **Do not treat
   are advisory and cannot change a verdict or move money. If a screening flag
   and a verdict disagree, the verdict is what settles.
 - **The advisory layer has been wrong here, publicly.** It flagged an honest
-  submission for knowing the grader — over a comment that lives in the buyer's
-  own base tree and which the provider *deleted* — and scored that same wrong
+  submission for knowing the grader, over a comment that lives in the buyer's
+  own base tree and which the provider *deleted*, and scored that same wrong
   finding 40, then 10, then 25 out of 100 across three runs on equivalent input.
   Treat its scores as a prompt to look, never as a result.
 - **A feasibility `ACCEPT` is not a prediction that you will pass.** Under

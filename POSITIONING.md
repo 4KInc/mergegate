@@ -41,8 +41,8 @@ receipt names the term:
 
 That is the difference between a control layer and "CI plus a transfer".
 
-Both were graded **inside the sealed Cloud Run job** — executions
-`mergegate-verifier-5rbrl` and `mergegate-verifier-mc5bj` — and the receipts
+Both were graded **inside the sealed Cloud Run job**, executions
+`mergegate-verifier-5rbrl` and `mergegate-verifier-mc5bj`, and the receipts
 carry the network posture measured from inside it.
 
 Both re-verify offline against the published signing key. The
@@ -164,8 +164,8 @@ differently from how they would have been written in advance.
   a contract may not commit to a protection the deployment cannot deliver,
   because a provider reading the term would take it as a guarantee.
 
-- **A retry costs the buyer a second verifier fee.** The loop is closed — a
-  refused submission is remediated and resubmitted automatically — but a retry
+- **A retry costs the buyer a second verifier fee.** The loop is closed, so a
+  refused submission is remediated and resubmitted automatically, but a retry
   is a *new contract*, funded again, because the buyer's mandate authorized
   exactly one payment decision. Nothing about this is free to the buyer, which
   is why `RetryBudget` bounds attempts and respects the deadline. A loop with no
@@ -205,8 +205,8 @@ differently from how they would have been written in advance.
   `deny-tcp-egress-except-google-restricted-vip-199.36.153.4/30; dns-resolution-available`.
 
   So the honest statement is two residual channels, not one. Graded code can
-  open a socket to Google's API front-end — with no credentials to use there,
-  but "unauthenticated" is weaker than "unreachable" — and DNS still resolves.
+  open a socket to Google's API front-end, with no credentials to use there,
+  though "unauthenticated" is weaker than "unreachable". DNS still resolves.
   The probe that establishes this is a module rather than a one-off, precisely
   because the claim has now moved three times.
 
@@ -223,7 +223,7 @@ differently from how they would have been written in advance.
   assesses a contract before a provider accepts it, screens the provider's diff
   for malicious code and test gaming, and explains a FAIL into a policy-checked
   retry plan. Each of the four is bounded by deterministic code that decides
-  what may be *acted on* — a draft that fails policy cannot be funded, a plan or
+  what may be *acted on*: a draft that fails policy cannot be funded, a plan or
   an assessment naming a protected path is refused, and an assessment made
   without sight of the acceptance criteria has its confidence capped whatever
   the model claimed. It is still absent from
@@ -237,9 +237,9 @@ differently from how they would have been written in advance.
   submission it saw, flagging a comment the provider *deleted* as evidence the
   provider had read the grader, and scored that same wrong finding 40/100, then
   10/100, then 25/100 across three runs on equivalent input. That is the
-  argument for the architecture rather than an embarrassment to it: had the screening carried gating power, correct
-  work would have been refused, and whether it was refused would depend on which
-  run you got.
+  argument for the architecture rather than an embarrassment to it: had the
+  screening carried gating power, correct work would have been refused, and
+  whether it was refused would depend on which run you got.
 
 - **x402 carries the verifier fee, not the task reward.** The endpoint now
   verifies and settles a real payment from a Circle Agent Wallet. What it does

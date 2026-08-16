@@ -210,7 +210,7 @@ Sealing the API too would silently break settlement, which is why the deny-all
 VPC is attached to the job alone. **That job is now what grades.**
 `verifier/dispatch.py` submits to it, `verifier/job.py` runs inside it, and the
 orchestrator re-checks the returned manifest against the request that asked for
-it — refusing on any mismatch rather than degrading to a FAIL, since an
+it, refusing on any mismatch rather than degrading to a FAIL, since an
 orchestrator that could turn "I could not reach the verifier" into "the work is
 rejected" would be a way to refuse payment by breaking infrastructure.
 
@@ -348,9 +348,9 @@ everything:
 | `REFUNDED` | FAIL, or a PASS that arrived after the deadline |
 | `EXPIRED` | The deadline passed and **no verdict ever existed** |
 
-`VerdictUnavailableError` is deliberately not a FAIL — an infrastructure outage
-must not be able to spend the buyer's money — but before `EXPIRED` a task the
-verifier never answered simply stayed in `VERIFYING` with escrow funded and
+`VerdictUnavailableError` is deliberately not a FAIL, because an infrastructure
+outage must not be able to spend the buyer's money. But before `EXPIRED`, a task
+the verifier never answered simply stayed in `VERIFYING` with escrow funded and
 nothing able to close it. "Never releases funds incorrectly" was true; "always
 reaches a terminal state" was not.
 
@@ -358,7 +358,7 @@ reaches a terminal state" was not.
 `execute_mandate` checks the deadline *before* the verdict, so a PASS settled
 after `T` refunds. If a graded task could also expire, anyone able to delay
 settlement past `T` could convert a provider's PASS into a refund by doing
-nothing at all — stalling would become a way to avoid paying for delivered work.
+nothing at all: stalling would become a way to avoid paying for delivered work.
 Only tasks with nothing to pay for can expire. Both guards are covered by tests
 that were checked by removing the guard and watching them fail.
 
@@ -753,7 +753,7 @@ Nine tools, split by who needs them:
 | Tool | For |
 | --- | --- |
 | `mergegate_status` | Anyone. What this deployment attests, and what it does not |
-| `mergegate_draft_task` | Buyers. Terms from a plain request, **plus the policy verdict** — a draft that fails cannot be funded |
+| `mergegate_draft_task` | Buyers. Terms from a plain request, **plus the policy verdict**: a draft that fails cannot be funded |
 | `mergegate_inspect_contract` | Providers. The pinned terms, including `terms_visibility` |
 | `mergegate_assess_contract` | Providers, before accepting. Feasibility, a plan, and a path check against the contract's own guard |
 | `mergegate_get_retry_plan` | Providers, after a FAIL. A plan and whether it is actionable |
@@ -803,7 +803,7 @@ Three things about it are worth stating plainly.
 `PathGuard`. What the agent does about a failure decides what gets resubmitted
 and therefore what gets paid for, so it has to be reproducible. Reverting is the
 whole remedy here precisely because the failure is a *term violation* rather
-than a wrong answer — the code was correct. A submission that failed its tests
+than a wrong answer: the code was correct. A submission that failed its tests
 has nothing to revert and says so instead of guessing.
 
 **A retry is a new contract.** The settled task is terminal and the state
@@ -818,14 +818,14 @@ cost the buyer nothing per attempt would have no reason to terminate.
 
 ## Before accepting: what a provider agent can know
 
-`mergegate_assess_contract` assesses a contract before any work begins —
+`mergegate_assess_contract` assesses a contract before any work begins:
 feasibility, an implementation sketch, the files it expects to touch, and
 `ACCEPT` / `REQUEST_CLARIFICATION` / `DECLINE`. The path check runs the
 contract's own guard, so a plan that would edit a protected path is refused
 *before* the attempt rather than after it.
 
 The interesting constraint is what it is not allowed to claim. Under
-`HASH_ONLY` — the default — the acceptance tests are a hash and the model cannot
+`HASH_ONLY` (the default) the acceptance tests are a hash and the model cannot
 see them. It can still sketch a useful implementation, but it cannot know
 whether the hidden tests are satisfiable, and a confident `ACCEPT` on criteria
 nobody can read is exactly the kind of claim this project avoids. So the
@@ -844,7 +844,7 @@ term, so a provider agent can branch on it:
 | Value | Meaning |
 | --- | --- |
 | `HASH_ONLY` | The default. You can prove the goalposts do not move; you cannot see where they are |
-| `PUBLISHED_GRADER` | The buyer *asserts* the bundle is readable in the base tree. **MergeGate does not verify this** — confirm you can actually read it |
+| `PUBLISHED_GRADER` | The buyer *asserts* the bundle is readable in the base tree. **MergeGate does not verify this**, so confirm you can actually read it |
 | `THIRD_PARTY_ESCROWED_GRADER` | **Rejected at construction.** No such escrow exists here, and a contract may not commit to a protection the deployment cannot deliver |
 
 The default is the weakest value, so a contract that says nothing about
@@ -862,7 +862,7 @@ guarantee at all.
 
 The fix is a custom VPC (`mergegate-sealed`) with no Cloud NAT plus an explicit
 deny-all egress firewall rule, attached to the verifier job with
-`--vpc-egress=all-traffic`. That produced a flat deny — and then broke the job
+`--vpc-egress=all-traffic`. That produced a flat deny, and then broke the job
 entirely, for a reason worth stating plainly.
 
 **A totally sealed job cannot receive its inputs.** Inputs arrive on a Cloud
