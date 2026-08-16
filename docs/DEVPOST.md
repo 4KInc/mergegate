@@ -19,12 +19,12 @@ following `base_sha` out of a receipt reaches the demo repo.
 >
 > | | |
 > | --- | --- |
-> | Mainnet PASS, provider paid 0.25 USDC | [`0xf8cb4b0f`](https://basescan.org/tx/0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6) block 49972831 |
-> | Mainnet FAIL, buyer refunded 0.25 USDC | [`0x8362ac90`](https://basescan.org/tx/0x8362ac904dad8ce8f740b29d3183d8a1659ba01b2a71a1b09fe35e5c97245354) block 49972989 |
+> | Mainnet PASS, provider paid 0.25 USDC | [`0x35209073`](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c) block 50032399 |
+> | Mainnet FAIL, buyer refunded 0.25 USDC | [`0x46f5c75d`](https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2) block 50032315 |
 > | Mainnet x402 payment, verifier fee 0.05 USDC, paid by `circle services pay` | [`0xb40552f2`](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) block 50018597 |
 > | Buyer agent wallet | [`0x5c34e3e0…`](https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2) |
 > | Verifier fee wallet | [`0xe36b612b…`](https://basescan.org/address/0xe36b612ba0fd6bed653e997d5060228e548825f5) |
-> | Verifiable receipt, re-checked on load | [PASS](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-97e4bd614868) · [FAIL](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-1758ca302557) |
+> | Verifiable receipt, re-checked on load | [PASS](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-3272dffd5c37) · [FAIL](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-9a4388aa3890) |
 
 ## Inspiration
 

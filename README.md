@@ -30,8 +30,8 @@ GitHub code, running on Base mainnet.
 | | |
 | --- | --- |
 | **Dashboard** | [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app) |
-| **PASS flow** (0.25 USDC released to the provider) | [settlement tx](https://basescan.org/tx/0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6) · block 49972831 |
-| **FAIL flow** (0.25 USDC refunded to the buyer) | [refund tx](https://basescan.org/tx/0x8362ac904dad8ce8f740b29d3183d8a1659ba01b2a71a1b09fe35e5c97245354) · block 49972989 |
+| **PASS flow** (0.25 USDC released to the provider) | [settlement tx](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c) · block 50032399 |
+| **FAIL flow** (0.25 USDC refunded to the buyer) | [refund tx](https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2) · block 50032315 |
 | **x402 payment** (0.05 USDC verifier fee, paid by `circle services pay`) | [settlement tx](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) · block 50018597 |
 
 The FAIL flow is the one worth opening. That submission's code was **correct**
@@ -307,12 +307,12 @@ Base RPC, not just through Circle's response.
 
 | | |
 | --- | --- |
-| contract | `sha256:be8e3ab1a764ef807cbd31db06417bd23af7250ff8519d935a17deffcbf1b9e0` |
+| contract | `sha256:d1bc60dd09701303266b9044ab8e1e48c3b561f6e17d7afbc623d93920e0a169` |
 | grader | `sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6` |
-| submission | `97e4bd614868913199f264effb1e954a2f799373` |
-| escrow funded | [`0x2d41e529…`](https://basescan.org/tx/0x2d41e529c3567f31195355cf82c4e789d8373a940647ec33993910bdd629b0a2) |
-| release, 0.25 USDC | [`0xf8cb4b0f…`](https://basescan.org/tx/0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6), block 49972831 |
-| verifier fee, 0.05 USDC | [`0x58a5bdd3…`](https://basescan.org/tx/0x58a5bdd3d8f82eb2c3d6c7729761d56b160a4e8df87dbb1718ed5384c0417d92), block 49972855 |
+| submission | `3272dffd5c371bec904cfdac64cf7c78706ad036` |
+| escrow funded | [`0x74e5273d…`](https://basescan.org/tx/0x74e5273d5460a84422be1066f3318f3da1fc8f9753c6c4e534ed05ea55654a54) |
+| release, 0.25 USDC | [`0x35209073…`](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c), block 50032399 |
+| verifier fee, 0.05 USDC | [`0x8881750b…`](https://basescan.org/tx/0x8881750be74f7e699ce2cdc85bf1dd97439eb019c8fb23b24cae848f6031183b), block 50032419 |
 
 **FAIL → refund.** This is the one that matters. The submission's code is
 *correct*: it would have passed the buyer's tests, but it also edited
@@ -321,11 +321,11 @@ and escrow returned to the buyer.
 
 | | |
 | --- | --- |
-| contract | `sha256:5fad3810abcb6705dad2f88fb8bd447fbc2dd6e61eb5d193968b200dd91e139d` |
-| submission | `1758ca302557dcc9d6c1eee6b5aad92cd7bcfe0e` |
-| escrow funded | [`0x39913b9f…`](https://basescan.org/tx/0x39913b9fc210c35e1ff55df04ea828fcf206b4f47a098c6e3cfe5dd964062ba9) |
-| refund, 0.25 USDC | [`0x8362ac90…`](https://basescan.org/tx/0x8362ac904dad8ce8f740b29d3183d8a1659ba01b2a71a1b09fe35e5c97245354), block 49972989 |
-| verifier fee, 0.05 USDC | [`0x2426472b…`](https://basescan.org/tx/0x2426472b1c6ac01538d2e776fe8f7fa94f1c18cfc9fd86611238b389de15b6c5), block 49973001 |
+| contract | `sha256:b74e74321939e66b158445959206beb75b733160ab16ea2862ad1145378ff6e4` |
+| submission | `9a4388aa38901a451fbdfb26312b17c7f0daa98c` |
+| escrow funded | [`0xf3786b97…`](https://basescan.org/tx/0xf3786b978a646b7579503eb99cd3e625f8ba2f60cf7d6a34b21a6de8e3f41737) |
+| refund, 0.25 USDC | [`0x46f5c75d…`](https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2), block 50032315 |
+| verifier fee, 0.05 USDC | [`0xb7b7c8a6…`](https://basescan.org/tx/0xb7b7c8a65bfca2a69daead816b40f775ad042978f2b93363b3f6984562af684e), block 50032339 |
 
 The refund receipt names the failed term rather than reporting a generic
 failure:
@@ -333,19 +333,24 @@ failure:
 > contract evaluated FAIL: `.github/workflows/deploy.yml` modifies a
 > contract-protected path (pattern: `.github/**`)
 
-Both runs happened **with the runtime grader guard active**, so these receipts
-attest the pipeline as it stands rather than an earlier version of it.
+Both runs happened with the runtime grader guard active **and after the
+isolation claim was corrected**, so these receipts state the environment that
+actually graded them rather than borrowing the sealed sandbox's posture. Earlier
+receipts, from before that fix, overstated it.
 
-Mainnet balances moved exactly as the mandates specified: buyer 2.29 → 1.94
-(−0.35, being 0.10 of fees plus the 0.25 released, since the refunded 0.25 came
-back), provider 0.39 → 0.64 (+0.25), verifier-fee wallet 0.10 → 0.20 (+0.10),
-and escrow net zero at 2.01 with 0.60 in and 0.60 out.
+Mainnet balances moved exactly as the mandates specified. After this pair the
+provider holds 0.89 USDC (+0.25 from the release) and the verifier-fee wallet
+0.40 (+0.10 from two fees, plus 0.05 each from two x402 payments). The buyer
+funded 0.60 into escrow across both runs and had 0.25 returned by the refund.
 
 Both receipts re-verify offline against the published signing key
-(`mergegate-e5683130`): 18 and 17 checks. They are committed under
-`demo/receipts/mainnet-guarded/`. The earlier pair, run before the guard
-existed, is kept in `demo/receipts/mainnet/` rather than deleted: they are
-honest records of what the system did at the time, and both still verify.
+(`mergegate-e5683130`): 18 checks on the PASS and 17 on the FAIL. They are
+committed under `demo/receipts/mainnet-honest/`. Two earlier pairs are kept
+rather than deleted, in `demo/receipts/mainnet/` and
+`demo/receipts/mainnet-guarded/`. They still verify, and they are accurate about
+everything except one field: issued before the isolation claim was corrected,
+they assert the sealed sandbox's egress posture for runs that graded in the
+calling process.
 
 ## The app
 
@@ -427,12 +432,13 @@ result.
 ### Real output, on the real mainnet FAIL run
 
 Not illustrative. This is `gemini-2.5-flash` screening the actual diff from
-submission `1758ca302557`, the run that refunded 0.25 USDC on Base mainnet:
+submission `9a4388aa3890`, the run that refunded 0.25 USDC on Base mainnet:
 
 ```
-score: 90/100   band: HIGH   recommendation: FLAG
+score: 95/100   band: HIGH   recommendation: FLAG
 flags:
-  - Modification of protected path: .github/workflows/deploy.yml
+  - ProtectedPathModification
+  - GraderDisclosureInDiff
 ```
 
 > The submission includes modifications to the `.github/workflows/deploy.yml`
@@ -479,40 +485,46 @@ decoded the payload. That is the good outcome, but it is **not** what the design
 relies on. The guarantee is the tested one: had the injection worked, the
 settlement would have been byte-identical anyway.
 
-### A false positive, and why it vindicates the architecture
+### A false positive that does not even hold still
 
-Running the screening over the **PASS** submission produced this, live:
+Screening the **PASS** submission raised this, live:
 
 ```
-score: 40/100   band: MEDIUM
 flags:
-  - Developer showed knowledge of specific grader test cases in comments,
-    indicating potential undue insight into the grading mechanism.
+  - Evidence of previous test gaming (comment referencing specific grader
+    assertion was present, now removed).
 ```
 
-It is wrong. The comment it objected to reads
+It is wrong. The comment it objects to reads
 `# The buyer's pinned grader asserts add(-1, -1) == -2.`, and that line is in
 the **buyer's own base tree**, seeded with the bug. The provider's diff deletes
-it. Gemini saw the line in the diff and attributed the knowledge to the party
-that removed it.
+it. Gemini sees the line among the removed lines and attributes the knowledge to
+the party that removed it.
 
-This is exactly the failure mode that makes LLM-as-judge unsafe for settlement,
-observed on the first real submission it was pointed at. Had this screening
-carried gating power, a correct submission would have been held or refused over
-a comment its author deleted, and 0.25 USDC of real money would have gone to the
-wrong party.
+The interesting part is what happened on the re-run. The same class of diff
+produced the same wrong flag both times, but scored **40/100 MEDIUM** on the
+first run and **10/100 LOW** on the second. So the model is not merely
+sometimes wrong: the severity it attaches to being wrong moves by a factor of
+four between runs on equivalent input.
+
+That is the failure mode that makes LLM-as-judge unsafe for settlement, and it
+showed up on the first real submission the screening was ever pointed at. Had
+this carried gating power, a correct submission could have been held or refused
+over a comment its own author deleted, and 0.25 USDC of real money would have
+gone to the wrong party. Worse, whether it was held would depend on which run
+you got.
 
 It did not, because the screening decides nothing. The tests passed, the guard
 found no violation, and the provider was paid
-[`0xf8cb4b0f`](https://basescan.org/tx/0xf8cb4b0f35af41019b0ab57efee70ab451eaa85e718cb0eb91aed35e5acfe9b6).
+[`0x35209073`](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c).
 The flag is visible on the evaluation page next to a payment that completed
 normally.
 
-Both figures are on the live pages rather than quoted only here:
-[FAIL](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-1758ca302557)
+Both are on the live pages rather than quoted only here:
+[FAIL](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-9a4388aa3890)
 scored 95/100 HIGH,
-[PASS](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-97e4bd614868)
-scored 40/100 MEDIUM and was paid anyway.
+[PASS](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-3272dffd5c37)
+scored 10/100 LOW while still carrying the bogus flag, and was paid anyway.
 
 **Three further limits, held deliberately:**
 
@@ -608,10 +620,10 @@ account, no permission, and no network call.
 git clone --recurse-submodules https://github.com/4KInc/mergegate.git
 cd mergegate && pip install -e .
 
-curl -O https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-1758ca302557.json
+curl -O https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-9a4388aa3890.json
 export MERGEGATE_RECEIPT_PUBLIC_KEY=bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U
 
-mergegate verify 4KInc-mergegate-demo-task-1758ca302557.json
+mergegate verify 4KInc-mergegate-demo-task-9a4388aa3890.json
 ```
 
 `--recurse-submodules` is not optional. Canonical JSON, Merkle hashing and
