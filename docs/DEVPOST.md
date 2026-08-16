@@ -19,12 +19,12 @@ following `base_sha` out of a receipt reaches the demo repo.
 >
 > | | |
 > | --- | --- |
-> | Mainnet PASS, provider paid 0.25 USDC | [`0x35209073`](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c) block 50032399 |
-> | Mainnet FAIL, buyer refunded 0.25 USDC | [`0x46f5c75d`](https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2) block 50032315 |
+> | Mainnet PASS, provider paid 0.25 USDC | [`0xa1303e97`](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae) block 50060061 |
+> | Mainnet FAIL, buyer refunded 0.25 USDC | [`0xc9a5e865`](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25) block 50060179 |
 > | Mainnet x402 payment, verifier fee 0.05 USDC, paid by `circle services pay` | [`0xb40552f2`](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) block 50018597 |
 > | Buyer agent wallet | [`0x5c34e3e0…`](https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2) |
 > | Verifier fee wallet | [`0xe36b612b…`](https://basescan.org/address/0xe36b612ba0fd6bed653e997d5060228e548825f5) |
-> | Verifiable receipt, re-checked on load | [PASS](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-3272dffd5c37) · [FAIL](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-9a4388aa3890) |
+> | Verifiable receipt, re-checked on load | [PASS](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e8a00740eb5f) · [FAIL](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565) |
 
 ## Inspiration
 
@@ -56,9 +56,12 @@ because it also edited a protected CI file, and the refund names the exact term:
 ## How we built it
 
 Circle agent wallets for programmable escrow, driven by the `circle` CLI. API,
-dashboard and webhook on Cloud Run. The verifier's sealed Cloud Run job is
-specified, pinned by image digest and probed, but grading still runs in the
-calling process; receipts say so rather than borrowing the sandbox's posture. Firestore for settlement state, receipts and funded
+dashboard and webhook on Cloud Run. Grading runs in a sealed Cloud Run job,
+pinned by image digest, on a VPC with no Cloud NAT; the orchestrator re-checks
+the returned manifest against the request that asked for it and refuses on any
+mismatch rather than degrading to a FAIL. Inputs cross the boundary on a Cloud
+Storage volume the platform mounts, so the graded process fetches nothing
+itself. Firestore for settlement state, receipts and funded
 contracts. Secret Manager for the signing key, webhook secret and CLI session.
 Receipt signing, canonical JSON (RFC 8785) and Merkle hashing come from a shared
 engine rather than being rebuilt.

@@ -22,8 +22,8 @@ response.
 
 | Flow | Settlement | Verifier fee |
 | --- | --- | --- |
-| PASS → release, 0.25 USDC to provider | [`0x35209073…`](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c), block 50032399 | [`0x8881750b…`](https://basescan.org/tx/0x8881750be74f7e699ce2cdc85bf1dd97439eb019c8fb23b24cae848f6031183b) |
-| FAIL → refund, 0.25 USDC to buyer | [`0x46f5c75d…`](https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2), block 50032315 | [`0xb7b7c8a6…`](https://basescan.org/tx/0xb7b7c8a65bfca2a69daead816b40f775ad042978f2b93363b3f6984562af684e) |
+| PASS → release, 0.25 USDC to provider | [`0xa1303e97…`](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae), block 50060061 | [`0x6f94ef37…`](https://basescan.org/tx/0x6f94ef377c10f961a5252eadd8832ade991c47d22a76788e73ea81fe65507d5f) |
+| FAIL → refund, 0.25 USDC to buyer | [`0xc9a5e865…`](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25), block 50060179 | [`0x177a46af…`](https://basescan.org/tx/0x177a46af7eb120206264c63f588dff0142eb75102239497b151c6e43966a9b96) |
 
 Separately, the verifier is sold as an x402 service and Circle's own CLI pays
 it: `circle services pay` verifies the buyer's EIP-3009 authorization, including
@@ -208,9 +208,9 @@ differently from how they would have been written in advance.
 
   The screening also produced a false positive on the very first honest
   submission it saw, flagging a comment the provider *deleted* as evidence the
-  provider had read the grader, and scored that same wrong finding 40/100 on one
-  run and 10/100 on another. That is the argument for the architecture rather
-  than an embarrassment to it: had the screening carried gating power, correct
+  provider had read the grader, and scored that same wrong finding 40/100, then
+  10/100, then 25/100 across three runs on equivalent input. That is the
+  argument for the architecture rather than an embarrassment to it: had the screening carried gating power, correct
   work would have been refused, and whether it was refused would depend on which
   run you got.
 

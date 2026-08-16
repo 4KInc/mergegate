@@ -10,9 +10,9 @@ screen without editing anything.
 - Terminal at a large font, in `~/Projects/mergegate`.
 - Open these four tabs in order, so you never wait on a page load on camera:
   1. `https://mergegate-api-1031148889398.us-central1.run.app`
-  2. `https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-9a4388aa3890`
-  3. `https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-9a4388aa3890`
-  4. `https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2`
+  2. `https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565`
+  3. `https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-e6bd8ffbc565`
+  4. `https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25`
 
 Lead with the FAIL flow, not the PASS flow. A payment succeeding is unremarkable;
 a payment *refused* for a reason the viewer can check is the whole product.
@@ -42,7 +42,7 @@ a payment *refused* for a reason the viewer can check is the whole product.
 transaction.
 
 ```
-https://mergegate-api-1031148889398.us-central1.run.app/contracts/sha256:b74e74321939e66b158445959206beb75b733160ab16ea2862ad1145378ff6e4
+https://mergegate-api-1031148889398.us-central1.run.app/contracts/sha256:69fe3f44d0697a72cd07d641f7ff8c2674c3005c26c04ab2251f59f1350fab9e
 ```
 
 Point at the protected paths chip (`.github/**`) and say "remember this one".
@@ -62,7 +62,7 @@ the later stages greyed out, and the line reading
 > "The tests never ran. A submission that disables the deploy gate has not
 > satisfied the contract, it has routed around it. So escrow refunded the buyer."
 
-*On screen:* switch to Basescan tab, refund transaction, block 50032315.
+*On screen:* switch to Basescan tab, refund transaction, block 50060179.
 
 > "That is real USDC on Base mainnet, and that is the difference between a
 > control layer and a test runner wired to a transfer."

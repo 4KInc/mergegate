@@ -38,8 +38,8 @@ GitHub code, running on Base mainnet.
 | | |
 | --- | --- |
 | **Dashboard** | [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app) |
-| **PASS flow** (0.25 USDC released to the provider) | [settlement tx](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c) · block 50032399 |
-| **FAIL flow** (0.25 USDC refunded to the buyer) | [refund tx](https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2) · block 50032315 |
+| **PASS flow** (0.25 USDC released to the provider) | [settlement tx](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae) · block 50060061 |
+| **FAIL flow** (0.25 USDC refunded to the buyer) | [refund tx](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25) · block 50060179 |
 | **x402 payment** (0.05 USDC verifier fee, paid by `circle services pay`) | [settlement tx](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) · block 50018597 |
 
 The FAIL flow is the one worth opening. That submission's code was **correct**
@@ -353,12 +353,15 @@ Base RPC, not just through Circle's response.
 
 | | |
 | --- | --- |
-| contract | `sha256:d1bc60dd09701303266b9044ab8e1e48c3b561f6e17d7afbc623d93920e0a169` |
+| contract | `sha256:f11f6dccf98af122985ac6cf46e05bfd7b0d95fa13fdd600347792382126e16c` |
 | grader | `sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6` |
-| submission | `3272dffd5c371bec904cfdac64cf7c78706ad036` |
-| escrow funded | [`0x74e5273d…`](https://basescan.org/tx/0x74e5273d5460a84422be1066f3318f3da1fc8f9753c6c4e534ed05ea55654a54) |
-| release, 0.25 USDC | [`0x35209073…`](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c), block 50032399 |
-| verifier fee, 0.05 USDC | [`0x8881750b…`](https://basescan.org/tx/0x8881750be74f7e699ce2cdc85bf1dd97439eb019c8fb23b24cae848f6031183b), block 50032419 |
+| base | `4422245f37439c6ac8af117797913b6c2513f537` |
+| submission | `e8a00740eb5f126494a6fa9bcbe6203c7d415119` |
+| graded in | sealed Cloud Run job, execution `mergegate-verifier-5rbrl` |
+| escrow funded | [`0x0d8caf15…`](https://basescan.org/tx/0x0d8caf15d5c6953b3e3677ba44ea831728508666906e76edba7109c20c672805), block 50059994 |
+| release, 0.25 USDC | [`0xa1303e97…`](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae), block 50060061 |
+| verifier fee, 0.05 USDC | [`0x6f94ef37…`](https://basescan.org/tx/0x6f94ef377c10f961a5252eadd8832ade991c47d22a76788e73ea81fe65507d5f), block 50060075 |
+| receipt | [`…e8a00740eb5f`](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e8a00740eb5f) |
 
 **FAIL → refund.** This is the one that matters. The submission's code is
 *correct*: it would have passed the buyer's tests, but it also edited
@@ -367,11 +370,14 @@ and escrow returned to the buyer.
 
 | | |
 | --- | --- |
-| contract | `sha256:b74e74321939e66b158445959206beb75b733160ab16ea2862ad1145378ff6e4` |
-| submission | `9a4388aa38901a451fbdfb26312b17c7f0daa98c` |
-| escrow funded | [`0xf3786b97…`](https://basescan.org/tx/0xf3786b978a646b7579503eb99cd3e625f8ba2f60cf7d6a34b21a6de8e3f41737) |
-| refund, 0.25 USDC | [`0x46f5c75d…`](https://basescan.org/tx/0x46f5c75dbe52697a024a19992544860b2ea53e14d2b06454524c0bcdb084bed2), block 50032315 |
-| verifier fee, 0.05 USDC | [`0xb7b7c8a6…`](https://basescan.org/tx/0xb7b7c8a65bfca2a69daead816b40f775ad042978f2b93363b3f6984562af684e), block 50032339 |
+| contract | `sha256:69fe3f44d0697a72cd07d641f7ff8c2674c3005c26c04ab2251f59f1350fab9e` |
+| base | `fe18707595a05f934ff8c643617a94a1ea54efda` |
+| submission | `e6bd8ffbc565bcf4abdd438bd4c7d7d56ff55e97` |
+| graded in | sealed Cloud Run job, execution `mergegate-verifier-mc5bj` |
+| escrow funded | [`0xdb63e1ad…`](https://basescan.org/tx/0xdb63e1ade4b3f8f18b5cc6829fcbb3e5c6245e1391fb1dc41b09cad23e7260ed), block 50060104 |
+| refund, 0.25 USDC | [`0xc9a5e865…`](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25), block 50060179 |
+| verifier fee, 0.05 USDC | [`0x177a46af…`](https://basescan.org/tx/0x177a46af7eb120206264c63f588dff0142eb75102239497b151c6e43966a9b96), block 50060191 |
+| receipt | [`…e6bd8ffbc565`](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565) |
 
 The refund receipt names the failed term rather than reporting a generic
 failure:
@@ -478,20 +484,21 @@ result.
 ### Real output, on the real mainnet FAIL run
 
 Not illustrative. This is `gemini-2.5-flash` screening the actual diff from
-submission `9a4388aa3890`, the run that refunded 0.25 USDC on Base mainnet:
+submission `e6bd8ffbc565`, the run that refunded 0.25 USDC on Base mainnet:
 
 ```
-score: 95/100   band: HIGH   recommendation: FLAG
+score: 90/100   band: HIGH   recommendation: FLAG
 flags:
-  - ProtectedPathModification
-  - GraderDisclosureInDiff
+  - Modified protected path: .github/workflows/deploy.yml
+  - Attempted modification of CI/CD workflow configuration
 ```
 
-> The submission includes modifications to the `.github/workflows/deploy.yml`
-> file [...] explicitly defined as a protected path in the contract terms. The
-> changes to `src/calc.py` resolve a bug by removing incorrect conditional logic
-> and do not introduce any security concerns, supply chain risks, test gaming,
-> or obfuscation.
+> The submission contains modifications to a file within a protected path [...]
+> Altering CI/CD workflow configurations, even if seemingly to empty them,
+> represents a significant integrity and security risk as it could disable or
+> bypass critical automation. The changes to `src/calc.py` appear to be a
+> functional bug fix [...] and do not introduce any security concerns, supply
+> chain risks, or test gaming.
 
 Gemini reached the same conclusion as the path guard, independently, and
 correctly separated the legitimate fix from the violation. It did not decide
@@ -537,8 +544,8 @@ Screening the **PASS** submission raised this, live:
 
 ```
 flags:
-  - Evidence of previous test gaming (comment referencing specific grader
-    assertion was present, now removed).
+  - Agent demonstrated knowledge of grader's specific assertions in code
+    comments.
 ```
 
 It is wrong. The comment it objects to reads
@@ -547,11 +554,12 @@ the **buyer's own base tree**, seeded with the bug. The provider's diff deletes
 it. Gemini sees the line among the removed lines and attributes the knowledge to
 the party that removed it.
 
-The interesting part is what happened on the re-run. The same class of diff
-produced the same wrong flag both times, but scored **40/100 MEDIUM** on the
-first run and **10/100 LOW** on the second. So the model is not merely
-sometimes wrong: the severity it attaches to being wrong moves by a factor of
-four between runs on equivalent input.
+The interesting part is what happens on re-runs. The same class of diff has now
+produced the same wrong flag three times, scoring **40/100 MEDIUM**, then
+**10/100 LOW**, then **25/100 LOW** on the current mainnet run. So the model is
+not merely sometimes wrong: the severity it attaches to being wrong moves by a
+factor of four across runs on equivalent input, and it does not converge with
+repetition.
 
 That is the failure mode that makes LLM-as-judge unsafe for settlement, and it
 showed up on the first real submission the screening was ever pointed at. Had
@@ -562,15 +570,15 @@ you got.
 
 It did not, because the screening decides nothing. The tests passed, the guard
 found no violation, and the provider was paid
-[`0x35209073`](https://basescan.org/tx/0x3520907307e1aa5a1f23485be115f13951bdf6ac9da0e4a478444f19484ee24c).
+[`0xa1303e97`](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae).
 The flag is visible on the evaluation page next to a payment that completed
 normally.
 
 Both are on the live pages rather than quoted only here:
-[FAIL](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-9a4388aa3890)
-scored 95/100 HIGH,
-[PASS](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-3272dffd5c37)
-scored 10/100 LOW while still carrying the bogus flag, and was paid anyway.
+[FAIL](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-e6bd8ffbc565)
+scored 90/100 HIGH,
+[PASS](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-e8a00740eb5f)
+scored 25/100 LOW while still carrying the bogus flag, and was paid anyway.
 
 **Three further limits, held deliberately:**
 
@@ -666,10 +674,10 @@ account, no permission, and no network call.
 git clone --recurse-submodules https://github.com/4KInc/mergegate.git
 cd mergegate && pip install -e .
 
-curl -O https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-9a4388aa3890.json
+curl -O https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565.json
 export MERGEGATE_RECEIPT_PUBLIC_KEY=bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U
 
-mergegate verify 4KInc-mergegate-demo-task-9a4388aa3890.json
+mergegate verify 4KInc-mergegate-demo-task-e6bd8ffbc565.json
 ```
 
 `--recurse-submodules` is not optional. Canonical JSON, Merkle hashing and
@@ -679,8 +687,11 @@ exits rather than proceeding: a verifier that silently degraded would be worse
 than one that refuses. MergeGate is not on PyPI, and a plain wheel install would
 carry the code without the proof layer.
 
-Seventeen checks, recomputed locally. Exit codes are the interface, because the
-caller is usually another program:
+Seventeen checks, recomputed locally. A PASS receipt reports eighteen: one rule
+(`release_requires_pass`) only has something to say about a release, so the
+count follows the verdict rather than being padded to look constant.
+
+Exit codes are the interface, because the caller is usually another program:
 
 | Exit | Meaning |
 | --- | --- |

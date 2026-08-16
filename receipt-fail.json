@@ -1,0 +1,70 @@
+{
+  "body": {
+    "schema_version": "mergegate.receipt/v1",
+    "issued_at": "2026-08-16T19:49:18.097080Z",
+    "binding": {
+      "funding_tx": "0xdb63e1ade4b3f8f18b5cc6829fcbb3e5c6245e1391fb1dc41b09cad23e7260ed",
+      "execution_id": "mergegate-verifier-mc5bj",
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:69fe3f44d0697a72cd07d641f7ff8c2674c3005c26c04ab2251f59f1350fab9e",
+      "grader_hash": "sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6",
+      "base_sha": "fe18707595a05f934ff8c643617a94a1ea54efda",
+      "submission_sha": "e6bd8ffbc565bcf4abdd438bd4c7d7d56ff55e97",
+      "tree_hash": "",
+      "verifier_image_digest": "us-central1-docker.pkg.dev/quick-catcher-470218-b0/mergegate/verifier@sha256:c1e9fe76ba1783e90bcadd47f580b0ac39a76be5cd0d748b87c833bb432ad905",
+      "command_output_digest": "sha256:27c7e64be0e78cfe38a90ae791b152694202a58492702a2e512d1f3b51f496fd",
+      "result_digest": "sha256:a684f8232746874e184d2287d79cd7bde51cf831ee7fb47eb3e7f085f12e9e7c",
+      "mandate_hash": "sha256:31e1d2b831192b7710466cb8541b08fa3b54cbefd353798e961c988a47e04e10",
+      "settlement_key": "sha256:401cb6484ca22009ff2baf19602bed9e1629bbf15481927291e73a20758bfd30",
+      "decision": "FAIL",
+      "settlement_action": "refund",
+      "settlement_recipient": "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2",
+      "settlement_amount_usdc": "0.25",
+      "settlement_asset": "USDC",
+      "settlement_chain": "BASE",
+      "reason": "contract evaluated FAIL: .github/workflows/deploy.yml modifies a contract-protected path (pattern: .github/**)",
+      "settlement_tx": "0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25",
+      "verifier_fee_tx": "0x177a46af7eb120206264c63f588dff0142eb75102239497b151c6e43966a9b96"
+    },
+    "manifest": {
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:69fe3f44d0697a72cd07d641f7ff8c2674c3005c26c04ab2251f59f1350fab9e",
+      "grader_hash": "sha256:83018d118089f7a1a267f815dccde1933e92fff615e70d00c8a6b31dd5e2a7a6",
+      "base_sha": "fe18707595a05f934ff8c643617a94a1ea54efda",
+      "submission_sha": "e6bd8ffbc565bcf4abdd438bd4c7d7d56ff55e97",
+      "tree_hash": "",
+      "verifier_image_digest": "us-central1-docker.pkg.dev/quick-catcher-470218-b0/mergegate/verifier@sha256:c1e9fe76ba1783e90bcadd47f580b0ac39a76be5cd0d748b87c833bb432ad905",
+      "commands": [],
+      "command_output_digest": "sha256:27c7e64be0e78cfe38a90ae791b152694202a58492702a2e512d1f3b51f496fd",
+      "failed_terms": [
+        "protected_path"
+      ],
+      "rejection_reason": ".github/workflows/deploy.yml modifies a contract-protected path (pattern: .github/**)",
+      "tamper_signals": [],
+      "git_stripped": true,
+      "egress_policy": "deny-tcp-egress-except-google-restricted-vip-199.36.153.4/30; dns-resolution-available",
+      "verdict": "FAIL"
+    },
+    "mandate": {
+      "schema_version": "mergegate.mandate/v1",
+      "task_id": "4KInc/mergegate-demo-task",
+      "contract_hash": "sha256:69fe3f44d0697a72cd07d641f7ff8c2674c3005c26c04ab2251f59f1350fab9e",
+      "buyer_agent": "0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2",
+      "provider_agent": "0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558",
+      "amount_usdc": "0.25",
+      "asset": "USDC",
+      "chain": "BASE",
+      "deadline": "2026-08-17T01:45:50.486972Z",
+      "nonce": "251f59f1350fab9e"
+    },
+    "mandate_statement": "pay exactly 0.25 USDC to 0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558 if and only if contract sha256:69fe3f44d0697a72cd07d641f7ff8c2674c3005c26c04ab2251f59f1350fab9e evaluates PASS before 2026-08-17T01:45:50.486972Z",
+    "scope": "Attests verified contract acceptance only, not code quality, security, or mergeworthiness.",
+    "custody": "Programmable USDC escrow with policy-bound conditional settlement. MergeGate holds escrow authority."
+  },
+  "sig": {
+    "alg": "EdDSA",
+    "kid": "mergegate-e5683130",
+    "value": "yuIccD_L0m7DkZ2XVRDfgBgUjxXNYSALHAmsCgWUPyFyK2P5_YlFGRckDRuYi4mj_Rf9paJvyv8mTCGrAtHYCQ"
+  },
+  "receipt_hash": "sha256:935671cfd0efc5abe43c68ca6fb1a78f05ea205bb84c639771cb0f7ddaba3076"
+}
