@@ -170,7 +170,12 @@ def test_a_key_starting_with_a_dash_is_usable(
     envelope, private = signed_receipt
     path = tmp_path / "receipt.json"
     path.write_text(json.dumps(envelope))
-    dashed = "-" + _public_b64(private)[1:]
+    # Derived from a *different* key, so it is never accidentally the correct
+    # one. Building it from `private` meant that when the real key already began
+    # with "-", the forced value was identical to it, verification succeeded,
+    # and the test failed about one run in sixty. Second time random key
+    # material has decided which branch this file exercises.
+    dashed = "-" + _public_b64(Ed25519PrivateKey.generate())[1:]
 
     # Wrong key, so the answer is "invalid" (1), never "unusable" (2). Exit 2
     # here would mean argparse rejected the arguments before verifying at all.
