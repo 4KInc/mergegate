@@ -150,7 +150,7 @@ tailwind.config = {
     <span class="mono text-[10px] text-on-faint ml-auto truncate max-w-[40%]">{{ network }}</span>
   </div>
   <nav class="flex gap-1 px-3 pb-2.5 overflow-x-auto">
-    {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier"),("Integrate","/integrate")] %}
+    {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier"),("Docs","/docs")] %}
     <a href="{{ href }}"
        class="shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors
        {% if active == label %}bg-accent/10 text-accent border border-accent/25{% else %}text-on-muted border border-transparent{% endif %}">{{ label }}</a>
@@ -168,7 +168,7 @@ tailwind.config = {
     </a>
 
     <nav class="space-y-0.5 text-sm">
-      {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier"),("Integrate","/integrate")] %}
+      {% for label, href in [("Contracts","/"),("Receipts","/receipts"),("Verifier","/verifier"),("Docs","/docs")] %}
       <a href="{{ href }}"
          class="flex items-center gap-2 px-3 py-2 rounded-lg transition-all
          {% if active == label %}bg-white/[.05] text-on-surface border border-accent/15{% else %}text-on-muted hover:text-on-surface hover:bg-white/[.03] border border-transparent{% endif %}">
@@ -185,7 +185,7 @@ tailwind.config = {
       <div class="text-[10px] uppercase tracking-widest text-on-faint mb-2">Check it yourself</div>
       <div class="mono text-[10px] leading-relaxed text-on-muted break-all">mergegate verify<br/>&lt;receipt&gt;.json</div>
       <p class="text-[10px] leading-relaxed text-on-faint mt-2">Offline, against a pinned key. No access to MergeGate needed.</p>
-      <a href="/integrate" class="inline-block mt-2 text-[11px] text-accent hover:underline">How to verify &rarr;</a>
+      <a href="/docs" class="inline-block mt-2 text-[11px] text-accent hover:underline">View docs &rarr;</a>
     </div>
 
     <div class="mt-auto pt-6 space-y-3">

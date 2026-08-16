@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MergeGate P&L Statement</title>
+<style>
+  @page { size: landscape; margin: 0.5in; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #333; margin: 40px; max-width: 960px; }
+  h1 { font-size: 28px; color: #1a1a2e; margin-bottom: 30px; }
+  .header-row { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; }
+  .header-row span { color: #666; }
+  .header-row .currency-val { color: #0891b2; font-weight: bold; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #1e3a5f; color: white; padding: 10px 12px; text-align: left; font-weight: 600; }
+  th:not(:first-child) { text-align: right; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+  td:not(:first-child) { text-align: right; }
+  .section-header td { font-weight: bold; color: #1e3a5f; background: #f0f4f8; border-bottom: 2px solid #cbd5e1; padding-top: 14px; }
+  .sub-header td { font-weight: bold; color: #333; }
+  .item td:first-child { padding-left: 28px; font-style: italic; color: #555; }
+  .total-row td { font-weight: bold; border-top: 2px solid #1e3a5f; border-bottom: 2px solid #1e3a5f; }
+  .profit-row td { font-weight: bold; color: #dc2626; background: #1e3a5f; color: #ef4444; font-size: 14px; padding: 12px; }
+  .profit-row td:first-child { color: #ef4444; }
+  .empty { color: #999; }
+  .confidential { font-size: 11px; font-style: italic; color: #888; margin-top: 12px; }
+  .legend { margin-top: 30px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; font-size: 12px; line-height: 1.8; }
+  .legend strong { display: block; margin-bottom: 8px; font-size: 13px; }
+  .legend p { margin: 4px 0; color: #555; }
+</style>
+</head>
+<body>
+
+<h1>Build with Gemini XPRIZE</h1>
+
+<div class="header-row">
+  <span>Program Period: May 19 - August 17</span>
+  <span>Currency: <span class="currency-val">USD</span></span>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:40%">Description</th>
+      <th>May</th>
+      <th>June</th>
+      <th>July</th>
+      <th>August</th>
+      <th>Full 90 Days</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- REVENUE -->
+    <tr class="section-header"><td colspan="6">REVENUE</td></tr>
+    <tr class="item"><td>Independent Sales (ie. sales of product or service)</td><td></td><td></td><td></td><td></td><td class="empty">-</td></tr>
+    <tr class="item"><td>Related Party Revenue (ie. see Rules)</td><td></td><td></td><td></td><td></td><td class="empty">-</td></tr>
+    <tr class="total-row"><td>TOTAL REVENUE</td><td class="empty">-</td><td class="empty">-</td><td class="empty">-</td><td class="empty">-</td><td class="empty">-</td></tr>
+
+    <!-- EXPENSES -->
+    <tr class="section-header"><td colspan="6">EXPENSES</td></tr>
+
+    <tr class="sub-header"><td>COGS</td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr class="item"><td>Personnel</td><td></td><td></td><td></td><td></td><td class="empty">-</td></tr>
+    <tr class="item"><td>Software Subscriptions</td><td></td><td></td><td></td><td></td><td class="empty">-</td></tr>
+    <tr class="item"><td>Tokens</td><td></td><td></td><td>$10</td><td>$15</td><td>$25</td></tr>
+
+    <tr class="sub-header"><td>SG&A</td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr class="item"><td>Personnel</td><td></td><td></td><td></td><td></td><td class="empty">-</td></tr>
+    <tr class="item"><td>Software Subscriptions</td><td>$5</td><td>$15</td><td>$15</td><td>$15</td><td>$50</td></tr>
+    <tr class="item"><td>Tokens</td><td></td><td></td><td>$1</td><td>$4</td><td>$5</td></tr>
+
+    <tr class="sub-header"><td>Other Expenses</td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr class="item"><td>Other expenses (see Legend)</td><td></td><td>$20</td><td>$10</td><td>$10</td><td>$40</td></tr>
+
+    <tr class="total-row"><td>TOTAL EXPENSES</td><td>$5</td><td>$35</td><td>$36</td><td>$44</td><td>$120</td></tr>
+
+    <!-- PROFIT -->
+    <tr class="profit-row"><td>PROFIT (LOSS)</td><td>($5)</td><td>($35)</td><td>($36)</td><td>($44)</td><td>($120)</td></tr>
+  </tbody>
+</table>
+
+<p class="confidential">Build with Gemini XPRIZE | Managed by Devpost | CONFIDENTIAL</p>
+
+<div class="legend">
+  <strong>LEGEND:</strong>
+  <p>Personnel: $0 - solo founder, no paid employees or contractors during hackathon period.</p>
+  <p>COGS Tokens: Gemini API costs for code security screening (~$0.002/diff) and post-verdict failure forensics (~$0.003/report). Active July-August when Gemini integration was built and tested against live mainnet runs.</p>
+  <p>SG&A Software Subscriptions: GCP Cloud Run hosting for mergegate-api service + verifier job (~$10/month), Cloud Firestore (~$3/month), Secret Manager (~$2/month). May was partial month ($5).</p>
+  <p>SG&A Tokens: USDC for Base mainnet testing - 2 escrow fundings (0.30 each), 2 settlements (0.25 each), 2 verifier fees (0.05 each), 1 x402 payment (0.05). Plus ETH gas for x402 relay.</p>
+  <p>Other Expenses: State incorporation filing for BlockIntel Inc ($20 in June, shared with Verigate). Sealed VPC setup and Cloud Run Job configuration for sandbox isolation ($10/month July-August).</p>
+  <p>All expenses recorded on cash basis.</p>
+</div>
+
+</body>
+</html>

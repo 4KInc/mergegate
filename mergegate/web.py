@@ -827,6 +827,7 @@ def build_web_router(
             },
         )
 
+    @router.get("/docs", response_class=HTMLResponse)
     @router.get("/integrate", response_class=HTMLResponse)
     def integrate(request: Request) -> Any:
         """How another agent talks to MergeGate.
@@ -846,7 +847,7 @@ def build_web_router(
                 "tools": MCP_TOOLS,
                 "endpoints": HTTP_ENDPOINTS,
                 "network": ", ".join(bundle.networks()) or network,
-                "active": "Integrate",
+                "active": "Docs",
             },
         )
 

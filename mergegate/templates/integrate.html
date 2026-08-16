@@ -1,31 +1,43 @@
 {% extends "base.html" %}
-{% block title %}MergeGate: Integrate{% endblock %}
+{% block title %}MergeGate: Docs{% endblock %}
 {% block content %}
 
-<header class="mb-8">
+<header class="mb-10">
   <span class="pill mb-5">
     <span class="dot dot-live"></span>
     <span class="mono text-[10px] uppercase tracking-widest text-accent">Agent to agent</span>
   </span>
-  <h1 class="font-display text-3xl md:text-[34px] leading-tight font-semibold tracking-tight">Integrate</h1>
-  <p class="text-sm text-on-faint mt-1 max-w-3xl">
+  <h1 class="font-display text-3xl md:text-[38px] leading-tight font-semibold tracking-tight">Docs</h1>
+  <p class="text-sm text-on-faint mt-2 max-w-3xl leading-relaxed">
     Four ways in, ordered by how much you have to trust us. Verifying a receipt
     needs nothing from this service at all; the rest are conveniences.
   </p>
 </header>
 
-<section class="card p-6 mb-4 border-accent/25">
-  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">1. Verify a receipt yourself</h2>
-  <p class="text-xs text-on-faint mb-4 max-w-3xl">
+{# ─── Nav pills ─── #}
+<div class="flex gap-2 mb-8 overflow-x-auto pb-1">
+  {% for id, label in [("verify","Verify"),("mcp","MCP Server"),("http","HTTP API"),("python","Python SDK"),("key","Verification Key")] %}
+  <button onclick="showSection('{{ id }}')"
+    class="doc-pill shrink-0 px-4 py-2 rounded-full text-xs font-medium transition-all border
+    {% if id == 'verify' %}bg-accent/10 text-accent border-accent/25{% else %}text-on-muted border-line hover:text-on-surface hover:bg-white/[.04]{% endif %}"
+    data-pill="{{ id }}">{{ label }}</button>
+  {% endfor %}
+</div>
+
+{# ═══ Section 1: Verify ═══ #}
+<section class="doc-section" data-section="verify">
+<div class="card p-6 mb-4 border-accent/25">
+  <div class="flex items-center gap-3 mb-1">
+    <span class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center text-accent font-display font-bold text-sm">1</span>
+    <h2 class="font-display text-lg font-semibold tracking-tight">Verify a receipt yourself</h2>
+  </div>
+  <p class="text-xs text-on-faint mb-5 max-w-3xl ml-11 leading-relaxed">
     This is the one that matters. It reads a receipt and a public key, and
     re-derives the whole chain locally. It contacts no server, so a compromised
     MergeGate cannot change the answer.
   </p>
-  {# Two columns: the command is what a reader runs, the exit codes are what
-     their program branches on. Stacking them made this section read like the
-     three below it, when it is the one that matters. #}
   <div class="grid lg:grid-cols-[1.6fr_1fr] gap-4">
-    <div class="rounded-lg bg-black/20 border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
+    <div class="rounded-xl bg-black/30 border border-line p-5 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
 <pre><span class="text-on-faint"># --recurse-submodules is required: the proof layer is a shared submodule</span>
 git clone --recurse-submodules https://github.com/4KInc/mergegate.git
 cd mergegate &amp;&amp; pip install -e .
@@ -36,29 +48,35 @@ export MERGEGATE_RECEIPT_PUBLIC_KEY={{ public_key }}
 
 mergegate verify {{ sample_receipt }}.json</pre>
     </div>
-    <div class="space-y-2">
-      {% for code, meaning in [("0","receipt verified"),("1","failed verification: a result, not a crash"),("2","could not check: no key, bad file")] %}
-      <div class="rounded-lg bg-black/20 px-3.5 py-3 border border-line flex items-baseline gap-3">
-        <div class="mono text-sm text-accent shrink-0">exit {{ code }}</div>
+    <div class="space-y-2.5">
+      {% for code, meaning, color in [("0","receipt verified","accent"),("1","failed verification: a result, not a crash","danger"),("2","could not check: no key, bad file","warn")] %}
+      <div class="rounded-xl bg-black/30 px-4 py-3.5 border border-line flex items-baseline gap-3 hover:border-{{ color }}/25 transition-colors">
+        <div class="mono text-sm text-{{ color }} shrink-0 font-medium">exit {{ code }}</div>
         <div class="text-[11px] text-on-faint leading-snug">{{ meaning }}</div>
       </div>
       {% endfor %}
     </div>
   </div>
-  <p class="text-[11px] text-on-faint mt-4 leading-relaxed max-w-3xl">
+  <p class="text-[11px] text-on-faint mt-5 leading-relaxed max-w-3xl ml-11">
     Exit 1 and exit 2 are kept apart on purpose. A program that treats "I had no
     key" as "this receipt is forged" would raise a fraud alarm over its own
     misconfiguration.
   </p>
+</div>
 </section>
 
-<section class="card p-6 mb-4">
-  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">2. MCP server</h2>
-  <p class="text-xs text-on-faint mb-4 max-w-3xl">
+{# ═══ Section 2: MCP ═══ #}
+<section class="doc-section" data-section="mcp">
+<div class="card p-6 mb-4">
+  <div class="flex items-center gap-3 mb-1">
+    <span class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center text-accent font-display font-bold text-sm">2</span>
+    <h2 class="font-display text-lg font-semibold tracking-tight">MCP server</h2>
+  </div>
+  <p class="text-xs text-on-faint mb-5 max-w-3xl ml-11 leading-relaxed">
     So a coding agent can ask whether it has been paid without a human reading
     this dashboard for it. Add to any MCP client:
   </p>
-  <div class="rounded-lg bg-black/20 border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
+  <div class="rounded-xl bg-black/30 border border-line p-5 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
 <pre>{
   "mcpServers": {
     "mergegate": {
@@ -71,44 +89,56 @@ mergegate verify {{ sample_receipt }}.json</pre>
   }
 }</pre>
   </div>
-  <div class="mt-4 space-y-2">
+  <div class="mt-5 rounded-xl bg-black/20 border border-line divide-y divide-line overflow-hidden">
     {% for name, purpose in tools %}
-    <div class="grid md:grid-cols-[260px_1fr] gap-1 md:gap-3 items-start">
-      <div class="mono text-xs text-accent">{{ name }}</div>
+    <div class="flex flex-col md:flex-row md:items-start gap-1 md:gap-4 px-4 py-3 hover:bg-white/[.02] transition-colors">
+      <div class="mono text-xs text-accent shrink-0 md:w-[240px]">{{ name }}</div>
       <div class="text-xs text-on-faint leading-snug">{{ purpose }}</div>
     </div>
     {% endfor %}
   </div>
-  <p class="text-[11px] text-on-faint mt-4 leading-relaxed max-w-3xl">
+  <p class="text-[11px] text-on-faint mt-5 leading-relaxed max-w-3xl ml-11">
     Read only, deliberately. Nothing here funds escrow, signs a mandate or moves
     USDC. An MCP server is driven by whatever the model decides to call, so a
     funding tool on it would be a wallet-draining primitive one prompt injection
     away. Funding stays in the buyer's own process, holding the buyer's own
     credentials.
   </p>
+</div>
 </section>
 
-<section class="card p-6 mb-4">
-  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">3. HTTP</h2>
-  <p class="text-xs text-on-faint mb-4">Every page has a JSON counterpart. No authentication: all of it is public by design.</p>
-  <div class="space-y-2">
+{# ═══ Section 3: HTTP ═══ #}
+<section class="doc-section" data-section="http">
+<div class="card p-6 mb-4">
+  <div class="flex items-center gap-3 mb-1">
+    <span class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center text-accent font-display font-bold text-sm">3</span>
+    <h2 class="font-display text-lg font-semibold tracking-tight">HTTP API</h2>
+  </div>
+  <p class="text-xs text-on-faint mb-5 ml-11">Every page has a JSON counterpart. No authentication: all of it is public by design.</p>
+  <div class="rounded-xl bg-black/20 border border-line divide-y divide-line overflow-hidden">
     {% for method, path, purpose in endpoints %}
-    <div class="grid md:grid-cols-[70px_290px_1fr] gap-1 md:gap-3 items-start py-1.5 border-b border-line last:border-0">
-      <div class="mono text-[11px] text-on-faint">{{ method }}</div>
-      <div class="mono text-xs text-accent break-all">{{ path }}</div>
+    <div class="flex flex-col md:flex-row md:items-start gap-1 md:gap-4 px-4 py-3 hover:bg-white/[.02] transition-colors">
+      <div class="mono text-[11px] text-on-faint shrink-0 md:w-[60px] font-medium uppercase">{{ method }}</div>
+      <div class="mono text-xs text-accent shrink-0 md:w-[260px] break-all">{{ path }}</div>
       <div class="text-xs text-on-faint leading-snug">{{ purpose }}</div>
     </div>
     {% endfor %}
   </div>
+</div>
 </section>
 
-<section class="card p-6 mb-4">
-  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">4. Python, to run the whole flow</h2>
-  <p class="text-xs text-on-faint mb-4 max-w-3xl">
+{# ═══ Section 4: Python ═══ #}
+<section class="doc-section" data-section="python">
+<div class="card p-6 mb-4">
+  <div class="flex items-center gap-3 mb-1">
+    <span class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center text-accent font-display font-bold text-sm">4</span>
+    <h2 class="font-display text-lg font-semibold tracking-tight">Python SDK</h2>
+  </div>
+  <p class="text-xs text-on-faint mb-5 max-w-3xl ml-11 leading-relaxed">
     Buyers drive MergeGate in process, because funding escrow needs wallet
     credentials that should never leave the buyer's own machine.
   </p>
-  <div class="rounded-lg bg-black/20 border border-line p-4 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
+  <div class="rounded-xl bg-black/30 border border-line p-5 mono text-[11px] leading-relaxed text-on-muted overflow-x-auto">
 <pre><span class="text-on-faint"># pin the terms, then seal them: contract_hash covers all of it</span>
 contract = build_contract(
     repository="owner/repo", base_sha=sha, grader_bundle=Path("tests/"),
@@ -120,25 +150,52 @@ sealed = contract.seal(funding_tx=tx, mandate_hash=mandate_hash)
 manifest = evaluate(sealed=sealed, submission=submission, ...)
 directive = execute_mandate(mandate=mandate, manifest=manifest, now=now)</pre>
   </div>
-  <p class="text-[11px] text-on-faint mt-4 leading-relaxed max-w-3xl">
+  <p class="text-[11px] text-on-faint mt-5 leading-relaxed max-w-3xl ml-11">
     <span class="mono text-on-muted">amend()</span> always raises. Terms are
     fixed at funding, so there is no path where a buyer changes the tests after
     seeing the submission.
   </p>
+</div>
 </section>
 
-<section class="card p-6">
-  <h2 class="font-display text-lg font-semibold tracking-tight mb-1">The verification key</h2>
-  <div class="rounded-lg bg-black/20 border border-line px-3 py-2.5 mono text-[11px] text-on-muted break-all mt-3">{{ public_key or "not published by this deployment" }}</div>
-  <p class="text-[11px] text-on-faint mt-3 leading-relaxed max-w-3xl">
+{# ═══ Section 5: Key ═══ #}
+<section class="doc-section" data-section="key">
+<div class="card p-6">
+  <div class="flex items-center gap-3 mb-1">
+    <span class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center">
+      <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+    </span>
+    <h2 class="font-display text-lg font-semibold tracking-tight">Verification key</h2>
+  </div>
+  <div class="rounded-xl bg-black/30 border border-line px-4 py-3 mono text-[11px] text-on-muted break-all mt-4 ml-11">{{ public_key or "not published by this deployment" }}</div>
+  <p class="text-[11px] text-on-faint mt-4 leading-relaxed max-w-3xl ml-11">
     Served at <span class="mono text-on-muted">/api/verification-key</span>,
     with the caveat attached: a key taken from the issuer proves the issuer is
     self-consistent, not that it is honest. A service that forged a receipt
     would serve the key that matches it. Pin this out of band to get the
     guarantee the signature is meant to carry.
   </p>
+</div>
 </section>
 
-<p class="text-[11px] text-on-faint mt-4">Attests verified contract acceptance only, not code quality, security, or mergeworthiness.</p>
+<p class="text-[11px] text-on-faint mt-6">Attests verified contract acceptance only, not code quality, security, or mergeworthiness.</p>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.doc-section').forEach(s => {
+    s.style.display = s.dataset.section === id ? 'block' : 'none';
+  });
+  document.querySelectorAll('.doc-pill').forEach(p => {
+    const active = p.dataset.pill === id;
+    p.className = p.className.replace(/bg-accent\/10|text-accent|border-accent\/25|text-on-muted|border-line|hover:text-on-surface|hover:bg-white\/\[\.04\]/g, '');
+    if (active) {
+      p.classList.add('bg-accent/10', 'text-accent', 'border-accent/25');
+    } else {
+      p.classList.add('text-on-muted', 'border-line');
+    }
+  });
+}
+// Show all sections by default
+</script>
 
 {% endblock %}
