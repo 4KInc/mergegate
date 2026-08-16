@@ -103,7 +103,7 @@ settles over x402 driven by Circle's own CLI. Every transaction was confirmed
 on-chain independently of the payment provider's own response. Double-payment
 has two independent guards: the settlement state machine, and the settlement key
 passed to Circle as an idempotency UUID, verified by sending the same key twice
-and watching one transfer result. Receipts re-verify offline; thirteen bound
+and watching one transfer result. Receipts re-verify offline; fifteen bound
 fields survive an attacker holding the signing key, proven by re-signing each
 tampered variant.
 

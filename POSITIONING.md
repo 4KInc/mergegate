@@ -109,7 +109,7 @@ the bound receipt**:
 3. **Bound.** A signature over "PASS" proves someone said PASS. The receipt
    binds `contract_hash`, `grader_hash`, base SHA, `submission_sha`,
    `tree_hash`, verifier image digest, command output digest, result digest,
-   decision, settlement tx, and verifier-fee tx into one object. Thirteen of
+   decision, settlement tx, and verifier-fee tx into one object. Fifteen of
    those fields are cross-checked against the manifest and mandate the receipt
    carries, so editing any of them fails verification **even for an attacker
    holding the signing key**, proven by re-signing each tampered variant.

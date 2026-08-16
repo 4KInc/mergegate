@@ -318,3 +318,50 @@ def test_verifier_reports_every_failure_not_just_the_first(
 
     result = verify_receipt(tampered, public_key=signing_key.public_key())
     assert len(result.failures) >= 2
+
+
+def test_the_stated_cross_check_count_is_the_real_one(signing_key: Ed25519PrivateKey) -> None:
+    """The documented figure was wrong for a long time, so it is measured now.
+
+    "Thirteen bound fields" came from the dashboard's display list, which shows
+    thirteen rows and includes two fields verification cannot cross-check. The
+    honest number is whatever survives re-signing, so this computes it and pins
+    the modules and docs to agree.
+    """
+    import base64
+    import copy
+    import hashlib
+
+    from mergegate.engine import canonicalize
+
+    envelope = _receipt(signing_key)
+    fields = list(envelope["body"]["binding"].keys())
+
+    caught = []
+    for name in fields:
+        tampered = copy.deepcopy(envelope)
+        value = tampered["body"]["binding"][name]
+        if not isinstance(value, str):
+            continue
+        tampered["body"]["binding"][name] = value + "-tampered"
+        payload = canonicalize(tampered["body"])
+        tampered["receipt_hash"] = "sha256:" + hashlib.sha256(payload).hexdigest()
+        tampered["sig"]["value"] = (
+            base64.urlsafe_b64encode(signing_key.sign(payload)).rstrip(b"=").decode()
+        )
+        if not verify_receipt(tampered, public_key=signing_key.public_key()).valid:
+            caught.append(name)
+
+    assert len(fields) == 22, f"bound field count changed to {len(fields)}"
+    assert len(caught) == 15, f"cross-checked count is {len(caught)}, not 15: {sorted(caught)}"
+
+    signature_only = sorted(set(fields) - set(caught))
+    assert signature_only == [
+        "execution_id",
+        "funding_tx",
+        "reason",
+        "settlement_asset",
+        "settlement_chain",
+        "settlement_tx",
+        "verifier_fee_tx",
+    ], signature_only

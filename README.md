@@ -252,7 +252,7 @@ rows below now do.
 | P0.4 artifact binding | Pay only for the exact verified SHA + tree hash | **Done**: a new head SHA invalidates the prior verification; a stale result for a superseded SHA is dropped |
 | P0.5 idempotent settlement | One contract → one settlement action | **Done**: `mergegate/settlement.py`; replayed and out-of-order event sequences settle exactly once |
 | P0.6 conditional-mandate execution | Settlement is deterministic, not discretionary | **Done**: `mergegate/mandate.py`; the executor receives a decision, it does not make one |
-| P0.7 bound receipt | One object binds the whole chain, offline-verifiable | **Done**: `mergegate/receipt.py`; 13 bound fields survive an attacker holding the signing key |
+| P0.7 bound receipt | One object binds the whole chain, offline-verifiable | **Done**: `mergegate/receipt.py`; 15 of 22 bound fields survive an attacker holding the signing key, measured by re-signing each tampered variant |
 | P1.1 conftest / persisted-file gaming | Provider test hooks cannot survive grader injection | **Done**: hostile `conftest.py` and `sitecustomize.py` quarantined, asserted against a real pytest run |
 | P1.1b grader confidentiality | Provider code cannot read the graded tests at run time | **Done**: a submission that implemented nothing passed by scraping expected values out of the test file; a startup audit hook outside the workspace now blocks it |
 | P1.2 `.git` history leakage | No reading reference solutions from git history | **Done**: `git archive` never creates `.git`; a run that tries to read the gold patch fails |
@@ -569,7 +569,7 @@ scored 10/100 LOW while still carrying the bogus flag, and was paid anyway.
 **Three further limits, held deliberately:**
 
 - **Nothing advisory enters a signed receipt.** The receipt is worth something
-  because all thirteen bound fields are mechanically derived and cross-checked.
+  because its cross-checked fields are mechanically derived.
   A model's opinion cross-checks against nothing, so reports are stored in a
   separate collection and rendered below the verdict.
 - **Absent is not clean.** With no key configured, screening reports
@@ -771,13 +771,14 @@ A signature over "PASS" proves someone said PASS. The value is the **binding**:
 one object tying together which code, judged by which tests, in which
 environment, under whose mandate, settling which payment.
 
-Thirteen bound fields are cross-checked against the manifest and mandate the
+Fifteen of the twenty-two bound fields are cross-checked against the manifest and mandate the
 receipt carries, so editing any of them fails verification **even for an attacker
 holding the signing key**. `tests/test_receipt.py` proves this by re-signing each
 tampered variant; without that test, the tampering cases would only be
 demonstrating that Ed25519 works.
 
-Five fields (`settlement_tx`, `verifier_fee_tx`, `reason`, `settlement_asset`,
+Seven fields (`settlement_tx`, `verifier_fee_tx`, `funding_tx`, `execution_id`,
+`reason`, `settlement_asset`,
 `settlement_chain`) have nothing inside the receipt to check them against and
 rest on the signature alone. Confirming those means comparing the receipt to the
 chain, which no offline verifier can do. A receipt proves the decision was the

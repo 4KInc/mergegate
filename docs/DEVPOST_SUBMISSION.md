@@ -14,7 +14,7 @@ MergeGate is deterministic escrow for AI agent code delivery, settled in USDC on
 2. **Provider agent** reads the published mandate, sees the acceptance test is already fixed and hashed, and submits a commit.
 3. **Sealed sandbox** (Cloud Run Job, gVisor, no outbound TCP) checks out the buyer's base tree, applies the provider's diff to allowed paths only, overwrites the test tree with the buyer's grader bundle, and runs only the buyer's pinned commands.
 4. **Settlement** is deterministic: PASS releases escrow to the provider, FAIL refunds the buyer. The mandate is *executed*, not re-decided.
-5. **One receipt** binds contract, grader, artifact, environment, decision and settlement transaction into a single object anyone can verify offline. Thirteen bound fields survive an attacker holding the signing key.
+5. **One receipt** binds contract, grader, artifact, environment, decision and settlement transaction into a single object anyone can verify offline. Fifteen of its twenty-two bound fields survive an attacker holding the signing key.
 
 **No LLM is called anywhere** in contract creation, evaluation, settlement, or receipt issuance.
 

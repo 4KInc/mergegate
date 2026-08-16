@@ -27,13 +27,21 @@ swapped for a friendlier one.
 Signing and canonicalization come from the shared engine: MergeGate does not
 implement its own crypto.
 
-**What offline verification does and does not establish.** Thirteen of the bound
-fields are cross-checked against the embedded manifest and mandate, so editing
-any of them fails even for an attacker who holds the signing key -
-``tests/test_receipt.py`` proves this by re-signing each tampered variant. Five
-fields have nothing inside the receipt to check them against and rest on the
-signature alone: ``settlement_tx``, ``verifier_fee_tx``, ``reason``,
-``settlement_asset``, and ``settlement_chain``. Confirming those means comparing
+**What offline verification does and does not establish.** Fifteen of the
+twenty-two bound fields are cross-checked against the embedded manifest and
+mandate, so editing any of them fails even for an attacker who holds the signing
+key - ``tests/test_receipt.py`` proves this by re-signing each tampered variant.
+
+That count was stated as thirteen for a long time, which was wrong. It came from
+the dashboard's display list, which shows thirteen rows and includes two fields
+that are *not* cross-checked. The real figure was measured by tampering with
+each bound field in turn, re-signing, and seeing which edits verification still
+caught.
+
+Seven fields have nothing inside the receipt to check them against and rest on
+the signature alone: ``settlement_tx``, ``verifier_fee_tx``, ``funding_tx``,
+``execution_id``, ``reason``, ``settlement_asset``, and ``settlement_chain``.
+Confirming those means comparing
 the receipt against the chain, which no offline verifier can do. A receipt
 proves the decision was the deterministic result of the mandate and the verdict;
 confirming the money actually moved requires looking at Base.
@@ -91,12 +99,31 @@ class ReceiptBinding:
     reason: str
     settlement_tx: str = ""
     verifier_fee_tx: str = ""
-    """P2.2: the x402 micro-fee escrow paid the verifier for this run. Empty
-    until that path is wired; the field exists so the shape does not change
-    later and invalidate earlier receipts' schema."""
+    """P2.2: the fee escrow paid the verifier for this run."""
+
+    funding_tx: str = ""
+    """The transaction that put the money in escrow.
+
+    A receipt that binds only the outgoing settlement describes half a
+    transaction. Anyone auditing it later has to take on faith that escrow was
+    funded at all, and by whom, which is exactly the sort of gap that turns a
+    proof into a claim.
+    """
+
+    execution_id: str = ""
+    """The Cloud Run execution that produced the verdict.
+
+    Empty for an in-process run, and that emptiness is informative: it is the
+    difference between "this was graded in a sealed job you can look up" and
+    "this was graded somewhere". Recording an identity we did not have would be
+    the same mistake as the egress field, which asserted a sandbox posture for
+    runs that never entered the sandbox.
+    """
 
     def to_canonical_dict(self) -> dict[str, object]:
         return {
+            "funding_tx": self.funding_tx,
+            "execution_id": self.execution_id,
             "task_id": self.task_id,
             "contract_hash": self.contract_hash,
             "grader_hash": self.grader_hash,
@@ -132,6 +159,8 @@ def build_receipt(
     issued_at: datetime,
     settlement_tx: str = "",
     verifier_fee_tx: str = "",
+    funding_tx: str = "",
+    execution_id: str = "",
 ) -> dict[str, Any]:
     """Assemble the unsigned receipt body from a completed evaluation.
 
@@ -166,6 +195,8 @@ def build_receipt(
         reason=directive.reason,
         settlement_tx=settlement_tx,
         verifier_fee_tx=verifier_fee_tx,
+        funding_tx=funding_tx,
+        execution_id=execution_id,
     )
 
     return {

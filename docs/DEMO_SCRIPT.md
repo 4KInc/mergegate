@@ -75,7 +75,7 @@ the later stages greyed out, and the line reading
 
 > "Every decision emits one receipt. It binds the contract, the grader, the
 > exact commit, the tree hash, the verifier image, the decision and the
-> settlement transaction into a single object. Thirteen of those fields are
+> settlement transaction into a single object. Fifteen of those fields are
 > cross-checked against the manifest the receipt carries, so editing any of them
 > fails verification even for someone holding the signing key. The page
 > re-verifies it on every request. Seventeen checks, recomputed now, not cached."
