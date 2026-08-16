@@ -673,3 +673,34 @@ def test_the_judge_page_survives_an_empty_deployment(tmp_path: Path) -> None:
     assert "It was refused anyway" not in response.text
     # The claim and the limits do not depend on there being a run.
     assert "Buyer griefing is unsolved" in response.text
+
+
+def test_the_judge_page_shows_the_newest_run_not_the_first_by_id(
+    tmp_path: Path, key: Ed25519PrivateKey
+) -> None:
+    """Recency is sorted for, not inherited from the store's ordering.
+
+    Both stores return receipts sorted by id, which is alphabetical and has
+    nothing to do with time. A first version of the page treated list order as
+    recency and rendered a superseded run whose receipt predated the sealed job,
+    so it reported an empty execution_id while newer receipts carried one.
+
+    The ids here are deliberately ordered opposite to the timestamps: the older
+    receipt sorts first by id, so a page that follows id order shows the wrong
+    one.
+    """
+    d = tmp_path / "receipts"
+    d.mkdir()
+
+    old = _make_receipt(key, passing=True)
+    old["body"]["issued_at"] = "2020-01-01T00:00:00Z"
+    old["body"]["binding"]["execution_id"] = ""
+    (d / "receipt-aaa.json").write_text(json.dumps(old))
+
+    new = _make_receipt(key, passing=True)
+    new["body"]["issued_at"] = "2026-01-01T00:00:00Z"
+    new["body"]["binding"]["execution_id"] = "mergegate-verifier-newest"
+    (d / "receipt-zzz.json").write_text(json.dumps(new))
+
+    html = _client(d, key).get("/judge").text
+    assert "mergegate-verifier-newest" in html

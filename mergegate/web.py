@@ -694,12 +694,20 @@ def judge_view(views: list[ReceiptView], *, network: str) -> dict[str, Any]:
     a superseded transaction while the href pointed at the new one. A page that
     is wrong about its own evidence is worse than no page.
 
-    The PASS and FAIL shown are the most recent of each. If a decision has no
-    receipt yet, its slot is absent and the template omits the section instead
-    of rendering an empty promise.
+    The PASS and FAIL shown are the most recent of each, **sorted here rather
+    than assumed**. The stores return receipts ordered by id, which is
+    alphabetical and has nothing to do with time; a first version of this took
+    the list order as recency and rendered a superseded run whose receipt
+    predated the sealed job, so the page reported an empty ``execution_id``
+    while the deployment had newer receipts that carried one.
+
+    If a decision has no receipt yet, its slot is absent and the template omits
+    the section instead of rendering an empty promise.
     """
+    newest_first = sorted(views, key=lambda v: str(v.body.get("issued_at", "")), reverse=True)
+
     latest: dict[str, ReceiptView] = {}
-    for view in views:
+    for view in newest_first:
         decision = view.decision.upper()
         if decision in {"PASS", "FAIL"} and decision not in latest:
             latest[decision] = view
