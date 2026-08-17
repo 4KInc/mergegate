@@ -50,8 +50,9 @@ mergegate-mcp = "mergegate.mcp:main"
 [tool.hatch.build.targets.wheel]
 packages = ["mergegate"]
 # Jinja templates are package data; without this the wheel ships code that
-# renders nothing.
-artifacts = ["mergegate/templates/*.html"]
+# renders nothing. The same applies to the brand mark: the pages reference it
+# by URL, so a wheel without it renders broken images rather than failing loudly.
+artifacts = ["mergegate/templates/*.html", "mergegate/static/*.png"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

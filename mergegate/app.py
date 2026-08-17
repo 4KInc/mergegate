@@ -14,6 +14,7 @@ mandate at funding time.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 from fastapi import Request
@@ -127,6 +128,17 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
             "autonomous coding agents. Attests verified contract acceptance "
             "only, not code quality, security, or mergeworthiness."
         ),
+    )
+
+    # The brand mark ships as package data rather than an inline data URI: the
+    # artwork is a raster, and base64ing it into every page's <head> would put
+    # ~40KB on the wire for every request that renders a template.
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount(
+        "/static",
+        StaticFiles(directory=str(Path(__file__).resolve().parent / "static")),
+        name="static",
     )
 
     if receiver is None:

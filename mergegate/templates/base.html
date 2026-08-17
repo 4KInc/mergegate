@@ -12,7 +12,8 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>{% block title %}MergeGate{% endblock %}</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0a0c'/%3E%3Cpath d='M8 21V11l8 6 8-6v10' stroke='%234ade80' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icon-32.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/static/icon-180.png"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
 <script>
@@ -142,9 +143,7 @@ tailwind.config = {
 <header class="md:hidden sticky top-0 z-30 bg-surface/85 backdrop-blur-xl border-b border-line">
   <div class="flex items-center gap-2.5 px-4 py-3">
     <a href="/" class="flex items-center gap-2">
-      <span class="w-7 h-7 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center">
-        <svg viewBox="0 0 32 32" class="w-3.5 h-3.5" aria-hidden="true"><path d="M8 21V11l8 6 8-6v10" stroke="#4ade80" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
+      <img src="/static/icon-64.png" alt="" class="w-7 h-7 rounded-lg border border-line"/>
       <span class="font-display font-semibold tracking-tight text-sm">MergeGate</span>
     </a>
     <span class="mono text-[10px] text-on-faint ml-auto truncate max-w-[40%]">{{ network }}</span>
@@ -161,9 +160,7 @@ tailwind.config = {
 <div class="flex min-h-screen">
   <aside class="w-60 shrink-0 border-r border-line px-5 py-6 hidden md:flex md:flex-col sticky top-0 h-screen">
     <a href="/" class="flex items-center gap-2.5 mb-9 group">
-      <span class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center transition-colors group-hover:border-accent/50">
-        <svg viewBox="0 0 32 32" class="w-4 h-4" aria-hidden="true"><path d="M8 21V11l8 6 8-6v10" stroke="#4ade80" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </span>
+      <img src="/static/icon-64.png" alt="" class="w-8 h-8 rounded-lg border border-line transition-colors group-hover:border-accent/50"/>
       <span class="font-display font-semibold tracking-tight text-[15px] group-hover:text-accent transition-colors">MergeGate</span>
     </a>
 
