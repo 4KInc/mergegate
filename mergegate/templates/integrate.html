@@ -114,7 +114,26 @@ mergegate verify {{ sample_receipt }}.json</pre>
     <span class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/25 grid place-items-center text-accent font-display font-bold text-sm">3</span>
     <h2 class="font-display text-lg font-semibold tracking-tight">HTTP API</h2>
   </div>
-  <p class="text-xs text-on-faint mb-5 ml-11">Every page has a JSON counterpart. No authentication: all of it is public by design.</p>
+  <p class="text-xs text-on-faint mb-4 ml-11">Every page has a JSON counterpart. No authentication: all of it is public by design.</p>
+
+  {# The spec is generated from the running app rather than a committed file, so
+     it cannot describe a version of the service that no longer exists. #}
+  <div class="ml-11 mb-5 flex flex-wrap items-center gap-2">
+    <a href="{{ base_url }}/openapi.yaml" download
+       class="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-accent/10 border border-accent/25 text-accent hover:border-accent/50 transition-colors">
+      <svg viewBox="0 0 16 16" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+        <path d="M8 2v8m0 0L5 7m3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2.5 11v1.5A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V11" stroke-linecap="round"/>
+      </svg>
+      Download OpenAPI (YAML)
+    </a>
+    <a href="{{ base_url }}/openapi.json"
+       class="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-line text-on-muted hover:text-on-surface transition-colors">JSON</a>
+    <a href="{{ base_url }}/api/docs"
+       class="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-line text-on-muted hover:text-on-surface transition-colors">Swagger UI</a>
+    <span class="text-[11px] text-on-faint">Generated from this running deployment, not a checked-in file.</span>
+  </div>
+
   <div class="rounded-xl bg-black/20 border border-line divide-y divide-line overflow-hidden">
     {% for method, path, purpose in endpoints %}
     <div class="flex flex-col md:flex-row md:items-start gap-1 md:gap-4 px-4 py-3 hover:bg-white/[.02] transition-colors">

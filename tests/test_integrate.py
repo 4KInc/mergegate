@@ -201,7 +201,13 @@ def test_navigation_survives_a_narrow_viewport(client: Any) -> None:
     for href in hrefs:
         response = client.get(href)
         assert response.status_code == 200, f"{href} is linked but returns {response.status_code}"
-        assert "swagger" not in response.text.lower(), f"{href} lands on the API explorer"
+        # ``SwaggerUIBundle`` rather than the bare word "swagger": the check is
+        # whether the page *is* the API explorer, and /docs legitimately links
+        # to it by name. Matching the word made a page that merely mentions
+        # Swagger indistinguishable from Swagger itself, which would have made
+        # the honest fix "rename the link" instead of "do not serve the wrong
+        # page" — dodging the guard rather than satisfying it.
+        assert "swaggeruibundle" not in response.text.lower(), f"{href} lands on the API explorer"
 
 
 def test_receipts_summary_is_computed_not_asserted(client: Any) -> None:

@@ -17,6 +17,10 @@ dependencies = [
     "httpx>=0.28.0",
     "pydantic>=2.9.0",
     "jinja2>=3.1.0",
+    # For serving the OpenAPI spec as YAML. Hand-rolling a YAML emitter was
+    # the alternative, and YAML quoting and escaping rules are exactly what not
+    # to improvise when the output is meant to be parsed by someone else's tool.
+    "pyyaml>=6.0",
     "google-cloud-storage>=2.18.0",
     "google-cloud-firestore>=2.19.0",
     "google-cloud-run>=0.10.0",
@@ -34,6 +38,7 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "ruff>=0.8.0",
     "mypy>=1.13.0",
+    "types-PyYAML>=6.0",
     "types-requests",
     "httpx",
 ]

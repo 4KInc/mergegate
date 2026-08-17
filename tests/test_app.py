@@ -212,3 +212,83 @@ def test_delivery_for_another_repository_is_refused() -> None:
         },
     )
     assert r.status_code == 400
+
+
+# -- the OpenAPI spec, as a download ------------------------------------------
+#
+# The spec is the one artefact whose entire job is to describe the service, so
+# it is generated from the running app rather than committed. A checked-in copy
+# is wrong the first time a route changes, and wrong silently: nothing fails,
+# the file just stops being true.
+
+
+def test_the_yaml_spec_is_served_as_a_named_download() -> None:
+    response = _client().get("/openapi.yaml")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/yaml")
+    # Named, because it lands in a downloads folder beside everyone else's
+    # openapi.yaml.
+    assert "mergegate-openapi.yaml" in response.headers["content-disposition"]
+    assert response.headers["content-disposition"].startswith("attachment")
+
+
+def test_the_yaml_spec_is_the_same_document_as_the_json_one() -> None:
+    """The two cannot disagree, and this is what makes that true.
+
+    Both come from ``app.openapi()``. If someone later "helpfully" serves a
+    static file from one of them, this fails.
+    """
+    import yaml
+
+    client = _client()
+    from_yaml = yaml.safe_load(client.get("/openapi.yaml").text)
+    from_json = client.get("/openapi.json").json()
+
+    assert from_yaml == from_json
+
+
+def test_a_new_route_appears_in_the_yaml_without_anyone_updating_it() -> None:
+    """Drift is impossible by construction, proven rather than asserted.
+
+    A committed spec would pass every other test here while describing a
+    service that no longer exists. Adding a route and finding it in the YAML is
+    the only check that distinguishes generated from transcribed.
+    """
+    import yaml
+
+    app = create_app(
+        store=MemoryTaskStore(),
+        receiver=WebhookReceiver(secret=SECRET, repository=REPO, resolve=lambda push: None),
+    )
+
+    def added() -> dict[str, str]:
+        return {}
+
+    app.get("/a-route-added-after-the-app-was-built")(added)
+
+    document = yaml.safe_load(TestClient(app).get("/openapi.yaml").text)
+    assert "/a-route-added-after-the-app-was-built" in document["paths"]
+
+
+def test_the_spec_parses_as_openapi_3() -> None:
+    """A YAML file that parses but is not a spec would still fail a directory."""
+    import yaml
+
+    document = yaml.safe_load(_client().get("/openapi.yaml").text)
+
+    assert document["openapi"].startswith("3.")
+    assert document["info"]["title"] == "MergeGate"
+    assert document["paths"], "a spec with no paths describes nothing"
+
+
+def test_the_docs_page_links_the_download() -> None:
+    """The button has to point at the route that exists.
+
+    Checked through the rendered page rather than by reading the template,
+    because a template that renders a broken href still renders.
+    """
+    html = _client().get("/docs").text
+
+    assert "/openapi.yaml" in html
+    assert "Download OpenAPI" in html

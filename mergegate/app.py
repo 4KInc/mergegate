@@ -167,6 +167,42 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
         )
     )
 
+    @app.get("/openapi.yaml", include_in_schema=False)
+    def openapi_yaml() -> Any:
+        """The served OpenAPI document, as YAML, as a download.
+
+        **Generated from the live app, never from a checked-in copy.** A
+        committed spec file is wrong the first time a route changes, and it is
+        wrong silently: nothing fails, the file simply stops describing the
+        service. This project has already been bitten by that class of drift
+        twice, so the one artefact whose entire job is to describe the API is
+        derived from the API.
+
+        ``app.openapi()`` is the same document FastAPI serves at
+        ``/openapi.json``, so the two cannot disagree by construction.
+
+        ``sort_keys=False`` preserves OpenAPI's own ordering, which puts
+        ``openapi`` and ``info`` first. Alphabetising would technically parse
+        and would read as though it had been machine-mangled.
+        """
+        import yaml
+        from fastapi.responses import Response
+
+        document = yaml.safe_dump(
+            app.openapi(),
+            sort_keys=False,
+            allow_unicode=True,
+            default_flow_style=False,
+            width=100,
+        )
+        return Response(
+            content=document,
+            media_type="application/yaml",
+            # Named rather than left as "openapi.yaml", because it lands in a
+            # downloads folder next to everyone else's openapi.yaml.
+            headers={"Content-Disposition": 'attachment; filename="mergegate-openapi.yaml"'},
+        )
+
     # Deliberately /health, not /healthz. The deployed service showed /healthz
     # returning a generic HTML 404 with no "Server: Google Frontend" header
     # while every other path carried one: something upstream intercepts that
