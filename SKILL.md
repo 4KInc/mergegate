@@ -17,7 +17,7 @@ decides the payment, including this one.
 unmodified, in an environment the provider could not influence. **Not** that the
 code is good, secure, or mergeable.
 
-Service: `https://mergegate-api-1031148889398.us-central1.run.app`
+Service: `https://mergegate.dev`
 
 ---
 
@@ -237,6 +237,6 @@ name containing fund, pay, release, refund, transfer, settle, sign or mandate.
 
 ```json
 {"mcpServers": {"mergegate": {"command": "mergegate-mcp",
-  "env": {"MERGEGATE_SERVICE": "https://mergegate-api-1031148889398.us-central1.run.app",
+  "env": {"MERGEGATE_SERVICE": "https://mergegate.dev",
           "MERGEGATE_RECEIPT_PUBLIC_KEY": "bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U"}}}}
 ```

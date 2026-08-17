@@ -352,7 +352,7 @@ step_summary() {
   echo -e "${BOLD}${GREEN}✔ DEMO COMPLETE — ALL CIRCLE AGENTIC ECONOMY PRIZE REQUIREMENTS MET${RESET}"
   echo ""
   echo -e "  ${BOLD}1. Public GitHub Integration:${RESET}    https://github.com/4KInc/mergegate"
-  echo -e "  ${BOLD}2. Live GCP Cloud Run API:${RESET}        https://mergegate-api-1031148889398.us-central1.run.app"
+  echo -e "  ${BOLD}2. Live GCP Cloud Run API:${RESET}        https://mergegate.dev"
   echo -e "  ${BOLD}3. Buyer Agent Wallet (Base):${RESET}     https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2"
   echo -e "  ${BOLD}4. Escrow Contract Account:${RESET}       https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d"
   echo -e "  ${BOLD}5. Provider Agent Wallet:${RESET}         https://basescan.org/address/0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558"

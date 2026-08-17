@@ -56,7 +56,7 @@ __all__ = ["TOOLS", "PUBLIC_KEY_VAR", "call_tool", "handle_message", "serve", "m
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_INFO = {"name": "mergegate", "version": "0.1.0"}
-DEFAULT_SERVICE = "https://mergegate-api-1031148889398.us-central1.run.app"
+DEFAULT_SERVICE = "https://mergegate.dev"
 
 
 def _service() -> str:

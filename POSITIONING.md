@@ -46,9 +46,9 @@ Both were graded **inside the sealed Cloud Run job**, executions
 carry the network posture measured from inside it.
 
 Both re-verify offline against the published signing key. The
-[one-page case](https://mergegate-api-1031148889398.us-central1.run.app/judge)
+[one-page case](https://mergegate.dev/judge)
 assembles all of this from the receipts the deployment actually holds, and the
-[dashboard](https://mergegate-api-1031148889398.us-central1.run.app)
+[dashboard](https://mergegate.dev)
 re-verifies them on every request rather than trusting a stored flag.
 
 ## Where this sits relative to ERC-8183

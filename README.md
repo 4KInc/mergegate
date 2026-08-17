@@ -37,8 +37,8 @@ GitHub code, running on Base mainnet.
 
 | | |
 | --- | --- |
-| **Start here** | [the one-page case](https://mergegate-api-1031148889398.us-central1.run.app/judge) |
-| **Dashboard** | [mergegate-api-1031148889398.us-central1.run.app](https://mergegate-api-1031148889398.us-central1.run.app) |
+| **Start here** | [the one-page case](https://mergegate.dev/judge) |
+| **Dashboard** | [mergegate-api-1031148889398.us-central1.run.app](https://mergegate.dev) |
 | **PASS flow** (0.25 USDC released to the provider) | [settlement tx](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae) · block 50060061 |
 | **FAIL flow** (0.25 USDC refunded to the buyer) | [refund tx](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25) · block 50060179 |
 | **x402 payment** (0.05 USDC verifier fee, paid by `circle services pay`) | [settlement tx](https://basescan.org/tx/0xb40552f201885ff233a35c66c39114f651dc84b062aa7484ec2c974db59a86d7) · block 50018597 |
@@ -392,7 +392,7 @@ Base RPC, not just through Circle's response.
 | escrow funded | [`0x0d8caf15…`](https://basescan.org/tx/0x0d8caf15d5c6953b3e3677ba44ea831728508666906e76edba7109c20c672805), block 50059994 |
 | release, 0.25 USDC | [`0xa1303e97…`](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae), block 50060061 |
 | verifier fee, 0.05 USDC | [`0x6f94ef37…`](https://basescan.org/tx/0x6f94ef377c10f961a5252eadd8832ade991c47d22a76788e73ea81fe65507d5f), block 50060075 |
-| receipt | [`…e8a00740eb5f`](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e8a00740eb5f) |
+| receipt | [`…e8a00740eb5f`](https://mergegate.dev/receipts/4KInc-mergegate-demo-task-e8a00740eb5f) |
 
 **FAIL → refund.** This is the one that matters. The submission's code is
 *correct*: it would have passed the buyer's tests, but it also edited
@@ -408,7 +408,7 @@ and escrow returned to the buyer.
 | escrow funded | [`0xdb63e1ad…`](https://basescan.org/tx/0xdb63e1ade4b3f8f18b5cc6829fcbb3e5c6245e1391fb1dc41b09cad23e7260ed), block 50060104 |
 | refund, 0.25 USDC | [`0xc9a5e865…`](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25), block 50060179 |
 | verifier fee, 0.05 USDC | [`0x177a46af…`](https://basescan.org/tx/0x177a46af7eb120206264c63f588dff0142eb75102239497b151c6e43966a9b96), block 50060191 |
-| receipt | [`…e6bd8ffbc565`](https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565) |
+| receipt | [`…e6bd8ffbc565`](https://mergegate.dev/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565) |
 
 The refund receipt names the failed term rather than reporting a generic
 failure:
@@ -606,9 +606,9 @@ The flag is visible on the evaluation page next to a payment that completed
 normally.
 
 Both are on the live pages rather than quoted only here:
-[FAIL](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-e6bd8ffbc565)
+[FAIL](https://mergegate.dev/evaluations/4KInc-mergegate-demo-task-e6bd8ffbc565)
 scored 90/100 HIGH,
-[PASS](https://mergegate-api-1031148889398.us-central1.run.app/evaluations/4KInc-mergegate-demo-task-e8a00740eb5f)
+[PASS](https://mergegate.dev/evaluations/4KInc-mergegate-demo-task-e8a00740eb5f)
 scored 25/100 LOW while still carrying the bogus flag, and was paid anyway.
 
 **Three further limits, held deliberately:**
@@ -705,7 +705,7 @@ account, no permission, and no network call.
 git clone --recurse-submodules https://github.com/4KInc/mergegate.git
 cd mergegate && pip install -e .
 
-curl -O https://mergegate-api-1031148889398.us-central1.run.app/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565.json
+curl -O https://mergegate.dev/receipts/4KInc-mergegate-demo-task-e6bd8ffbc565.json
 export MERGEGATE_RECEIPT_PUBLIC_KEY=bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U
 
 mergegate verify 4KInc-mergegate-demo-task-e6bd8ffbc565.json
@@ -744,7 +744,7 @@ be pinned by some route other than asking the signer.
 
 ```json
 {"mcpServers": {"mergegate": {"command": "mergegate-mcp",
-  "env": {"MERGEGATE_SERVICE": "https://mergegate-api-1031148889398.us-central1.run.app",
+  "env": {"MERGEGATE_SERVICE": "https://mergegate.dev",
           "MERGEGATE_RECEIPT_PUBLIC_KEY": "bKniJaFvoeSt4_LmdfiKemxeIqaz-ALsjSFtiNWzA8U"}}}}
 ```
 

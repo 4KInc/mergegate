@@ -43,7 +43,7 @@ __all__ = ["main"]
 
 PUBLIC_KEY_VAR = "MERGEGATE_RECEIPT_PUBLIC_KEY"
 SERVICE_VAR = "MERGEGATE_SERVICE"
-DEFAULT_SERVICE = "https://mergegate-api-1031148889398.us-central1.run.app"
+DEFAULT_SERVICE = "https://mergegate.dev"
 
 EXIT_OK = 0
 EXIT_INVALID = 1
