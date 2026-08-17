@@ -381,13 +381,15 @@ Stated here rather than left for a reviewer to find.
 |---|---|
 | **Verified contract acceptance is not code quality** | A PASS means the submission satisfied the buyer's pinned tests. It does not mean the code is good, secure, or mergeable. METR's work found test-passing is a poor proxy for what a maintainer merges |
 | **Buyer griefing is unsolved** | A bad-faith buyer can pin an unpassable test, read the diff, and take the refund. A provider can verify the tests **cannot change**, not that they are **passable**. Scope is trusted buyers and approved providers. The v2 fix is a slashable buyer bond, and it is not built |
-| **Custody is real** | MergeGate holds escrow authority. This is programmable escrow with policy-bound settlement. It is **not** non-custodial and **not** trustless |
+| **Custody is real** | MergeGate holds escrow authority. This is programmable USDC escrow with policy-bound conditional settlement. It is **not** non-custodial and **not** trustless. The `circle` CLI session that drives settlement is a **bearer credential**: anyone holding it can move USDC |
 | **The sandbox has two residual channels** | DNS, and one Google API address without which the job cannot receive its inputs. Both are disclosed on the receipt |
 | **Gemini has been wrong here, publicly** | 40/100, then 10/100, then 25/100 on equivalent input. Advisory only, and that is why |
 | **x402 carries the verifier fee, not the reward** | The 0.25 release and refund are plain USDC transfers through agent wallets |
 | **The 20% demo fee rate** | A demo figure chosen for explorer legibility, not a business model |
 | **No customers, no third-party revenue** | Every transaction shown is self-paid between wallets we operate |
 | **Nanopayments not adopted** | Evaluated and documented above, with the deposit tx that did not credit |
+| **Whether an expired task should be charged is unresolved** | `EXPIRED` returns escrow when no verdict ever existed. Nothing wires it to the fee executor today, and charging for an evaluation that produced no result would be charging for our own outage. Written down as an open pricing decision rather than quietly implemented either way |
+| **"MergeGate" is a working name** | Commercial use would require trademark and availability work that has not been done |
 | **Seven receipt fields rest on the signature alone** | Confirming those means looking at the chain |
 
 ## The One Sentence
