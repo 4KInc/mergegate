@@ -12,6 +12,8 @@ An AI agent can write code today. It cannot get paid for it without a human in t
 
 MergeGate answers it with a test the seller cannot touch. The proof is a submission whose code was **correct** and was refused anyway: [0.25 USDC refunded on Base mainnet](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25), because it also edited a file the contract protected.
 
+**This is a native Circle agent-to-agent economy, not a verifier with a payment rail bolted on.** A buyer agent funds programmable USDC escrow through a Circle Agent Wallet and signs the release condition before any work exists. Settlement releases or refunds as Circle Agent Wallet transfers on Base mainnet, submitted by Circle's own relayers so MergeGate pays no gas on those legs ([release](https://basescan.org/tx/0xa1303e97235b39357d73ff82d90c6f6d757dafc2490abb18aa37098cf06dfbae) submitted by `0x211d9824…`, [refund](https://basescan.org/tx/0xc9a5e865dc66000fcc2478bf71ca42fe5359163c0928ff380022942178d27d25) by the same, [verifier fee](https://basescan.org/tx/0x6f94ef377c10f961a5252eadd8832ade991c47d22a76788e73ea81fe65507d5f) by `0xe1963570…`, none of them a wallet we fund). And the verifier itself is an x402 service that **Circle's own CLI pays**: `circle services pay` verifies the buyer's EIP-3009 authorization, including the **ERC-1271 signature of a Circle Agent Wallet**, before settling the fee. Remove Circle and there is no escrow, no gas model, no agent-payable verifier, and no settlement.
+
 Paying for code is the **application**. A release condition no party can move is the **thesis**.
 
 ---
@@ -30,7 +32,7 @@ Paying for code is the **application**. A release condition no party can move is
 
 | Requirement | Evidence |
 |-------------|----------|
-| Uses Circle Agent Stack | Agent Wallets, Circle CLI, x402 (3 of 5 genuinely used, see [coverage](#circle-agent-stack-coverage-35)) |
+| Uses Circle Agent Stack | Agent Wallets and Circle CLI (2 of the 5 named components), plus x402 / EIP-3009 settlement with ERC-1271 Agent-Wallet signature verification. See [coverage](#circle-agent-stack-coverage-2-of-5-named-components-and-the-depth-that-matters) |
 | Public GitHub repo | [4KInc/mergegate](https://github.com/4KInc/mergegate) |
 | Real USDC transaction | [3 mainnet txs on Basescan](#mainnet-transactions-base-l2) |
 | Agent wallet addresses | [Buyer](https://basescan.org/address/0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2), [Escrow](https://basescan.org/address/0x0c744ecb3949b3582cdd2dbc70dc876405eec44d), [Provider](https://basescan.org/address/0xbe1424b7bcc149523f749ceb7a8316d8ba6ba558), [Verifier fee](https://basescan.org/address/0xe36b612ba0fd6bed653e997d5060228e548825f5) |
@@ -133,23 +135,31 @@ Not described, run. Against a real repository, with a real `pytest` process, ass
 
 One defense is worth naming because the obvious version is insufficient: a path guard alone permits `src/conftest.py`, which sits inside an allowed source path, and pytest will still execute it. **Allowed to write is not allowed to grade.**
 
-## Circle Agent Stack Coverage (3/5)
+## Circle Agent Stack Coverage: 2 of 5 named components, and the depth that matters
 
-Stated as the true subset rather than rounded up.
+Counted honestly rather than rounded up, because the interesting number here is not how many components are ticked but how much of the system stops working without them.
 
-| Stack Component | How MergeGate Uses It | Status |
-|----------------|---------------------|---|
-| **Agent Wallets** | 4 wallets (buyer, escrow, provider, verifier fee) with independent spending policies read live from Circle on [/wallets](https://mergegate.dev/wallets) | Used |
-| **Circle CLI** | Every transfer, funding, release, refund and balance query | Used |
-| **x402** | The verifier is sold as a paid service and Circle's own CLI pays it: `circle services pay` settles 0.05 USDC on Base | Used |
-| **Gateway Nanopayments** | Evaluated, not adopted. See [below](#circle-nanopayments-measured-not-adopted) | Not used |
-| **Agent Marketplace** | MergeGate is not listed there. It does publish an agent-discoverable [OpenAPI spec](https://mergegate.dev/openapi.yaml) and a 9-tool MCP server, but that is discovery, not the Marketplace | Not used |
+| Named component | Status | Evidence |
+|----------------|---|---------|
+| **Agent Wallets** | **Used** | 4 wallets (buyer, escrow, provider, verifier fee) with independent spending policies read live from Circle via `circle wallet limit` (`payments/policy.py`), shown on [/wallets](https://mergegate.dev/wallets) |
+| **Circle CLI** | **Used** | Every transfer, funding, release, refund and balance query shells out to the `circle` binary, not the REST API (`payments/circle_cli.py`, `circle wallet transfer …`) |
+| **Gateway Nanopayments** | Not used | Evaluated and proven unusable for these wallets. See [below](#circle-nanopayments-measured-not-adopted) |
+| **Agent Marketplace** | Not used | MergeGate is not listed there. It publishes an agent-discoverable [OpenAPI spec](https://mergegate.dev/openapi.yaml) and a 9-tool MCP server, but that is discovery, not the Marketplace |
+| **Circle Skills** | Not used | `circle skill install` consumes skills published to `circlefin/skills`. [SKILL.md](SKILL.md) is MergeGate's own agent-facing guide and is not published there |
+
+**Separately, and not one of the five:** MergeGate settles the verifier fee over **x402 / EIP-3009**, and `circle services pay` verifies the payer's **ERC-1271 Agent-Wallet signature** before settling. That is a Circle-supported settlement standard rather than a named Stack component, so it is described rather than counted.
+
+### Why two components is the wrong thing to measure
+
+Take Circle out and nothing is left to demonstrate. There is no escrow to fund, because escrow *is* a Circle Agent Wallet under a policy the operator cannot widen. There is no gas model, because the release and refund legs are submitted by Circle's relayers and MergeGate pays nothing for them. There is no agent-payable verifier, because the fee is collected by Circle's own CLI verifying a Circle Agent Wallet's signature. And there is no settlement, because the mandate executes as a `circle wallet transfer`.
+
+The two components MergeGate does use are load-bearing for the entire economy. The three it does not are, in this design, either unusable (Gateway) or unrelated to settlement (Marketplace, Skills).
 
 ### Circle Nanopayments: measured, not adopted
 
 MergeGate settles on Circle Agent Wallets with gas sponsored by Circle, so the flat 0.05 USDC verifier fee costs the buyer nothing in gas. Gateway was evaluated as the rail for charging per unit of evidence rather than per evaluation.
 
-It is not wired in, and the reason is specific rather than a matter of time. A Gateway balance has to live somewhere, and for these wallets it cannot live on Base. The `direct` deposit method keeps funds on the source chain but requires native gas there, and these agent wallets hold **zero ETH by design**, which is the same property that makes settlement gas-free. The `eco` method works without gas but lands the balance on **Polygon**, which is not the chain MergeGate settles on. A real 0.5 USDC eco deposit was executed on mainnet ([`0x1bf870c6...`](https://basescan.org/tx/0x1bf870c62f43f944122d51cdc5f2b56c4e708c95cc7dbae4c56dee83f6560fc7)) and had not credited to a queryable Gateway balance on any supported chain when this was written.
+It is not wired in, and the reason is specific rather than a matter of time. A Gateway balance has to live somewhere, and for these wallets it cannot live on Base. The `direct` deposit method keeps funds on the source chain but requires native gas there, and these agent wallets hold **zero ETH by design**, which is the same property that makes the escrow legs cost us no gas. The `eco` method works without gas but lands the balance on **Polygon**, which is not the chain MergeGate settles on. A real 0.5 USDC eco deposit was executed on mainnet ([`0x1bf870c6...`](https://basescan.org/tx/0x1bf870c62f43f944122d51cdc5f2b56c4e708c95cc7dbae4c56dee83f6560fc7)) and had not credited to a queryable Gateway balance on any supported chain when this was written.
 
 One framing is worth refusing explicitly, because it is the obvious pitch. Gateway is not a way to avoid per-payment on-chain cost here: a transfer out of Gateway settles through an on-chain `gatewayMint` on the destination chain, so the transaction count per payment is unchanged. Gateway's real contribution is a unified balance spendable across chains without pre-funding each one. That is genuinely useful to a multi-chain evidence market and is the shape of the v2 argument, but it is not a claim this deployment has earned.
 
@@ -223,7 +233,7 @@ circle services pay https://mergegate.dev/x402/verify \
   --address 0x5c34e3e05f0f1b9c4e3b92846791c6516dd431a2 --chain BASE
 ```
 
-Circle's own CLI verifies the buyer's EIP-3009 authorization, including the ERC-1271 signature of a Circle Agent Wallet, and settles 0.05 USDC on Base. Agent to agent, no human, no dashboard.
+**Circle's own CLI is the payer here, and Circle's own wallet standard is what gets verified.** `circle services pay` presents an EIP-3009 authorization; MergeGate verifies it, and because a Circle Agent Wallet is a smart contract account rather than an EOA, that verification goes through **ERC-1271 `isValidSignature`** (`x402_settle.py:280`) rather than ECDSA recovery. Then 0.05 USDC settles on Base. Agent to agent, no human, no dashboard.
 
 ### Run the whole loop
 
@@ -277,7 +287,7 @@ Measured, not projected. Full detail in [ECONOMICS.md](ECONOMICS.md).
 | Compute | ~$0 (free tier) | ~$0 |
 | **Gross margin** | **$0.0476** | **$0.0451** |
 
-Two measurements worth keeping. Settlement gas is genuinely **zero**: every transfer's `from` address is a Circle relayer, because Agent Wallets sponsor gas. And **thinking tokens are 80% of the Gemini bill**, six times the visible output, so any cost model built from prompt and response length alone understates it by roughly 4x.
+Two measurements worth keeping, and one correction. **Gas on the four escrow legs is genuinely zero to MergeGate**: each was submitted by an address we neither configure nor fund, because Agent Wallets sponsor gas. Those submitters are *three different* Circle relayers, not one, which an earlier version of this README got wrong. **The x402 leg is the exception and is not sponsored**: EIP-3009 makes the recipient submit, so MergeGate runs its own relayer (`0x349eF760…`, derived from a key we hold) and pays 96,381 gas at 0.006 gwei, about 0.00000058 ETH. Second, **thinking tokens are 80% of the Gemini bill**, six times the visible output, so any cost model built from prompt and response length alone understates it by roughly 4x.
 
 **The 20% demo fee rate is indefensible and we know it.** 0.05 on a 0.25 reward was chosen so both numbers are legible in a block explorer. A 20% take on delivered work is far outside what code marketplaces sustain. The rate is also the wrong shape: verification cost is roughly flat in task size while a percentage fee grows without bound. A defensible price is $0.05 to $0.25 flat, which on a $50 task is 0.1% rather than 20%. None of it is validated, because there are no customers.
 

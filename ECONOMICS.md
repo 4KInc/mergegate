@@ -39,20 +39,34 @@ carried an empty `verifier_fee_tx` while reporting success.
 
 Measured, on the two mainnet runs of 2026-08-15.
 
-### Settlement gas: zero
+### Settlement gas: zero on four legs, ours on the fifth
 
 This surprised me, and it is the single most favourable number in the model.
 
 The four agent-wallet transfers in a full flow each burn about 155,400 gas at
-0.006 gwei, roughly **$0.0018** each. MergeGate pays none of it. The `from`
-address on every one is `0xe19635704ae3b77bc993358ff515d10cceae0ce1`, a Circle
-relayer. Circle Agent Wallets sponsor gas, so escrow funding, release, refund
-and the fee transfer all cost MergeGate nothing on-chain.
+0.006 gwei, which is **0.00000093 ETH** each. MergeGate pays none of it.
 
-The one exception is x402. There MergeGate runs its own relayer, because
-EIP-3009 exists so the *payer* never needs gas, which means the recipient side
-must submit. That transaction is paid by `0x349eF760…` and costs about
-**$0.0018**.
+An earlier version of this section said the `from` address on every one is
+`0xe19635704ae3b77bc993358ff515d10cceae0ce1`. That is wrong, and re-decoding the
+receipts shows why it matters: the four sponsored legs were submitted by **three
+different addresses**: `0x211d9824…` (release and refund), `0xe1963570…` (the
+PASS verifier fee) and `0x6a6fb757…` (the FAIL verifier fee). Circle rotates a
+pool of relayers rather than using one. None of the three is a wallet MergeGate
+configures or funds, which is the part that actually carries the claim: gas on
+those legs is sponsored, and MergeGate pays nothing on-chain for escrow funding,
+release, refund or the fee transfer.
+
+The one exception is x402, and it is a real one. There MergeGate runs **its own**
+relayer, because EIP-3009 exists so the *payer* never needs gas, which means the
+recipient side must submit. That transaction is submitted by `0x349eF760…`, an
+address derived from a key MergeGate holds in Secret Manager, and burns 96,381
+gas at 0.006 gwei, or **0.00000058 ETH**.
+
+Gas is quoted in ETH rather than dollars because the dollar figure is a function
+of a price this document cannot verify. A previous version quoted both the
+sponsored leg and the x402 leg at "$0.0018" despite the x402 leg using 38% less
+gas, which silently assumed two different ETH prices. At $3,000/ETH the sponsored
+legs are about $0.0028 each and the x402 leg about $0.0017.
 
 ### Gemini: $0.0025 to $0.0049
 
@@ -95,7 +109,7 @@ tier at any volume this project will see.
 | | PASS | FAIL |
 | --- | --- | --- |
 | Revenue | $0.05 | $0.05 |
-| Settlement gas | $0 (Circle sponsors) | $0 |
+| Settlement gas, escrow legs | $0 (Circle sponsors) | $0 |
 | Gemini | $0.0025 | $0.0049 |
 | Compute | ~$0 (free tier) | ~$0 |
 | **Gross margin** | **$0.0476** | **$0.0451** |
@@ -230,10 +244,17 @@ retry, and is the obvious candidate to charge for. It is free because charging
 for it would create pressure to make it load-bearing, and the entire design
 depends on it deciding nothing.
 
-**Nanopayments.** Circle Gateway offers gas-free sub-cent USDC transfers. At
-$0.05 the fee is already a whole transaction; a per-file or per-test-run charge
-would be the natural fit and would let the fee scale with work done rather than
-per evaluation. Not built.
+**Nanopayments.** A per-file or per-test-run charge would be the natural fit at
+this size, letting the fee scale with work done rather than per evaluation.
+Circle Gateway was evaluated as the rail for it and **is not usable here**, for
+two measured reasons. A Gateway balance cannot live on Base for these wallets:
+`direct` deposit needs native gas on the source chain and these agent wallets
+hold zero ETH by design, while `eco` lands the balance on Polygon. And Gateway
+is not the gas-free off-chain rail it is easy to assume: a transfer out settles
+through an on-chain `gatewayMint` on the destination chain, so the transaction
+count per payment is unchanged. A real 0.5 USDC eco deposit
+(`0x1bf870c6…`) had not credited on any supported chain when this was written.
+Not built, and not for lack of time.
 
 **The marketplace.** MergeGate is not listed in Circle's Agent Marketplace,
 so no provider agent discovers work through it. Discovery is where a

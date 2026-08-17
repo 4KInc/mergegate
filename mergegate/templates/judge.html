@@ -7,7 +7,7 @@
    NOT claim. The limits are on the same page as the proof deliberately, not on
    a page someone has to go looking for. #}
 {% extends "base.html" %}
-{% block title %}MergeGate — the case{% endblock %}
+{% block title %}MergeGate: the case{% endblock %}
 
 {% block content %}
 
@@ -22,6 +22,14 @@
     agent pins the acceptance criteria and funds USDC escrow before any work
     begins; a deterministic evaluator decides; escrow releases or refunds. No
     model is consulted at any point in the payment path.
+  </p>
+  <p class="text-on-muted mt-4 max-w-2xl leading-relaxed text-sm">
+    All of it runs on Circle. Escrow is a Circle Agent Wallet under a spending
+    policy the operator cannot widen, settlement executes as a
+    <span class="mono text-on-surface">circle wallet transfer</span> on Base
+    mainnet with Circle's relayers paying the gas, and the verifier is an x402
+    service that Circle's own CLI pays after verifying the ERC-1271 signature of
+    a Circle Agent Wallet.
   </p>
 </section>
 
@@ -133,12 +141,21 @@
       <h3 class="font-display font-semibold text-[15px] mb-2">Settles</h3>
       <p class="text-xs text-on-faint leading-relaxed">
         The buyer's pre-signed mandate is <em>executed</em>, not re-decided.
-        Agent wallets move the USDC under spending policies read live from
-        Circle.
+        Escrow <em>is</em> a Circle Agent Wallet under a policy the operator
+        cannot widen, settlement is a <span class="mono">circle wallet
+        transfer</span>, and Circle's relayers submit those legs so MergeGate
+        pays no gas on them.
       </p>
     </div>
   </div>
-  <p class="text-xs text-on-faint mt-4 leading-relaxed max-w-3xl">
+  <p class="text-xs text-on-muted mt-4 leading-relaxed max-w-3xl">
+    <strong class="text-on-surface">Circle is the substrate, not the rail.</strong>
+    Remove it and there is no escrow to fund, no gas model, no agent-payable
+    verifier and no settlement. The verifier is itself an x402 service that
+    Circle's own CLI pays, verifying the ERC-1271 signature of a Circle Agent
+    Wallet before the fee settles.
+  </p>
+  <p class="text-xs text-on-faint mt-3 leading-relaxed max-w-3xl">
     Intelligence informs; rules decide. That boundary is enforced by tests
     rather than by convention &mdash; the settlement is byte-identical for
     hostile model output, and a diff that successfully steers the screening

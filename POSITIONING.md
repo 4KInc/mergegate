@@ -14,6 +14,29 @@ by anyone holding it.
 
 That is the claim. Everything below is context for it.
 
+## Circle is the substrate, not the rail
+
+The distinction matters because "uses USDC" describes almost every entry in this
+category. MergeGate is a native Circle agent-to-agent economy in the stronger
+sense: remove Circle and there is nothing left to demonstrate.
+
+- **Escrow is a Circle Agent Wallet** under a spending policy the operator cannot
+  widen. `circle wallet limit set` requires a human OTP, so the policy binding the
+  escrow is not something MergeGate can raise on its own behalf.
+- **Settlement is a `circle wallet transfer`.** The mandate executes by shelling
+  out to Circle's CLI (`payments/circle_cli.py`), not by calling a REST API.
+- **Circle sponsors the gas on those legs.** The release, the refund and the
+  verifier fee were each submitted by an address MergeGate neither configures nor
+  funds. Three different Circle relayers across four transactions, not one.
+- **The verifier is paid by Circle's own CLI.** `circle services pay` settles the
+  x402 fee, and because a Circle Agent Wallet is a smart contract account, the
+  authorization is verified through **ERC-1271 `isValidSignature`** rather than
+  ECDSA recovery.
+
+The one leg Circle does *not* sponsor is x402, where EIP-3009 requires the
+recipient to submit, so MergeGate runs its own relayer and pays that gas. Stating
+it precisely matters more than a blanket "gas-free" would be worth.
+
 ## What actually ran
 
 Both flows executed on **Base mainnet** with real USDC. Each settlement was
