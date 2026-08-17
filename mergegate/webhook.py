@@ -262,6 +262,11 @@ def build_router(receiver: WebhookReceiver, *, path: str = "/webhooks/github") -
 
     @router.post(path)
     async def receive(request: Request) -> Response:
+        """Accept a signed GitHub push and advance the task it concerns.
+
+        HMAC-verified against the raw body. Deliveries are de-duplicated, and a
+        push for a superseded SHA is dropped rather than applied.
+        """
         # request.body() is the raw bytes as received. Anything that parses and
         # re-serializes before this point breaks signature verification.
         body = await request.body()

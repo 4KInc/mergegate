@@ -214,6 +214,8 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
     # mergegate/x402.py for what it deliberately does not yet claim.
     @app.get("/x402/verify")
     def x402_verify(request: Request) -> Any:
+        """Buy one evaluation over x402. Answers 402 with a payment challenge
+        until paid, which is the protocol working rather than an error."""
         from fastapi.responses import JSONResponse
 
         from .x402 import X402Price, payment_requirements
@@ -303,6 +305,7 @@ def create_app(store: Any = None, receiver: WebhookReceiver | None = None) -> An
 
     @app.get("/health")
     def health() -> dict[str, str]:
+        """Liveness only. Says nothing about whether settlement is working."""
         return {"status": "ok"}
 
     @app.get("/api/status")
